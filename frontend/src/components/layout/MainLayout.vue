@@ -2,6 +2,7 @@
   <div class="main-layout">
     <!-- Sidebar -->
     <Sidebar
+      ref="sidebarRef"
       :collapsed="uiStore.sidebarCollapsed"
       @toggle="uiStore.toggleSidebar"
     />
@@ -30,7 +31,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useUIStore } from '@/stores';
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
@@ -44,6 +45,8 @@ const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
+const sidebarRef = ref<InstanceType<typeof Sidebar> | null>(null);
+
 onMounted(async () => {
   // Load initial data
   try {
@@ -56,8 +59,8 @@ onMounted(async () => {
 });
 
 function handleTodoCreated() {
-  // Refresh todos after creating a new one
-  todoStore.fetchTodos();
+  // Reset sidebar to 'all' view so the newly created todo is visible
+  sidebarRef.value?.resetToAllView();
 }
 </script>
 

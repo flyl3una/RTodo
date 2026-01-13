@@ -22,19 +22,19 @@ impl StatsRepository {
 
         // 获取各状态任务数
         let todo: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE status = 'todo'",
+            "SELECT COUNT(*) FROM todos WHERE status = 0",
             [],
             |row| row.get(0)
         ).context("Failed to get todo count")?;
 
         let in_progress: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE status = 'in_progress'",
+            "SELECT COUNT(*) FROM todos WHERE status = 1",
             [],
             |row| row.get(0)
         ).context("Failed to get in_progress count")?;
 
         let done: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE status = 'done'",
+            "SELECT COUNT(*) FROM todos WHERE status = 2",
             [],
             |row| row.get(0)
         ).context("Failed to get done count")?;
@@ -49,7 +49,7 @@ impl StatsRepository {
         // 获取逾期任务数（截止日期小于当前时间且状态不是已完成）
         let now = Utc::now().timestamp_millis();
         let overdue: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE due_date < ? AND status != 'done'",
+            "SELECT COUNT(*) FROM todos WHERE due_date < ? AND status != 2",
             params![now],
             |row| row.get(0)
         ).context("Failed to get overdue count")?;

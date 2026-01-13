@@ -2,34 +2,17 @@
 // SPDX-License-Identifier: MIT
 
 use serde::{Deserialize, Serialize};
+use serde_repr::{Serialize_repr, Deserialize_repr};
 use crate::models::{Tag, TodoStep, Attachment, TaskGroup};
 
-/// 任务状态
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+/// 任务状态 - 使用数字表示
+/// 0: 待办, 1: 进行中, 2: 已完成
+#[derive(Debug, Clone, Copy, Serialize_repr, Deserialize_repr, PartialEq, Eq)]
+#[repr(i32)]
 pub enum TodoStatus {
-    Todo,
-    InProgress,
-    Done,
-}
-
-impl From<String> for TodoStatus {
-    fn from(s: String) -> Self {
-        match s.as_str() {
-            "in_progress" => TodoStatus::InProgress,
-            "done" => TodoStatus::Done,
-            _ => TodoStatus::Todo,
-        }
-    }
-}
-
-impl From<TodoStatus> for String {
-    fn from(status: TodoStatus) -> Self {
-        match status {
-            TodoStatus::Todo => "todo".to_string(),
-            TodoStatus::InProgress => "in_progress".to_string(),
-            TodoStatus::Done => "done".to_string(),
-        }
-    }
+    Todo = 0,
+    InProgress = 1,
+    Done = 2,
 }
 
 /// 任务实体

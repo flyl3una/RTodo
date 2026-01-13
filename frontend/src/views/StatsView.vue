@@ -198,6 +198,7 @@ import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import type { TodoStats, StatsByDate, TodoStatsWithDetails } from '@/types';
+import { TodoStatus } from '@/types';
 import * as api from '@/api/tauri';
 
 const todoStore = useTodoStore();
@@ -242,7 +243,7 @@ const groupStats = computed(() => {
       name: group.name,
       color: group.color || '#409EFF',
       total: groupTodos.length,
-      done: groupTodos.filter(t => t.status === 'done').length,
+      done: groupTodos.filter(t => t.status === TodoStatus.Done).length,
     };
   }).filter(g => g.total > 0);
 });

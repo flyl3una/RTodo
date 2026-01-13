@@ -4,6 +4,7 @@
 pub mod schema;
 pub mod connection;
 pub mod repositories;
+pub mod migrations;
 
 use anyhow::Result;
 use connection::DbConnection;
@@ -22,6 +23,9 @@ impl Database {
 
         // 初始化数据库表结构
         schema::init_database(conn.inner())?;
+
+        // 运行数据库迁移
+        migrations::run_migrations(conn.inner())?;
 
         Ok(Self {
             conn: Arc::new(Mutex::new(conn)),

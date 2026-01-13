@@ -46,9 +46,9 @@
               @change="applyFilters"
             >
               <el-option label="全部" :value="undefined" />
-              <el-option label="待办" value="todo" />
-              <el-option label="进行中" value="in_progress" />
-              <el-option label="已完成" value="done" />
+              <el-option label="待办" :value="TodoStatus.Todo" />
+              <el-option label="进行中" :value="TodoStatus.InProgress" />
+              <el-option label="已完成" :value="TodoStatus.Done" />
             </el-select>
           </div>
 
@@ -189,6 +189,7 @@ import { useUIStore } from '@/stores';
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
+import { TodoStatus } from '@/types';
 
 const props = defineProps<{
   collapsed: boolean;
@@ -208,7 +209,7 @@ const searchQuery = ref('');
 const viewMode = uiStore.viewMode;
 
 // Filter states
-const filterStatus = ref<string | undefined>();
+const filterStatus = ref<TodoStatus | undefined>();
 const filterPriority = ref<number | undefined>();
 const filterGroupId = ref<string | undefined>();
 const filterTagIds = ref<string[]>([]);
@@ -239,7 +240,7 @@ function handleSearch(value: string) {
 
 function applyFilters() {
   const params: {
-    status?: string;
+    status?: TodoStatus;
     priority?: number;
     group_id?: string;
     tag_id?: string;

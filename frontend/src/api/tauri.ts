@@ -12,6 +12,7 @@ import type {
   TodoStatsWithDetails,
   ExportData,
 } from '@/types';
+import { TodoStatus } from '@/types';
 
 // ==================== Todo API ====================
 
@@ -21,7 +22,7 @@ import type {
 export async function getTodos(params?: {
   group_id?: string;
   tag_id?: string;
-  status?: string;
+  status?: TodoStatus;
   search?: string;
   is_marked?: boolean;
   priority?: number;
@@ -71,7 +72,7 @@ export async function deleteTodo(id: string): Promise<void> {
 /**
  * 更新任务状态
  */
-export async function updateTodoStatus(id: string, status: string): Promise<Todo> {
+export async function updateTodoStatus(id: string, status: TodoStatus): Promise<Todo> {
   return invoke<Todo>('update_todo_status', { id, status });
 }
 
@@ -161,14 +162,14 @@ export async function deleteTag(id: string): Promise<void> {
  * 获取任务的所有步骤
  */
 export async function getTodoSteps(todoId: string): Promise<TodoStep[]> {
-  return invoke<TodoStep[]>('get_todo_steps', { todo_id: todoId });
+  return invoke<TodoStep[]>('get_todo_steps', { todoId });
 }
 
 /**
  * 创建步骤
  */
 export async function createStep(todoId: string, title: string): Promise<TodoStep> {
-  return invoke<TodoStep>('create_step', { todo_id: todoId, title });
+  return invoke<TodoStep>('create_step', { todoId, title });
 }
 
 /**
@@ -191,7 +192,7 @@ export async function deleteStep(id: string): Promise<void> {
  * 获取任务的所有附件
  */
 export async function getAttachments(todoId: string): Promise<Attachment[]> {
-  return invoke<Attachment[]>('get_attachments', { todo_id: todoId });
+  return invoke<Attachment[]>('get_attachments', { todoId });
 }
 
 /**
@@ -199,9 +200,9 @@ export async function getAttachments(todoId: string): Promise<Attachment[]> {
  */
 export async function uploadAttachment(todoId: string, filePath: string, fileName: string): Promise<Attachment> {
   return invoke<Attachment>('upload_attachment', {
-    todo_id: todoId,
-    file_path: filePath,
-    file_name: fileName,
+    todoId,
+    filePath,
+    fileName,
   });
 }
 

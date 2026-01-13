@@ -141,7 +141,7 @@ pub async fn import_data(
                 params![
                     todo.title,
                     todo.description,
-                    String::from(todo.status.clone()),
+                    todo.status as i32,
                     todo.priority,
                     if todo.is_marked { 1 } else { 0 },
                     todo.group_id,
@@ -165,7 +165,7 @@ pub async fn import_data(
                     todo.id,
                     todo.title,
                     todo.description,
-                    String::from(todo.status.clone()),
+                    todo.status as i32,
                     todo.priority,
                     if todo.is_marked { 1 } else { 0 },
                     todo.group_id,

@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
 import type { Todo, CreateTodoRequest, UpdateTodoRequest, TodoStep } from '@/types';
+import { TodoStatus } from '@/types';
 import * as api from '@/api/tauri';
 
 export const useTodoStore = defineStore('todo', () => {
@@ -13,7 +14,7 @@ export const useTodoStore = defineStore('todo', () => {
   // Filters
   const filterGroupId = ref<string | undefined>();
   const filterTagId = ref<string | undefined>();
-  const filterStatus = ref<string | undefined>();
+  const filterStatus = ref<TodoStatus | undefined>();
   const filterIsMarked = ref<boolean | undefined>();
   const filterPriority = ref<number | undefined>();
   const searchQuery = ref<string>('');
@@ -30,7 +31,7 @@ export const useTodoStore = defineStore('todo', () => {
     if (filterTagId.value) {
       result = result.filter(t => t.tags?.some(tag => tag.id === filterTagId.value));
     }
-    if (filterStatus.value) {
+    if (filterStatus.value !== undefined) {
       result = result.filter(t => t.status === filterStatus.value);
     }
     if (filterIsMarked.value !== undefined) {
@@ -66,9 +67,9 @@ export const useTodoStore = defineStore('todo', () => {
 
   const todoStats = computed(() => {
     const total = todos.value.length;
-    const todo = todos.value.filter(t => t.status === 'todo').length;
-    const inProgress = todos.value.filter(t => t.status === 'in_progress').length;
-    const done = todos.value.filter(t => t.status === 'done').length;
+    const todo = todos.value.filter(t => t.status === TodoStatus.Todo).length;
+    const inProgress = todos.value.filter(t => t.status === TodoStatus.InProgress).length;
+    const done = todos.value.filter(t => t.status === TodoStatus.Done).length;
     const marked = todos.value.filter(t => t.is_marked).length;
 
     return { total, todo, inProgress, done, marked };
@@ -131,10 +132,10 @@ export const useTodoStore = defineStore('todo', () => {
     error.value = null;
     try {
       const updated = await api.updateTodo(request);
-      // Update in list
+      // Update in list using splice to trigger Vue reactivity
       const index = todos.value.findIndex(t => t.id === updated.id);
       if (index !== -1) {
-        todos.value[index] = updated;
+        todos.value.splice(index, 1, updated);
       }
       // Update current if selected
       if (currentTodo.value?.id === updated.id) {
@@ -166,14 +167,22 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  async function updateTodoStatus(id: string, status: string) {
+  async function updateTodoStatus(id: string, status: TodoStatus) {
     loading.value = true;
     error.value = null;
     try {
+      console.log('[Store] updateTodoStatus called:', { id, status });
       const updated = await api.updateTodoStatus(id, status);
+      console.log('[Store] Updated todo received:', updated);
+
       const index = todos.value.findIndex(t => t.id === updated.id);
+      console.log('[Store] Found todo at index:', index);
+
       if (index !== -1) {
-        todos.value[index] = updated;
+        console.log('[Store] Old todo status:', todos.value[index].status);
+        // Use splice to trigger Vue reactivity
+        todos.value.splice(index, 1, updated);
+        console.log('[Store] Updated todos[index] status:', todos.value[index].status);
       }
       if (currentTodo.value?.id === updated.id) {
         currentTodo.value = updated;
@@ -194,7 +203,8 @@ export const useTodoStore = defineStore('todo', () => {
       const updated = await api.toggleTodoMark(id);
       const index = todos.value.findIndex(t => t.id === updated.id);
       if (index !== -1) {
-        todos.value[index] = updated;
+        // Use splice to trigger Vue reactivity
+        todos.value.splice(index, 1, updated);
       }
       if (currentTodo.value?.id === updated.id) {
         currentTodo.value = updated;
@@ -211,7 +221,7 @@ export const useTodoStore = defineStore('todo', () => {
   function setFilter(params: {
     group_id?: string;
     tag_id?: string;
-    status?: string;
+    status?: TodoStatus;
     search?: string;
     is_marked?: boolean;
     priority?: number;

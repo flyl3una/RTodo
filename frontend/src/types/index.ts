@@ -1,10 +1,41 @@
 /**
- * 任务状态枚举
+ * 任务状态枚举 - 使用数字表示
+ * 0: 待办, 1: 进行中, 2: 已完成
  */
 export enum TodoStatus {
-  Todo = 'todo',
-  InProgress = 'in_progress',
-  Done = 'done',
+  Todo = 0,
+  InProgress = 1,
+  Done = 2,
+}
+
+/**
+ * 获取状态标签文本
+ */
+export function getStatusLabel(status: TodoStatus): string {
+  switch (status) {
+    case TodoStatus.Todo:
+      return '待办';
+    case TodoStatus.InProgress:
+      return '进行中';
+    case TodoStatus.Done:
+      return '已完成';
+    default:
+      return '未知';
+  }
+}
+
+/**
+ * 获取状态对应的 Element Plus 标签类型
+ */
+export function getStatusType(status: TodoStatus): 'success' | 'warning' | 'info' {
+  switch (status) {
+    case TodoStatus.Done:
+      return 'success';
+    case TodoStatus.InProgress:
+      return 'warning';
+    default:
+      return 'info';
+  }
 }
 
 /**
@@ -23,7 +54,7 @@ export interface Todo {
   id: string;
   title: string;
   description?: string;
-  status: 'todo' | 'in_progress' | 'done';
+  status: TodoStatus;
   priority: number;
   is_marked: boolean;
   group_id?: string;
@@ -109,7 +140,7 @@ export interface UpdateTodoRequest {
   id: string;
   title?: string;
   description?: string;
-  status?: 'todo' | 'in_progress' | 'done';
+  status?: TodoStatus;
   priority?: number;
   is_marked?: boolean;
   group_id?: string;
@@ -167,6 +198,24 @@ export interface TodoFilter {
     end: number;
   };
 }
+
+// 导出所有类型
+export type {
+  Todo,
+  TaskGroup,
+  Tag,
+  TodoStep,
+  Attachment,
+  CreateTodoRequest,
+  UpdateTodoRequest,
+  TodoStats,
+  StatsByDate,
+  TodoStatsWithDetails,
+  TodoFilter,
+  GroupStats,
+  TagStats,
+  ExportData,
+};
 
 /**
  * 任务组统计

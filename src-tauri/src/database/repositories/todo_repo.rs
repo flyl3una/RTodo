@@ -16,7 +16,7 @@ impl TodoRepository {
         conn: &Connection,
         group_id: Option<&str>,
         tag_id: Option<&str>,
-        status: Option<&str>,
+        status: Option<i32>,
         search: Option<&str>,
         is_marked: Option<bool>,
         priority: Option<i32>,
@@ -39,7 +39,7 @@ impl TodoRepository {
         // 按状态筛选
         if let Some(s) = status {
             where_clauses.push("t.status = ?");
-            params.push(Box::new(s.to_string()));
+            params.push(Box::new(s));
         }
 
         // 按标签筛选（需要 JOIN）
@@ -93,7 +93,7 @@ impl TodoRepository {
 
         // 排序：未完成在前，然后按创建时间倒序
         query.push_str(" ORDER BY
-            CASE WHEN t.status = 'done' THEN 1 ELSE 0 END,
+            CASE WHEN t.status = 2 THEN 1 ELSE 0 END,
             t.is_marked DESC,
             t.due_date ASC,
             t.created_at DESC");
@@ -105,12 +105,18 @@ impl TodoRepository {
         let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
         let todo_iter = stmt.query_map(param_refs.as_slice(), |row| {
-            let status_str: String = row.get("status")?;
+            let status_int: i32 = row.get("status")?;
+            let status = match status_int {
+                0 => TodoStatus::Todo,
+                1 => TodoStatus::InProgress,
+                2 => TodoStatus::Done,
+                _ => TodoStatus::Todo, // 默认为待办
+            };
             Ok(Todo {
                 id: row.get("id")?,
                 title: row.get("title")?,
                 description: row.get("description")?,
-                status: TodoStatus::from(status_str),
+                status,
                 priority: row.get("priority")?,
                 is_marked: row.get::<_, i32>("is_marked")? == 1,
                 group_id: row.get("group_id")?,
@@ -149,12 +155,18 @@ impl TodoRepository {
         .context("Failed to prepare get_todo query")?;
 
         let todo_opt = stmt.query_row(params![id], |row| {
-            let status_str: String = row.get("status")?;
+            let status_int: i32 = row.get("status")?;
+            let status = match status_int {
+                0 => TodoStatus::Todo,
+                1 => TodoStatus::InProgress,
+                2 => TodoStatus::Done,
+                _ => TodoStatus::Todo, // 默认为待办
+            };
             Ok(Todo {
                 id: row.get("id")?,
                 title: row.get("title")?,
                 description: row.get("description")?,
-                status: TodoStatus::from(status_str),
+                status,
                 priority: row.get("priority")?,
                 is_marked: row.get::<_, i32>("is_marked")? == 1,
                 group_id: row.get("group_id")?,
@@ -206,7 +218,7 @@ impl TodoRepository {
                 id,
                 title,
                 description,
-                String::from(status.clone()),
+                status as i32,
                 priority,
                 0, // is_marked
                 group_id,
@@ -239,7 +251,7 @@ impl TodoRepository {
         id: &str,
         title: Option<&str>,
         description: Option<Option<String>>,
-        status: Option<&str>,
+        status: Option<i32>,
         priority: Option<i32>,
         is_marked: Option<bool>,
         group_id: Option<Option<String>>,
@@ -267,10 +279,10 @@ impl TodoRepository {
         }
         if let Some(s) = status {
             sets.push("status = ?");
-            params.push(Box::new(s.to_string()));
+            params.push(Box::new(s));
 
-            // 如果状态变为完成，设置完成时间
-            if s == "done" {
+            // 如果状态变为完成 (2)，设置完成时间
+            if s == 2 {
                 sets.push("completed_at = ?");
                 params.push(Box::new(now));
             } else {
@@ -373,9 +385,9 @@ impl TodoRepository {
     }
 
     /// 更新任务状态
-    pub fn update_status(conn: &Connection, id: &str, status: &str) -> Result<Todo> {
+    pub fn update_status(conn: &Connection, id: &str, status: i32) -> Result<Todo> {
         let now = Utc::now().timestamp_millis();
-        let completed_at = if status == "done" { Some(now) } else { None };
+        let completed_at = if status == 2 { Some(now) } else { None };
 
         conn.execute(
             "UPDATE todos SET status = ?1, completed_at = ?2, updated_at = ?3 WHERE id = ?4",

@@ -22,9 +22,9 @@
 
       <el-form-item label="状态">
         <el-select v-model="form.status" style="width: 100%">
-          <el-option label="待办" value="todo" />
-          <el-option label="进行中" value="in_progress" />
-          <el-option label="已完成" value="done" />
+          <el-option label="待办" :value="TodoStatus.Todo" />
+          <el-option label="进行中" :value="TodoStatus.InProgress" />
+          <el-option label="已完成" :value="TodoStatus.Done" />
         </el-select>
       </el-form-item>
 
@@ -89,7 +89,7 @@
     <div v-else class="detail-view">
       <div class="detail-header">
         <el-checkbox
-          :model-value="todo.status === 'done'"
+          :model-value="todo.status === TodoStatus.Done"
           @change="handleStatusToggle"
         />
         <h2 class="detail-title">{{ todo.title }}</h2>
@@ -208,12 +208,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { Edit, Delete, Star, StarFilled, Plus } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useTodoStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import type { Todo, UpdateTodoRequest, TodoStep } from '@/types';
+import { TodoStatus, getStatusLabel, getStatusType } from '@/types';
 
 const props = defineProps<{
   todo: Todo;
@@ -237,7 +238,7 @@ const steps = ref<TodoStep[]>([]);
 const form = ref<UpdateTodoRequest>({
   title: '',
   description: '',
-  status: 'todo',
+  status: TodoStatus.Todo,
   priority: 0,
   start_date: undefined,
   due_date: undefined,
@@ -252,21 +253,26 @@ const rules: FormRules = {
 
 const tags = computed(() => tagStore.tags);
 
-const statusType = computed(() => {
-  switch (props.todo.status) {
-    case 'done': return 'success';
-    case 'in_progress': return 'warning';
-    default: return 'info';
+// Watch for todo prop changes (when store updates the todo)
+watch(() => props.todo, (newTodo) => {
+  console.log('[TodoDetailPanel] Todo prop changed:', newTodo);
+  // If currently editing, sync the form with new data
+  if (isEditing.value) {
+    form.value = {
+      title: newTodo.title,
+      description: newTodo.description || '',
+      status: newTodo.status,
+      priority: newTodo.priority,
+      start_date: newTodo.start_date,
+      due_date: newTodo.due_date,
+      tag_ids: newTodo.tags?.map(t => t.id) || [],
+    };
   }
-});
+}, { deep: true });
 
-const statusText = computed(() => {
-  switch (props.todo.status) {
-    case 'done': return '已完成';
-    case 'in_progress': return '进行中';
-    default: return '待办';
-  }
-});
+const statusType = computed(() => getStatusType(props.todo.status));
+
+const statusText = computed(() => getStatusLabel(props.todo.status));
 
 const priorityType = computed(() => {
   switch (props.todo.priority) {
@@ -331,7 +337,14 @@ async function handleSave() {
       tag_ids: form.value.tag_ids?.length ? form.value.tag_ids : undefined,
     };
 
+    console.log('Saving todo with request:', request);
+    console.log('start_date:', request.start_date, 'due_date:', request.due_date);
+
     const updated = await todoStore.updateTodo(request);
+
+    console.log('Updated todo received:', updated);
+    console.log('Updated start_date:', updated.start_date, 'due_date:', updated.due_date);
+
     ElMessage.success('保存成功');
     isEditing.value = false;
     emit('updated', updated);
@@ -347,7 +360,7 @@ async function handleSave() {
 
 async function handleStatusToggle() {
   try {
-    const newStatus = props.todo.status === 'done' ? 'todo' : 'done';
+    const newStatus = props.todo.status === TodoStatus.Done ? TodoStatus.Todo : TodoStatus.Done;
     await todoStore.updateTodoStatus(props.todo.id, newStatus);
     emit('updated', { ...props.todo, status: newStatus });
   } catch (error) {
@@ -427,12 +440,15 @@ async function deleteStep(stepId: string) {
 }
 
 async function loadSteps() {
+  console.log('loadSteps called, props.todo:', props.todo);
   if (!props.todo?.id) {
-    console.warn('No todo id available for loading steps');
+    console.warn('No todo id available for loading steps, skipping API call');
     return;
   }
   try {
+    console.log('Fetching steps for todo id:', props.todo.id);
     steps.value = await todoStore.fetchSteps(props.todo.id);
+    console.log('Steps loaded successfully:', steps.value.length);
   } catch (error) {
     console.error('Failed to load steps:', error);
   }

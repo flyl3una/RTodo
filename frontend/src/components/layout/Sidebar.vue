@@ -151,6 +151,7 @@ import {
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
+import { TodoStatus } from '@/types';
 import type { TaskGroup } from '@/types';
 import type { Tag } from '@/types';
 import GroupManageDialog from '../group/GroupManageDialog.vue';
@@ -179,6 +180,13 @@ const editingTag = ref<Tag | undefined>();
 
 const groups = computed(() => groupStore.groups);
 const tags = computed(() => tagStore.tags);
+
+// Reset to 'all' view (can be called from parent)
+function resetToAllView() {
+  currentView.value = 'all';
+  filterGroupId.value = undefined;
+  todoStore.setFilter({});
+}
 
 function setFilter(view: 'all' | 'today' | 'marked' | 'urgent' | 'completed') {
   currentView.value = view;
@@ -211,8 +219,8 @@ function setFilter(view: 'all' | 'today' | 'marked' | 'urgent' | 'completed') {
       todoStore.setFilter({ priority: 2 });
       break;
     case 'completed':
-      // Filter by status = 'done'
-      todoStore.setFilter({ status: 'done' });
+      // Filter by status = Done (2)
+      todoStore.setFilter({ status: TodoStatus.Done });
       break;
   }
 
@@ -264,6 +272,11 @@ function handleTagUpdated() {
   editingTag.value = undefined;
   tagStore.fetchTags();
 }
+
+// Expose methods to parent components
+defineExpose({
+  resetToAllView,
+});
 </script>
 
 <style scoped>

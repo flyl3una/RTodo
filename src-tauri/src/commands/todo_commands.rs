@@ -10,7 +10,7 @@ use crate::models::Todo;
 pub async fn get_todos(
     group_id: Option<String>,
     tag_id: Option<String>,
-    status: Option<String>,
+    status: Option<i32>,
     search: Option<String>,
     is_marked: Option<bool>,
     priority: Option<i32>,
@@ -29,7 +29,7 @@ pub async fn get_todos(
         inner,
         group_id.as_deref(),
         tag_id.as_deref(),
-        status.as_deref(),
+        status,
         search.as_deref(),
         is_marked,
         priority,
@@ -67,7 +67,7 @@ pub async fn create_todo(
     tag_ids: Option<Vec<String>>,
     db: tauri::State<'_, Database>,
 ) -> Result<Todo, String> {
-    tracing::info!("create_todo called: title={}", title);
+    tracing::info!("create_todo called: title={}, start_date={:?}, due_date={:?}", title, start_date, due_date);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
@@ -91,7 +91,7 @@ pub async fn update_todo(
     id: String,
     title: Option<String>,
     description: Option<String>,
-    status: Option<String>,
+    status: Option<i32>,
     priority: Option<i32>,
     is_marked: Option<bool>,
     group_id: Option<String>,
@@ -101,7 +101,7 @@ pub async fn update_todo(
     tag_ids: Option<Vec<String>>,
     db: tauri::State<'_, Database>,
 ) -> Result<Todo, String> {
-    tracing::info!("update_todo called: id={}", id);
+    tracing::info!("update_todo called: id={}, start_date={:?}, due_date={:?}", id, start_date, due_date);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
@@ -119,7 +119,7 @@ pub async fn update_todo(
         &id,
         title.as_deref(),
         desc_opt,
-        status.as_deref(),
+        status,
         priority,
         is_marked,
         group_opt,
@@ -150,7 +150,7 @@ pub async fn delete_todo(
 #[tauri::command]
 pub async fn update_todo_status(
     id: String,
-    status: String,
+    status: i32,
     db: tauri::State<'_, Database>,
 ) -> Result<Todo, String> {
     tracing::info!("update_todo_status called: id={}, status={}", id, status);
@@ -159,7 +159,7 @@ pub async fn update_todo_status(
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    TodoRepository::update_status(inner, &id, &status)
+    TodoRepository::update_status(inner, &id, status)
         .map_err(|e| format!("Failed to update todo status: {}", e))
 }
 

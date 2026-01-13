@@ -6,12 +6,12 @@
         v-for="todo in filteredTodos"
         :key="todo.id"
         class="todo-item"
-        :class="{ completed: todo.status === 'done' }"
+        :class="{ completed: todo.status === TodoStatus.Done }"
         @click="selectTodo(todo)"
       >
         <div class="todo-left">
           <el-checkbox
-            :model-value="todo.status === 'done'"
+            :model-value="todo.status === TodoStatus.Done"
             @change="toggleStatus(todo)"
             @click.stop
           />
@@ -60,12 +60,12 @@
         v-for="todo in filteredTodos"
         :key="todo.id"
         class="todo-card"
-        :class="{ completed: todo.status === 'done' }"
+        :class="{ completed: todo.status === TodoStatus.Done }"
         @click="selectTodo(todo)"
       >
         <div class="card-header">
           <el-checkbox
-            :model-value="todo.status === 'done'"
+            :model-value="todo.status === TodoStatus.Done"
             @change="toggleStatus(todo)"
             @click.stop
           />
@@ -152,25 +152,43 @@ import { ElMessageBox, ElMessage } from 'element-plus';
 import { useTodoStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import type { Todo } from '@/types';
+import { TodoStatus } from '@/types';
 import TodoDetailPanel from '../components/todo/TodoDetailPanel.vue';
 
 const todoStore = useTodoStore();
 const uiStore = useUIStore();
 
 const loading = computed(() => todoStore.loading);
-const filteredTodos = computed(() => todoStore.filteredTodos);
-const viewMode = computed(() => uiStore.viewMode);
+const filteredTodos = todoStore.filteredTodos;
+const viewMode = uiStore.viewMode;
 
 const selectedTodo = ref<Todo | null>(null);
 const detailVisible = ref(false);
 
+// Watch for store changes and update selectedTodo if it's the same todo
+watch(() => todoStore.todos, (newTodos) => {
+  if (selectedTodo.value) {
+    const updatedTodo = newTodos.find(t => t.id === selectedTodo.value!.id);
+    if (updatedTodo && updatedTodo !== selectedTodo.value) {
+      console.log('[HomeView] Syncing selectedTodo with store data');
+      selectedTodo.value = updatedTodo;
+    }
+  }
+}, { deep: true });
+
 async function toggleStatus(todo: Todo) {
   try {
-    const newStatus = todo.status === 'done' ? 'todo' : 'done';
-    await todoStore.updateTodoStatus(todo.id, newStatus);
-  } catch (error) {
+    const newStatus = todo.status === TodoStatus.Done ? TodoStatus.Todo : TodoStatus.Done;
+    console.log('toggleStatus called:', { todoId: todo.id, oldStatus: todo.status, newStatus });
+
+    const updated = await todoStore.updateTodoStatus(todo.id, newStatus);
+
+    console.log('toggleStatus result:', updated);
+    console.log('Current filteredTodos:', filteredTodos.map(t => ({ id: t.id, status: t.status })));
+  } catch (error: any) {
     console.error('Failed to toggle status:', error);
-    ElMessage.error('状态更新失败');
+    const errorMsg = error?.toString() || JSON.stringify(error) || 'Unknown error';
+    ElMessage.error(`状态更新失败: ${errorMsg}`);
   }
 }
 
@@ -200,11 +218,11 @@ function handleTodoDeleted() {
   todoStore.fetchTodos();
 }
 
-function formatDate(timestamp?: number, todoStatus?: string): string {
+function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   if (!timestamp) return '无截止日期';
   const date = new Date(timestamp);
   const now = new Date();
-  const isOverdue = date < now && todoStatus !== 'done';
+  const isOverdue = date < now && todoStatus !== TodoStatus.Done;
 
   const options: Intl.DateTimeFormatOptions = {
     month: 'short',
