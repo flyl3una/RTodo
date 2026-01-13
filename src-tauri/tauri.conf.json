@@ -1,0 +1,32 @@
+{
+  "$schema": "https://schema.tauri.app/config/2.0.0",
+  "productName": "RTodo",
+  "version": "0.1.0",
+  "identifier": "com.rtodo.app",
+  "build": {
+    "beforeDevCommand": "cd ../frontend && npm run dev",
+    "beforeBuildCommand": "cd ../frontend && npm run build",
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../frontend/dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "RTodo",
+        "width": 1400,
+        "height": 900,
+        "resizable": true,
+        "fullscreen": false,
+        "minWidth": 1000,
+        "minHeight": 600
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": []
+  }
+}
