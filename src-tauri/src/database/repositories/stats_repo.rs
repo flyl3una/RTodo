@@ -70,14 +70,19 @@ impl StatsRepository {
         let (start_date, days) = match range {
             "day" => {
                 // 今天
-                let start = now.date_naive().and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp_millis();
+                let start = now.date_naive()
+                    .and_hms_opt(0, 0, 0)
+                    .expect("0:0:0 is always a valid time")
+                    .and_utc()
+                    .timestamp_millis();
                 (start, 1)
             }
             "week" => {
                 // 最近7天
                 let start = (now - chrono::Duration::days(6))
                     .date_naive()
-                    .and_hms_opt(0, 0, 0).unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .expect("0:0:0 is always a valid time")
                     .and_utc()
                     .timestamp_millis();
                 (start, 7)
@@ -86,7 +91,8 @@ impl StatsRepository {
                 // 最近30天
                 let start = (now - chrono::Duration::days(29))
                     .date_naive()
-                    .and_hms_opt(0, 0, 0).unwrap()
+                    .and_hms_opt(0, 0, 0)
+                    .expect("0:0:0 is always a valid time")
                     .and_utc()
                     .timestamp_millis();
                 (start, 30)
@@ -103,7 +109,7 @@ impl StatsRepository {
 
             // 转换为日期字符串
             let date = chrono::DateTime::from_timestamp_millis(day_start)
-                .unwrap()
+                .expect("timestamp should be valid for date range")
                 .format("%Y-%m-%d")
                 .to_string();
 

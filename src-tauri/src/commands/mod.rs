@@ -7,4 +7,4 @@ pub mod tag_commands;
 pub mod step_commands;
 pub mod attachment_commands;
 pub mod stats_commands;
-pub mod import_export;
+pub mod data_manager_command;

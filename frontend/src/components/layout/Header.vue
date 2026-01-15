@@ -12,7 +12,7 @@
         placeholder="搜索任务..."
         :prefix-icon="Search"
         clearable
-        style="width: 300px"
+        style="width: 200px"
         @input="handleSearch"
       />
       <el-popover

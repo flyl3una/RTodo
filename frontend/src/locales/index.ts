@@ -14,9 +14,15 @@ const messages = {
   'ja-JP': jaJP,
 };
 
+// 从 localStorage 读取保存的语言，默认使用 'zh-CN'
+const savedLanguage = localStorage.getItem('rtodo-language') as 'zh-CN' | 'zh-TW' | 'en-US' | 'ja-JP' | null;
+const defaultLocale = savedLanguage && ['zh-CN', 'zh-TW', 'en-US', 'ja-JP'].includes(savedLanguage)
+  ? savedLanguage
+  : 'zh-CN';
+
 const i18n = createI18n({
   legacy: false,  // 使用 Composition API 模式
-  locale: 'zh-CN',  // 默认语言
+  locale: defaultLocale,  // 从 localStorage 读取的语言
   fallbackLocale: 'zh-CN',  // 回退语言
   messages,
 });

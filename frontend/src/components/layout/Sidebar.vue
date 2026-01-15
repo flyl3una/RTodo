@@ -3,10 +3,15 @@
     <!-- Header -->
     <div class="sidebar-header">
       <div class="logo" v-if="!collapsed">
-        <span class="logo-icon">📝</span>
+        <span class="logo-icon">
+          <Logo />
+        </span>
+
         <span class="logo-text">RTodo</span>
       </div>
-      <div class="logo-icon-only" v-else>📝</div>
+      <div class="logo-icon-only" v-else>
+        <Logo />
+      </div>
     </div>
 
     <!-- Quick Access -->
@@ -155,6 +160,7 @@ import type { TaskGroup } from '@/types';
 import type { Tag } from '@/types';
 import GroupManageDialog from '../group/GroupManageDialog.vue';
 import TagCreateDialog from '../tag/TagCreateDialog.vue';
+import Logo from '@/components/icon/logo.vue';
 
 const props = defineProps<{
   collapsed: boolean;
@@ -326,8 +332,30 @@ defineExpose({
   color: var(--el-color-primary);
 }
 
+.logo-icon {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon :deep(svg) {
+  width: 100%;
+  height: 100%;
+}
+
 .logo-icon-only {
-  font-size: 24px;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon-only :deep(svg) {
+  width: 100%;
+  height: 100%;
 }
 
 .sidebar-section {

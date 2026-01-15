@@ -60,6 +60,13 @@
               text
               @click.stop="toggleMark(todo)"
             />
+            <el-button
+              :icon="Delete"
+              circle
+              text
+              type="danger"
+              @click.stop="handleDeleteTodo(todo)"
+            />
           </div>
         </div>
         <!-- Sub-steps (collapsible) -->
@@ -120,6 +127,14 @@
             text
             size="small"
             @click.stop="toggleMark(todo)"
+          />
+          <el-button
+            :icon="Delete"
+            circle
+            text
+            size="small"
+            type="danger"
+            @click.stop="handleDeleteTodo(todo)"
           />
         </div>
         <div class="card-content">
@@ -196,7 +211,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, toRef } from 'vue';
-import { Calendar, Star, StarFilled, ArrowDown, ArrowRight } from '@element-plus/icons-vue';
+import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete } from '@element-plus/icons-vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { useTodoStore } from '@/stores';
 import { useUIStore } from '@/stores';
@@ -326,6 +341,35 @@ function handleTodoDeleted() {
   detailVisible.value = false;
   selectedTodo.value = null;
   todoStore.fetchTodos();
+}
+
+async function handleDeleteTodo(todo: Todo) {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除任务 "${todo.title}" 吗？`,
+      '删除任务',
+      {
+        type: 'warning',
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消',
+      }
+    );
+
+    await todoStore.deleteTodo(todo.id);
+    ElMessage.success('任务已删除');
+
+    // 如果删除的是当前选中的任务，关闭详情面板
+    if (selectedTodo.value?.id === todo.id) {
+      detailVisible.value = false;
+      selectedTodo.value = null;
+    }
+  } catch (error) {
+    // User cancelled or error occurred
+    if (error !== 'cancel') {
+      console.error('Failed to delete todo:', error);
+      ElMessage.error('删除失败');
+    }
+  }
 }
 
 function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {

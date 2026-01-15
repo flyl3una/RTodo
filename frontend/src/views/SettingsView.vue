@@ -70,7 +70,9 @@
         <h2 class="section-title">关于</h2>
         <div class="about-content">
           <div class="app-info">
-            <div class="app-logo">📝</div>
+            <div class="app-logo">
+              <Logo />
+            </div>
             <div class="app-details">
               <h3>RTodo</h3>
               <p class="app-version">版本 0.1.0</p>
@@ -96,6 +98,8 @@ import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useUIStore } from '@/stores';
 import * as api from '@/api/tauri';
+import Logo from '@/components/icon/logo.vue';
+import { save, open } from '@tauri-apps/plugin-dialog';
 
 const uiStore = useUIStore();
 
@@ -136,22 +140,24 @@ function handleDensityModeChange(mode: 'comfortable' | 'compact') {
 
 async function handleExport() {
   try {
+    // 先打开文件保存对话框获取用户选择的路径
+    const filePath = await save({
+      defaultPath: `rtodo-backup-${new Date().toISOString().split('T')[0]}.zip`,
+      filters: [{
+        name: 'ZIP Archive',
+        extensions: ['zip']
+      }]
+    });
+
+    if (!filePath) {
+      // 用户取消了文件选择
+      return;
+    }
+
     exportLoading.value = true;
 
-    // 调用后端API导出CSV压缩包
-    const zipData = await api.exportDataAsCsv();
-
-    // 创建Blob并触发下载
-    const blob = new Blob([zipData], { type: 'application/zip' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `rtodo-backup-${new Date().toISOString().split('T')[0]}.zip`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
+    // 将文件路径传递给后端，后端直接写入文件
+    await api.exportDataAsCsv(filePath);
     ElMessage.success('数据导出成功');
   } catch (error) {
     console.error('Export error:', error);
@@ -173,31 +179,31 @@ async function handleImport() {
       }
     );
 
-    // Create file input
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.zip';
+    // 使用 Tauri 的 open API 选择文件
+    const selectedPath = await open({
+      multiple: false,
+      filters: [{
+        name: 'ZIP Archive',
+        extensions: ['zip']
+      }]
+    });
 
-    input.onchange = async (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (!file) return;
+    if (!selectedPath) {
+      // 用户取消了文件选择
+      return;
+    }
 
-      try {
-        const arrayBuffer = await file.arrayBuffer();
-        const uint8Array = new Uint8Array(arrayBuffer);
+    exportLoading.value = true;
 
-        await api.importDataFromCsv(uint8Array);
-        ElMessage.success('数据导入成功，页面将重新加载');
-        setTimeout(() => window.location.reload(), 1500);
-      } catch (error) {
-        console.error('Import error:', error);
-        ElMessage.error('导入失败：文件格式错误');
-      }
-    };
-
-    input.click();
+    // 将文件路径传给后端，后端负责读取和解析
+    await api.importDataFromCsv(selectedPath);
+    ElMessage.success('数据导入成功，页面将重新加载');
+    setTimeout(() => window.location.reload(), 1500);
   } catch (error) {
-    // User cancelled
+    console.error('Import error:', error);
+    ElMessage.error('导入失败：文件格式错误');
+  } finally {
+    exportLoading.value = false;
   }
 }
 
@@ -298,7 +304,16 @@ onMounted(() => {
 }
 
 .app-logo {
-  font-size: 48px;
+  width: 64px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-logo :deep(svg) {
+  width: 100%;
+  height: 100%;
 }
 
 .app-details h3 {

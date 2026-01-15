@@ -10,7 +10,7 @@ mod utils;
 mod logging;
 
 use database::Database;
-use logging::{load_config, init_logging, LogWorkerGuards};
+use logging::{load_config, init_logging};
 
 #[tokio::main]
 async fn main() {
@@ -26,6 +26,7 @@ async fn main() {
     // 构建应用
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             tracing::info!("Setting up application...");
 
@@ -61,9 +62,11 @@ async fn main() {
             commands::stats_commands::get_stats,
             commands::stats_commands::get_stats_by_date,
             commands::stats_commands::get_stats_with_details,
-            commands::import_export::export_all_data,
-            commands::import_export::import_data,
-            commands::import_export::clear_all_data,
+            commands::data_manager_command::export_all_data,
+            commands::data_manager_command::import_data,
+            commands::data_manager_command::export_data_as_csv,
+            commands::data_manager_command::import_data_from_csv,
+            commands::data_manager_command::clear_all_data,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

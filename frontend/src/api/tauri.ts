@@ -291,17 +291,17 @@ export async function exportAllData(): Promise<ExportData> {
 }
 
 /**
- * 导出所有数据为CSV格式并打包
+ * 导出所有数据为CSV格式并打包到指定路径
  */
-export async function exportDataAsCsv(): Promise<Uint8Array> {
-  return safeInvoke<Uint8Array>('export_data_as_csv');
+export async function exportDataAsCsv(filePath: string): Promise<void> {
+  return safeInvoke<void>('export_data_as_csv', { filePath });
 }
 
 /**
  * 从CSV压缩包导入数据
  */
-export async function importDataFromCsv(fileData: Uint8Array): Promise<void> {
-  return safeInvoke<void>('import_data_from_csv', { fileData });
+export async function importDataFromCsv(filePath: string): Promise<void> {
+  return safeInvoke<void>('import_data_from_csv', { filePath });
 }
 
 /**

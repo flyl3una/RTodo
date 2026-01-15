@@ -25,9 +25,12 @@ tracing-appender.workspace = true
 tracing-error.workspace = true
 tauri.workspace = true
 tauri-plugin-shell.workspace = true
-dirs = {workspace = true}
-toml = {workspace = true}
-serde_derive = {workspace = true}
+tauri-plugin-dialog.workspace = true
+dirs.workspace = true
+toml.workspace = true
+serde_derive.workspace = true
+csv.workspace = true
+zip.workspace = true
 
 [features]
 default = ["custom-protocol"]
