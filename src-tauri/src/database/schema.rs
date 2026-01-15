@@ -47,7 +47,6 @@ pub fn init_database(conn: &Connection) -> Result<()> {
             description TEXT,
             status INTEGER NOT NULL DEFAULT 0,
             priority INTEGER DEFAULT 0,
-            is_marked INTEGER DEFAULT 0,
             group_id TEXT,
             assignee TEXT,
             start_date INTEGER,

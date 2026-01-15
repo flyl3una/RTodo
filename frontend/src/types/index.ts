@@ -40,11 +40,42 @@ export function getStatusType(status: TodoStatus): 'success' | 'warning' | 'info
 
 /**
  * 任务优先级
+ * 0: 普通, 1: 重要, 3: 紧急
  */
 export enum TodoPriority {
   Normal = 0,
   Important = 1,
-  Urgent = 2,
+  Urgent = 3,
+}
+
+/**
+ * 获取优先级标签文本
+ */
+export function getPriorityLabel(priority: number): string {
+  switch (priority) {
+    case 0:
+      return '普通';
+    case 1:
+      return '重要';
+    case 3:
+      return '紧急';
+    default:
+      return '未知';
+  }
+}
+
+/**
+ * 获取优先级对应的 Element Plus 标签类型
+ */
+export function getPriorityType(priority: number): 'info' | 'warning' | 'danger' {
+  switch (priority) {
+    case 3:
+      return 'danger';
+    case 1:
+      return 'warning';
+    default:
+      return 'info';
+  }
 }
 
 /**
@@ -56,7 +87,6 @@ export interface Todo {
   description?: string;
   status: TodoStatus;
   priority: number;
-  is_marked: boolean;
   group_id?: string;
   assignee?: string;
   start_date?: number;
@@ -67,7 +97,7 @@ export interface Todo {
   tags?: Tag[];
   steps?: TodoStep[];
   attachments?: Attachment[];
-  group?: TaskGroup;
+  group_info?: TaskGroup;
 }
 
 /**
@@ -142,7 +172,6 @@ export interface UpdateTodoRequest {
   description?: string;
   status?: TodoStatus;
   priority?: number;
-  is_marked?: boolean;
   group_id?: string;
   assignee?: string;
   start_date?: number;
@@ -191,7 +220,7 @@ export interface TodoFilter {
   group_id?: string;
   tag_id?: string;
   status?: TodoStatus;
-  is_marked?: boolean;
+  priority?: number;
   search_keyword?: string;
   date_range?: {
     start: number;

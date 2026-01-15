@@ -9,11 +9,19 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
+    // Ensure Tauri can connect to the dev server
+    strictPort: true,
+    host: true,
   },
   envPrefix: ['VITE_', 'TAURI_'],
   resolve: {
     alias: {
       '@': path.posix.resolve('/', './src'),
     },
+  },
+  // Tauri 2.0 requires this for development mode
+  define: {
+    __TAURI_PLATFORM__: '"windows"',
+    __TAURI_ARCH__: '"x86_64"',
   },
 }));

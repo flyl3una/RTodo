@@ -15,54 +15,17 @@ export const useTodoStore = defineStore('todo', () => {
   const filterGroupId = ref<string | undefined>();
   const filterTagId = ref<string | undefined>();
   const filterStatus = ref<TodoStatus | undefined>();
-  const filterIsMarked = ref<boolean | undefined>();
   const filterPriority = ref<number | undefined>();
   const searchQuery = ref<string>('');
   const filterStartDate = ref<number | undefined>();
   const filterEndDate = ref<number | undefined>();
 
   // Computed
+  // filteredTodos 直接返回 todos.value，因为筛选已经在 fetchTodos 中通过 API 完成
   const filteredTodos = computed(() => {
-    let result = todos.value;
-
-    if (filterGroupId.value) {
-      result = result.filter(t => t.group_id === filterGroupId.value);
-    }
-    if (filterTagId.value) {
-      result = result.filter(t => t.tags?.some(tag => tag.id === filterTagId.value));
-    }
-    if (filterStatus.value !== undefined) {
-      result = result.filter(t => t.status === filterStatus.value);
-    }
-    if (filterIsMarked.value !== undefined) {
-      result = result.filter(t => t.is_marked === filterIsMarked.value);
-    }
-    if (filterPriority.value !== undefined) {
-      result = result.filter(t => t.priority === filterPriority.value);
-    }
-    if (filterStartDate.value !== undefined) {
-      result = result.filter(t => {
-        // Filter by due_date or start_date falling within the range
-        const date = t.due_date || t.start_date;
-        return date && date >= filterStartDate.value!;
-      });
-    }
-    if (filterEndDate.value !== undefined) {
-      result = result.filter(t => {
-        // Filter by due_date or start_date falling within the range
-        const date = t.due_date || t.start_date;
-        return date && date < filterEndDate.value!;
-      });
-    }
-    if (searchQuery.value) {
-      const query = searchQuery.value.toLowerCase();
-      result = result.filter(t =>
-        t.title.toLowerCase().includes(query) ||
-        t.description?.toLowerCase().includes(query)
-      );
-    }
-
-    return result;
+    console.log('[TodoStore] filteredTodos computed, todos.length:', todos.value.length);
+    console.log('[TodoStore] filteredTodos data:', todos.value);
+    return todos.value;
   });
 
   const todoStats = computed(() => {
@@ -70,7 +33,7 @@ export const useTodoStore = defineStore('todo', () => {
     const todo = todos.value.filter(t => t.status === TodoStatus.Todo).length;
     const inProgress = todos.value.filter(t => t.status === TodoStatus.InProgress).length;
     const done = todos.value.filter(t => t.status === TodoStatus.Done).length;
-    const marked = todos.value.filter(t => t.is_marked).length;
+    const marked = todos.value.filter(t => t.priority >= 1).length;
 
     return { total, todo, inProgress, done, marked };
   });
@@ -80,16 +43,19 @@ export const useTodoStore = defineStore('todo', () => {
     loading.value = true;
     error.value = null;
     try {
-      todos.value = await api.getTodos({
+      const params = {
         group_id: filterGroupId.value,
         tag_id: filterTagId.value,
         status: filterStatus.value,
         search: searchQuery.value || undefined,
-        is_marked: filterIsMarked.value,
         priority: filterPriority.value,
         start_date: filterStartDate.value,
         end_date: filterEndDate.value,
-      });
+      };
+      console.log('[TodoStore] fetchTodos called with params:', params);
+      const result = await api.getTodos(params);
+      console.log('[TodoStore] fetchTodos returned', result.length, 'todos');
+      todos.value = result;
     } catch (e) {
       error.value = String(e);
       throw e;
@@ -131,18 +97,33 @@ export const useTodoStore = defineStore('todo', () => {
     loading.value = true;
     error.value = null;
     try {
+      console.log('[Store] updateTodo called with:', request);
       const updated = await api.updateTodo(request);
+      console.log('[Store] API returned updated todo:', updated);
+      console.log('[Store] updated.start_date:', updated.start_date, 'updated.due_date:', updated.due_date);
+
       // Update in list using splice to trigger Vue reactivity
       const index = todos.value.findIndex(t => t.id === updated.id);
+      console.log('[Store] Found todo at index:', index, 'out of', todos.value.length, 'todos');
+
       if (index !== -1) {
+        console.log('[Store] Old todo at index:', todos.value[index]);
         todos.value.splice(index, 1, updated);
+        console.log('[Store] Splice completed, new todo at index:', todos.value[index]);
+      } else {
+        console.warn('[Store] Todo not found in list, adding it');
+        todos.value.push(updated);
       }
+
       // Update current if selected
       if (currentTodo.value?.id === updated.id) {
         currentTodo.value = updated;
       }
+
+      console.log('[Store] updateTodo completed, returning:', updated);
       return updated;
     } catch (e) {
+      console.error('[Store] updateTodo error:', e);
       error.value = String(e);
       throw e;
     } finally {
@@ -196,46 +177,24 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  async function toggleTodoMark(id: string) {
-    loading.value = true;
-    error.value = null;
-    try {
-      const updated = await api.toggleTodoMark(id);
-      const index = todos.value.findIndex(t => t.id === updated.id);
-      if (index !== -1) {
-        // Use splice to trigger Vue reactivity
-        todos.value.splice(index, 1, updated);
-      }
-      if (currentTodo.value?.id === updated.id) {
-        currentTodo.value = updated;
-      }
-      return updated;
-    } catch (e) {
-      error.value = String(e);
-      throw e;
-    } finally {
-      loading.value = false;
-    }
-  }
-
   function setFilter(params: {
     group_id?: string;
     tag_id?: string;
     status?: TodoStatus;
     search?: string;
-    is_marked?: boolean;
     priority?: number;
     start_date?: number;
     end_date?: number;
   }) {
+    console.log('[TodoStore] setFilter called with:', params);
     filterGroupId.value = params.group_id;
     filterTagId.value = params.tag_id;
     filterStatus.value = params.status;
-    filterIsMarked.value = params.is_marked;
     filterPriority.value = params.priority;
     filterStartDate.value = params.start_date;
     filterEndDate.value = params.end_date;
     searchQuery.value = params.search || '';
+    console.log('[TodoStore] Filter state updated - group_id:', filterGroupId.value, 'tag_id:', filterTagId.value, 'status:', filterStatus.value);
     fetchTodos();
   }
 
@@ -314,7 +273,6 @@ export const useTodoStore = defineStore('todo', () => {
     updateTodo,
     deleteTodo,
     updateTodoStatus,
-    toggleTodoMark,
     setFilter,
     clearError,
     // Step methods

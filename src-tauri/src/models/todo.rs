@@ -23,7 +23,6 @@ pub struct Todo {
     pub description: Option<String>,
     pub status: TodoStatus,
     pub priority: i32,
-    pub is_marked: bool,
     pub group_id: Option<String>,
     pub assignee: Option<String>,
     pub start_date: Option<i64>,
@@ -39,7 +38,7 @@ pub struct Todo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub attachments: Option<Vec<Attachment>>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub group: Option<TaskGroup>,
+    pub group_info: Option<TaskGroup>,
 }
 
 /// 创建任务请求
@@ -55,6 +54,19 @@ pub struct CreateTodoRequest {
     pub tag_ids: Option<Vec<String>>,
 }
 
+/// 获取任务列表请求
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
+pub struct GetTodosRequest {
+    pub group_id: Option<String>,
+    pub tag_id: Option<String>,
+    pub status: Option<i32>,
+    pub search: Option<String>,
+    pub priority: Option<i32>,
+    pub start_date: Option<i64>,
+    pub end_date: Option<i64>,
+}
+
 /// 更新任务请求
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
@@ -68,8 +80,6 @@ pub struct UpdateTodoRequest {
     pub status: Option<TodoStatus>,
     #[serde(default)]
     pub priority: Option<i32>,
-    #[serde(default)]
-    pub is_marked: Option<bool>,
     #[serde(default)]
     pub group_id: Option<String>,
     #[serde(default)]

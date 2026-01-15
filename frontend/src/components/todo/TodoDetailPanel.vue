@@ -32,7 +32,7 @@
         <el-radio-group v-model="form.priority">
           <el-radio :label="0">普通</el-radio>
           <el-radio :label="1">重要</el-radio>
-          <el-radio :label="2">紧急</el-radio>
+          <el-radio :label="3">紧急</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -94,7 +94,7 @@
         />
         <h2 class="detail-title">{{ todo.title }}</h2>
         <el-button
-          :icon="todo.is_marked ? StarFilled : Star"
+          :icon="todo.priority >= 1 ? StarFilled : Star"
           circle
           text
           @click="handleMarkToggle"
@@ -120,13 +120,13 @@
       <div class="detail-section">
         <h4 class="section-title">时间</h4>
         <div class="time-info">
-          <div v-if="todo.start_date">
+          <div v-if="displayStartDate">
             <span class="time-label">开始:</span>
-            <span>{{ formatDate(todo.start_date) }}</span>
+            <span>{{ formatDate(displayStartDate) }}</span>
           </div>
-          <div v-if="todo.due_date">
+          <div v-if="displayDueDate">
             <span class="time-label">截止:</span>
-            <span>{{ formatDate(todo.due_date) }}</span>
+            <span>{{ formatDate(displayDueDate) }}</span>
           </div>
         </div>
       </div>
@@ -254,10 +254,14 @@ const rules: FormRules = {
 const tags = computed(() => tagStore.tags);
 
 // Watch for todo prop changes (when store updates the todo)
-watch(() => props.todo, (newTodo) => {
-  console.log('[TodoDetailPanel] Todo prop changed:', newTodo);
+watch(() => props.todo, (newTodo, oldTodo) => {
+  console.log('[TodoDetailPanel] Todo prop changed');
+  console.log('[TodoDetailPanel] New todo start_date:', newTodo.start_date, 'due_date:', newTodo.due_date);
+  console.log('[TodoDetailPanel] Old todo start_date:', oldTodo?.start_date, 'due_date:', oldTodo?.due_date);
+
   // If currently editing, sync the form with new data
   if (isEditing.value) {
+    console.log('[TodoDetailPanel] Syncing form with new data');
     form.value = {
       title: newTodo.title,
       description: newTodo.description || '',
@@ -267,6 +271,11 @@ watch(() => props.todo, (newTodo) => {
       due_date: newTodo.due_date,
       tag_ids: newTodo.tags?.map(t => t.id) || [],
     };
+  } else {
+    // Force re-render computed properties by accessing them
+    console.log('[TodoDetailPanel] Triggering reactivity for display');
+    console.log('[TodoDetailPanel] displayStartDate will be:', displayStartDate.value);
+    console.log('[TodoDetailPanel] displayDueDate will be:', displayDueDate.value);
   }
 }, { deep: true });
 
@@ -276,7 +285,7 @@ const statusText = computed(() => getStatusLabel(props.todo.status));
 
 const priorityType = computed(() => {
   switch (props.todo.priority) {
-    case 2: return 'danger';
+    case 3: return 'danger';
     case 1: return 'warning';
     default: return '';
   }
@@ -284,11 +293,15 @@ const priorityType = computed(() => {
 
 const priorityText = computed(() => {
   switch (props.todo.priority) {
-    case 2: return '紧急';
+    case 3: return '紧急';
     case 1: return '重要';
     default: return '普通';
   }
 });
+
+// Computed properties to ensure reactivity for time display
+const displayStartDate = computed(() => props.todo.start_date);
+const displayDueDate = computed(() => props.todo.due_date);
 
 function formatDate(timestamp?: number): string {
   if (!timestamp) return '-';
@@ -303,6 +316,10 @@ function formatDate(timestamp?: number): string {
 }
 
 function startEdit() {
+  console.log('[TodoDetailPanel] startEdit called');
+  console.log('[TodoDetailPanel] props.todo.start_date:', props.todo.start_date);
+  console.log('[TodoDetailPanel] props.todo.due_date:', props.todo.due_date);
+
   form.value = {
     title: props.todo.title,
     description: props.todo.description || '',
@@ -312,6 +329,12 @@ function startEdit() {
     due_date: props.todo.due_date,
     tag_ids: props.todo.tags?.map(t => t.id) || [],
   };
+
+  console.log('[TodoDetailPanel] form.value after init:', {
+    start_date: form.value.start_date,
+    due_date: form.value.due_date
+  });
+
   isEditing.value = true;
 }
 
@@ -326,19 +349,38 @@ async function handleSave() {
     await formRef.value.validate();
     loading.value = true;
 
+    console.log('[TodoDetailPanel] handleSave - form.value:', {
+      start_date: form.value.start_date,
+      due_date: form.value.due_date,
+      start_date_type: typeof form.value.start_date,
+      due_date_type: typeof form.value.due_date
+    });
+
+    // 构建请求对象
+    // 对于日期字段：
+    // - undefined: 不传递该字段（不更新）
+    // - null: 传递 null（清除日期）
+    // - 数字: 传递数字（设置日期）
     const request: UpdateTodoRequest = {
       id: props.todo.id,
       title: form.value.title,
       description: form.value.description || undefined,
       status: form.value.status,
       priority: form.value.priority,
-      start_date: form.value.start_date ?? undefined,
-      due_date: form.value.due_date ?? undefined,
+      // 保留原始值（包括 null），让 API 层决定如何处理
+      start_date: form.value.start_date,
+      due_date: form.value.due_date,
       tag_ids: form.value.tag_ids?.length ? form.value.tag_ids : undefined,
     };
 
+    console.log('[TodoDetailPanel] handleSave - request:', {
+      start_date: request.start_date,
+      start_date_type: typeof request.start_date,
+      due_date: request.due_date,
+      due_date_type: typeof request.due_date
+    });
+
     console.log('Saving todo with request:', request);
-    console.log('start_date:', request.start_date, 'due_date:', request.due_date);
 
     const updated = await todoStore.updateTodo(request);
 
@@ -346,9 +388,16 @@ async function handleSave() {
     console.log('Updated start_date:', updated.start_date, 'due_date:', updated.due_date);
 
     ElMessage.success('保存成功');
+
+    // 先退出编辑模式
     isEditing.value = false;
+
+    // 通知父组件
     emit('updated', updated);
+
+    console.log('[TodoDetailPanel] Save completed, isEditing:', isEditing.value);
   } catch (error: any) {
+    console.error('[TodoDetailPanel] Save error:', error);
     if (error?.errors) {
       return;
     }
@@ -370,10 +419,15 @@ async function handleStatusToggle() {
 
 async function handleMarkToggle() {
   try {
-    await todoStore.toggleTodoMark(props.todo.id);
-    emit('updated', { ...props.todo, is_marked: !props.todo.is_marked });
+    // Cycle through priorities: 0 (Normal) → 1 (Important) → 3 (Urgent) → 0 (Normal)
+    const newPriority = props.todo.priority === 0 ? 1 : (props.todo.priority === 1 ? 3 : 0);
+    await todoStore.updateTodo({
+      id: props.todo.id,
+      priority: newPriority,
+    });
+    emit('updated', { ...props.todo, priority: newPriority });
   } catch (error) {
-    ElMessage.error('标记切换失败');
+    ElMessage.error('优先级切换失败');
   }
 }
 

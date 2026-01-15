@@ -18,12 +18,12 @@
           <div class="todo-content">
             <div class="todo-title">
               <el-tag
-                v-if="todo.is_marked"
-                type="warning"
+                v-if="todo.priority >= 1"
+                :type="todo.priority === 3 ? 'danger' : 'warning'"
                 size="small"
                 effect="plain"
               >
-                重要
+                {{ todo.priority === 3 ? '紧急' : '重要' }}
               </el-tag>
               <span class="title-text">{{ todo.title }}</span>
             </div>
@@ -45,7 +45,7 @@
         </div>
         <div class="todo-actions">
           <el-button
-            :icon="todo.is_marked ? StarFilled : Star"
+            :icon="todo.priority >= 1 ? StarFilled : Star"
             circle
             text
             @click.stop="toggleMark(todo)"
@@ -70,7 +70,7 @@
             @click.stop
           />
           <el-button
-            :icon="todo.is_marked ? StarFilled : Star"
+            :icon="todo.priority >= 1 ? StarFilled : Star"
             circle
             text
             size="small"
@@ -80,12 +80,12 @@
         <div class="card-content">
           <div class="card-title">
             <el-tag
-              v-if="todo.is_marked"
-              type="warning"
+              v-if="todo.priority >= 1"
+              :type="todo.priority === 3 ? 'danger' : 'warning'"
               size="small"
               effect="plain"
             >
-              重要
+              {{ todo.priority === 3 ? '紧急' : '重要' }}
             </el-tag>
             <span class="title-text">{{ todo.title }}</span>
           </div>
@@ -137,6 +137,7 @@
     >
       <TodoDetailPanel
         v-if="selectedTodo"
+        :key="selectedTodo.id + '-' + selectedTodo.updated_at"
         :todo="selectedTodo"
         @updated="handleTodoUpdated"
         @deleted="handleTodoDeleted"
@@ -146,7 +147,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue';
+import { ref, computed, watch, toRef } from 'vue';
 import { Calendar, Star, StarFilled } from '@element-plus/icons-vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { useTodoStore } from '@/stores';
@@ -159,19 +160,39 @@ const todoStore = useTodoStore();
 const uiStore = useUIStore();
 
 const loading = computed(() => todoStore.loading);
-const filteredTodos = todoStore.filteredTodos;
-const viewMode = uiStore.viewMode;
+const filteredTodos = computed(() => todoStore.filteredTodos);
+const viewMode = toRef(uiStore, 'viewMode');
+
+// Debug logging
+console.log('[HomeView] Component setup - viewMode:', viewMode.value);
+console.log('[HomeView] Component setup - filteredTodos:', filteredTodos.value);
+
+// Watch for changes
+watch(filteredTodos, (newVal) => {
+  console.log('[HomeView] filteredTodos changed, length:', newVal?.length);
+  console.log('[HomeView] filteredTodos data:', newVal);
+}, { immediate: true });
+
+watch(viewMode, (newVal) => {
+  console.log('[HomeView] viewMode changed:', newVal);
+}, { immediate: true });
 
 const selectedTodo = ref<Todo | null>(null);
 const detailVisible = ref(false);
 
 // Watch for store changes and update selectedTodo if it's the same todo
 watch(() => todoStore.todos, (newTodos) => {
+  console.log('[HomeView] todoStore.todos changed, length:', newTodos.length);
   if (selectedTodo.value) {
     const updatedTodo = newTodos.find(t => t.id === selectedTodo.value!.id);
-    if (updatedTodo && updatedTodo !== selectedTodo.value) {
+    console.log('[HomeView] Looking for todo with id:', selectedTodo.value!.id, 'found:', !!updatedTodo);
+    if (updatedTodo) {
       console.log('[HomeView] Syncing selectedTodo with store data');
+      console.log('[HomeView] Old start_date:', selectedTodo.value.start_date, 'New start_date:', updatedTodo.start_date);
+      console.log('[HomeView] Old due_date:', selectedTodo.value.due_date, 'New due_date:', updatedTodo.due_date);
+      console.log('[HomeView] Old updated_at:', selectedTodo.value.updated_at, 'New updated_at:', updatedTodo.updated_at);
       selectedTodo.value = updatedTodo;
+      console.log('[HomeView] selectedTodo synced, new key would be:', updatedTodo.id + '-' + updatedTodo.updated_at);
     }
   }
 }, { deep: true });
@@ -194,10 +215,15 @@ async function toggleStatus(todo: Todo) {
 
 async function toggleMark(todo: Todo) {
   try {
-    await todoStore.toggleTodoMark(todo.id);
+    // Cycle through priorities: 0 (Normal) → 1 (Important) → 3 (Urgent) → 0 (Normal)
+    const newPriority = todo.priority === 0 ? 1 : (todo.priority === 1 ? 3 : 0);
+    await todoStore.updateTodo({
+      id: todo.id,
+      priority: newPriority,
+    });
   } catch (error) {
-    console.error('Failed to toggle mark:', error);
-    ElMessage.error('标记更新失败');
+    console.error('Failed to toggle priority:', error);
+    ElMessage.error('优先级更新失败');
   }
 }
 
@@ -206,10 +232,18 @@ function selectTodo(todo: Todo) {
   detailVisible.value = true;
 }
 
-function handleTodoUpdated(todo: Todo) {
-  selectedTodo.value = todo;
-  // Don't refetch - the store already updated the todos array in updateTodo/updateTodoStatus
-  // fetchTodos would overwrite the updated data with stale data from the server
+async function handleTodoUpdated(todo: Todo) {
+  console.log('[HomeView] handleTodoUpdated called');
+  // Wait for store to update, then sync selectedTodo
+  // Give the store time to update first
+  await new Promise(resolve => setTimeout(resolve, 100));
+
+  // Then update selectedTodo from the store
+  const updatedInStore = todoStore.todos.find(t => t.id === todo.id);
+  if (updatedInStore) {
+    console.log('[HomeView] Syncing selectedTodo from store after update');
+    selectedTodo.value = updatedInStore;
+  }
 }
 
 function handleTodoDeleted() {

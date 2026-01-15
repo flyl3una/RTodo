@@ -4,8 +4,8 @@
   "version": "0.1.0",
   "identifier": "com.rtodo.app",
   "build": {
-    "beforeDevCommand": "cd ../frontend && npm run dev",
-    "beforeBuildCommand": "cd ../frontend && npm run build",
+    "beforeDevCommand": "powershell -Command \"cd ../frontend; npm run dev\"",
+    "beforeBuildCommand": "powershell -Command \"cd ../frontend; npm run build\"",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../frontend/dist"
   },
@@ -23,7 +23,8 @@
     ],
     "security": {
       "csp": null
-    }
+    },
+    "withGlobalTauri": true
   },
   "bundle": {
     "active": false,

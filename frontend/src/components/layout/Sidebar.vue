@@ -34,8 +34,8 @@
         <a
           href="#"
           class="quick-link"
-          :class="{ active: currentView === 'marked' }"
-          @click.prevent="setFilter('marked')"
+          :class="{ active: currentView === 'important' }"
+          @click.prevent="setFilter('important')"
         >
           <el-icon><Star /></el-icon>
           <span>重要</span>
@@ -94,7 +94,7 @@
       <div class="section-title">
         标签
         <el-link type="primary" @click="showTagManage" style="float: right; font-size: 12px;">
-          管理
+          新建
         </el-link>
       </div>
       <div class="tags" v-if="tags.length > 0">
@@ -171,7 +171,7 @@ const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
-const currentView = ref<'all' | 'today' | 'marked' | 'urgent' | 'completed'>('all');
+const currentView = ref<'all' | 'today' | 'important' | 'urgent' | 'completed'>('all');
 const filterGroupId = ref<string | undefined>();
 const groupDialogVisible = ref(false);
 const editingGroup = ref<TaskGroup | undefined>();
@@ -188,13 +188,15 @@ function resetToAllView() {
   todoStore.setFilter({});
 }
 
-function setFilter(view: 'all' | 'today' | 'marked' | 'urgent' | 'completed') {
+function setFilter(view: 'all' | 'today' | 'important' | 'urgent' | 'completed') {
+  console.log('[Sidebar] setFilter called with view:', view);
   currentView.value = view;
   filterGroupId.value = undefined;
 
   // Apply filter
   switch (view) {
     case 'all':
+      console.log('[Sidebar] Applying "all" filter (no params)');
       todoStore.setFilter({});
       break;
     case 'today':
@@ -205,21 +207,26 @@ function setFilter(view: 'all' | 'today' | 'marked' | 'urgent' | 'completed') {
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowStart = tomorrow.getTime();
+      console.log('[Sidebar] Applying "today" filter:', { start_date: todayStart, end_date: tomorrowStart });
       // Filter by due_date in range [today, tomorrow)
       todoStore.setFilter({
         start_date: todayStart,
         end_date: tomorrowStart
       });
       break;
-    case 'marked':
-      todoStore.setFilter({ is_marked: true });
+    case 'important':
+      // Filter by priority = 1 (important)
+      console.log('[Sidebar] Applying "important" filter:', { priority: 1 });
+      todoStore.setFilter({ priority: 1 });
       break;
     case 'urgent':
-      // Filter by priority = 2 (urgent)
-      todoStore.setFilter({ priority: 2 });
+      // Filter by priority = 3 (urgent)
+      console.log('[Sidebar] Applying "urgent" filter:', { priority: 3 });
+      todoStore.setFilter({ priority: 3 });
       break;
     case 'completed':
       // Filter by status = Done (2)
+      console.log('[Sidebar] Applying "completed" filter:', { status: TodoStatus.Done });
       todoStore.setFilter({ status: TodoStatus.Done });
       break;
   }
@@ -231,8 +238,9 @@ function setFilter(view: 'all' | 'today' | 'marked' | 'urgent' | 'completed') {
 }
 
 function selectGroup(groupId: string) {
+  console.log('[Sidebar] selectGroup called with groupId:', groupId);
   currentView.value = 'all';
-  filterGroupId.value = groupId;
+  filterGroupId.value = groupId; // Keep local state in sync for UI display
   todoStore.setFilter({ group_id: groupId });
   if (route.path !== '/') {
     router.push('/');
@@ -240,6 +248,9 @@ function selectGroup(groupId: string) {
 }
 
 function selectTag(tagId: string) {
+  console.log('[Sidebar] selectTag called with tagId:', tagId);
+  currentView.value = 'all';
+  filterGroupId.value = undefined; // Tags don't use group_id filter
   todoStore.setFilter({ tag_id: tagId });
   if (route.path !== '/') {
     router.push('/');

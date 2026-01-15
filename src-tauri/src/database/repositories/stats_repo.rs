@@ -39,9 +39,9 @@ impl StatsRepository {
             |row| row.get(0)
         ).context("Failed to get done count")?;
 
-        // 获取重要任务数
+        // 获取重要任务数（优先级 >= 1 的任务）
         let marked: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE is_marked = 1",
+            "SELECT COUNT(*) FROM todos WHERE priority >= 1",
             [],
             |row| row.get(0)
         ).context("Failed to get marked count")?;
@@ -144,7 +144,6 @@ impl StatsRepository {
             None, // tag_id
             None, // status
             None, // search
-            None, // is_marked
             None, // priority
             start_date,
             end_date,

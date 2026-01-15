@@ -3,7 +3,7 @@
 
 use crate::database::Database;
 use crate::database::repositories::TodoRepository;
-use crate::models::Todo;
+use crate::models::{Todo, UpdateTodoRequest};
 
 /// 获取任务列表
 #[tauri::command]
@@ -12,30 +12,34 @@ pub async fn get_todos(
     tag_id: Option<String>,
     status: Option<i32>,
     search: Option<String>,
-    is_marked: Option<bool>,
     priority: Option<i32>,
     start_date: Option<i64>,
     end_date: Option<i64>,
     db: tauri::State<'_, Database>,
 ) -> Result<Vec<Todo>, String> {
-    tracing::info!("get_todos called: group_id={:?}, tag_id={:?}, status={:?}, search={:?}, is_marked={:?}, priority={:?}, start_date={:?}, end_date={:?}",
-        group_id, tag_id, status, search, is_marked, priority, start_date, end_date);
+    tracing::info!("get_todos called: group_id={:?}, tag_id={:?}, status={:?}, search={:?}, priority={:?}, start_date={:?}, end_date={:?}",
+        group_id, tag_id, status, search, priority, start_date, end_date);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    TodoRepository::list(
+    let result = TodoRepository::list(
         inner,
         group_id.as_deref(),
         tag_id.as_deref(),
         status,
         search.as_deref(),
-        is_marked,
         priority,
         start_date,
         end_date,
-    ).map_err(|e| format!("Failed to get todos: {}", e))
+    ).map_err(|e| {
+        tracing::error!("get_todos failed: {}", e);
+        format!("Failed to get todos: {}", e)
+    })?;
+
+    tracing::info!("get_todos returned {} todos", result.len());
+    Ok(result)
 }
 
 /// 获取单个任务详情
@@ -50,9 +54,18 @@ pub async fn get_todo(
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    TodoRepository::get(inner, &id)
-        .map_err(|e| format!("Failed to get todo: {}", e))?
-        .ok_or_else(|| format!("Todo not found: {}", id))
+    let result = TodoRepository::get(inner, &id)
+        .map_err(|e| {
+            tracing::error!("get_todo failed for id={}: {}", id, e);
+            format!("Failed to get todo: {}", e)
+        })?
+        .ok_or_else(|| {
+            tracing::warn!("get_todo: todo not found: {}", id);
+            format!("Todo not found: {}", id)
+        })?;
+
+    tracing::info!("get_todo returned todo: id={}, title={}", result.id, result.title);
+    Ok(result)
 }
 
 /// 创建任务
@@ -73,7 +86,7 @@ pub async fn create_todo(
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    TodoRepository::create(
+    let result = TodoRepository::create(
         inner,
         &title,
         description.as_deref(),
@@ -82,52 +95,55 @@ pub async fn create_todo(
         due_date,
         priority.unwrap_or(0),
         tag_ids,
-    ).map_err(|e| format!("Failed to create todo: {}", e))
+    ).map_err(|e| {
+        tracing::error!("create_todo failed: {}", e);
+        format!("Failed to create todo: {}", e)
+    })?;
+
+    tracing::info!("create_todo succeeded: id={}, title={}", result.id, result.title);
+    Ok(result)
 }
 
 /// 更新任务
 #[tauri::command]
 pub async fn update_todo(
-    id: String,
-    title: Option<String>,
-    description: Option<String>,
-    status: Option<i32>,
-    priority: Option<i32>,
-    is_marked: Option<bool>,
-    group_id: Option<String>,
-    assignee: Option<String>,
-    start_date: Option<i64>,
-    due_date: Option<i64>,
-    tag_ids: Option<Vec<String>>,
+    payload: UpdateTodoRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<Todo, String> {
-    tracing::info!("update_todo called: id={}, start_date={:?}, due_date={:?}", id, start_date, due_date);
+    tracing::info!("update_todo called: id={}, title={:?}, start_date={:?}, due_date={:?}, status={:?}",
+        payload.id, payload.title, payload.start_date, payload.due_date, payload.status);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
     // 将 Option<String> 转换为 Option<Option<String>> 用于表示是否需要更新
-    let desc_opt: Option<Option<String>> = description.map(Some);
-    let group_opt: Option<Option<String>> = group_id.map(Some);
-    let assignee_opt: Option<Option<String>> = assignee.map(Some);
-    let start_opt: Option<Option<i64>> = start_date.map(Some);
-    let due_opt: Option<Option<i64>> = due_date.map(Some);
+    let desc_opt: Option<Option<String>> = payload.description.map(Some);
+    let group_opt: Option<Option<String>> = payload.group_id.map(Some);
+    let assignee_opt: Option<Option<String>> = payload.assignee.map(Some);
+    let start_opt: Option<Option<i64>> = payload.start_date.map(Some);
+    let due_opt: Option<Option<i64>> = payload.due_date.map(Some);
 
-    TodoRepository::update(
+    let result = TodoRepository::update(
         inner,
-        &id,
-        title.as_deref(),
+        &payload.id,
+        payload.title.as_deref(),
         desc_opt,
-        status,
-        priority,
-        is_marked,
+        payload.status.map(|s| s as i32),
+        payload.priority,
         group_opt,
         assignee_opt,
         start_opt,
         due_opt,
-        tag_ids,
-    ).map_err(|e| format!("Failed to update todo: {}", e))
+        payload.tag_ids,
+    ).map_err(|e| {
+        tracing::error!("update_todo failed for id={}: {}", payload.id, e);
+        format!("Failed to update todo: {}", e)
+    })?;
+
+    tracing::info!("update_todo succeeded: id={}, start_date={:?}, due_date={:?}",
+        result.id, result.start_date, result.due_date);
+    Ok(result)
 }
 
 /// 删除任务
@@ -143,7 +159,13 @@ pub async fn delete_todo(
     let inner = conn_guard.inner();
 
     TodoRepository::delete(inner, &id)
-        .map_err(|e| format!("Failed to delete todo: {}", e))
+        .map_err(|e| {
+            tracing::error!("delete_todo failed for id={}: {}", id, e);
+            format!("Failed to delete todo: {}", e)
+        })?;
+
+    tracing::info!("delete_todo succeeded: id={}", id);
+    Ok(())
 }
 
 /// 更新任务状态
@@ -159,22 +181,12 @@ pub async fn update_todo_status(
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    TodoRepository::update_status(inner, &id, status)
-        .map_err(|e| format!("Failed to update todo status: {}", e))
-}
+    let result = TodoRepository::update_status(inner, &id, status)
+        .map_err(|e| {
+            tracing::error!("update_todo_status failed for id={}: {}", id, e);
+            format!("Failed to update todo status: {}", e)
+        })?;
 
-/// 切换任务重要标记
-#[tauri::command]
-pub async fn toggle_todo_mark(
-    id: String,
-    db: tauri::State<'_, Database>,
-) -> Result<Todo, String> {
-    tracing::info!("toggle_todo_mark called: id={}", id);
-
-    let conn = db.get_connection().await;
-    let conn_guard = conn.lock().await;
-    let inner = conn_guard.inner();
-
-    TodoRepository::toggle_mark(inner, &id)
-        .map_err(|e| format!("Failed to toggle todo mark: {}", e))
+    tracing::info!("update_todo_status succeeded: id={}, status={}", result.id, result.status as i32);
+    Ok(result)
 }

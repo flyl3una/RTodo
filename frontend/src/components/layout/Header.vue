@@ -45,7 +45,6 @@
               style="width: 100%"
               @change="applyFilters"
             >
-              <el-option label="全部" :value="undefined" />
               <el-option label="待办" :value="TodoStatus.Todo" />
               <el-option label="进行中" :value="TodoStatus.InProgress" />
               <el-option label="已完成" :value="TodoStatus.Done" />
@@ -62,7 +61,6 @@
               style="width: 100%"
               @change="applyFilters"
             >
-              <el-option label="全部" :value="undefined" />
               <el-option label="普通" :value="0" />
               <el-option label="重要" :value="1" />
               <el-option label="紧急" :value="2" />
@@ -79,7 +77,6 @@
               style="width: 100%"
               @change="applyFilters"
             >
-              <el-option label="全部" :value="undefined" />
               <el-option
                 v-for="group in groups"
                 :key="group.id"

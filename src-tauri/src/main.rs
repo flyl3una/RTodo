@@ -7,22 +7,33 @@ mod commands;
 mod database;
 mod models;
 mod utils;
+mod logging;
 
 use database::Database;
+use logging::{load_config, init_logging, LogWorkerGuards};
 
 #[tokio::main]
 async fn main() {
-    // 初始化日志
-    tracing_subscriber::fmt::init();
+    // 加载日志配置
+    let log_config = load_config();
+
+    // 初始化日志系统并获取 guards
+    // _log_guards 必须在程序整个生命周期中保持存活，否则日志后台线程会停止
+    let _log_guards = init_logging(&log_config).expect("Failed to initialize logging");
+
+    tracing::info!("RTodo application starting...");
 
     // 构建应用
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .setup(|app| {
+            tracing::info!("Setting up application...");
+
             // 初始化数据库连接池
             let db = Database::new().expect("Failed to initialize database");
             app.manage(db);
 
+            tracing::info!("Application setup completed successfully");
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -32,7 +43,6 @@ async fn main() {
             commands::todo_commands::update_todo,
             commands::todo_commands::delete_todo,
             commands::todo_commands::update_todo_status,
-            commands::todo_commands::toggle_todo_mark,
             commands::group_commands::get_task_groups,
             commands::group_commands::create_task_group,
             commands::group_commands::update_task_group,

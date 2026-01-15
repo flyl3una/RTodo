@@ -18,7 +18,6 @@ impl TodoRepository {
         tag_id: Option<&str>,
         status: Option<i32>,
         search: Option<&str>,
-        is_marked: Option<bool>,
         priority: Option<i32>,
         start_date: Option<i64>,
         end_date: Option<i64>,
@@ -63,11 +62,15 @@ impl TodoRepository {
             }
         }
 
-        // 按重要标记筛选
-        if let Some(marked) = is_marked {
-            where_clauses.push("t.is_marked = ?");
-            params.push(Box::new(if marked { 1 } else { 0 }));
-        }
+        // 按重要标记筛选 - 转换为优先级查询
+        // is_marked=true 表示 priority > 0（有优先级即标记为重要）
+        // if let Some(marked) = is_marked {
+        //     if marked {
+        //         where_clauses.push("t.priority > 0");
+        //     } else {
+        //         where_clauses.push("t.priority = 0");
+        //     }
+        // }
 
         // 按优先级筛选
         if let Some(p) = priority {
@@ -75,14 +78,31 @@ impl TodoRepository {
             params.push(Box::new(p));
         }
 
-        // 按时间范围筛选（due_date）
+        // 按时间范围筛选（start_date 或 due_date）
+        // "今天"应该返回：今天开始的任务 OR 今天截止的任务
         if let Some(start) = start_date {
-            where_clauses.push("t.due_date >= ?");
-            params.push(Box::new(start));
-        }
-        if let Some(end) = end_date {
-            where_clauses.push("t.due_date < ?");
+            if let Some(end) = end_date {
+                // 同时提供了开始和结束时间
+                // 查找：(start_date 在时间范围内) OR (due_date 在时间范围内)
+                where_clauses.push("(t.start_date >= ? AND t.start_date < ?) OR (t.due_date >= ? AND t.due_date < ?)");
+                params.push(Box::new(start));
+                params.push(Box::new(end));
+                params.push(Box::new(start));
+                params.push(Box::new(end));
+                tracing::debug!("Time range filter: start={}, end={}, checking both start_date and due_date", start, end);
+            } else {
+                // 只有开始时间，查找 start_date >= start OR due_date >= start
+                where_clauses.push("(t.start_date >= ?) OR (t.due_date >= ?)");
+                params.push(Box::new(start));
+                params.push(Box::new(start));
+                tracing::debug!("Time start filter: start={}, checking both start_date and due_date", start);
+            }
+        } else if let Some(end) = end_date {
+            // 只有结束时间，查找 start_date < end OR due_date < end
+            where_clauses.push("(t.start_date < ?) OR (t.due_date < ?)");
             params.push(Box::new(end));
+            params.push(Box::new(end));
+            tracing::debug!("Time end filter: end={}, checking both start_date and due_date", end);
         }
 
         // 添加 WHERE 子句
@@ -91,10 +111,10 @@ impl TodoRepository {
             query.push_str(&where_clauses.join(" AND "));
         }
 
-        // 排序：未完成在前，然后按创建时间倒序
+        // 排序：未完成在前，按优先级降序，然后按截止时间升序，最后按创建时间倒序
         query.push_str(" ORDER BY
             CASE WHEN t.status = 2 THEN 1 ELSE 0 END,
-            t.is_marked DESC,
+            t.priority DESC,
             t.due_date ASC,
             t.created_at DESC");
 
@@ -118,7 +138,6 @@ impl TodoRepository {
                 description: row.get("description")?,
                 status,
                 priority: row.get("priority")?,
-                is_marked: row.get::<_, i32>("is_marked")? == 1,
                 group_id: row.get("group_id")?,
                 assignee: row.get("assignee")?,
                 start_date: row.get("start_date")?,
@@ -129,7 +148,7 @@ impl TodoRepository {
                 tags: None,
                 steps: None,
                 attachments: None,
-                group: None,
+                group_info: None,
             })
         })
         .context("Failed to execute get_todos query")?;
@@ -149,6 +168,8 @@ impl TodoRepository {
 
     /// 根据 ID 获取单个任务
     pub fn get(conn: &Connection, id: &str) -> Result<Option<Todo>> {
+        tracing::debug!("TodoRepository::get called with id={}", id);
+
         let mut stmt = conn.prepare(
             "SELECT * FROM todos WHERE id = ?"
         )
@@ -162,33 +183,44 @@ impl TodoRepository {
                 2 => TodoStatus::Done,
                 _ => TodoStatus::Todo, // 默认为待办
             };
+
+            // 直接从数据库读取并记录日志
+            let start_date: Option<i64> = row.get("start_date")?;
+            let due_date: Option<i64> = row.get("due_date")?;
+
+            tracing::info!("Database row - start_date: {:?}, due_date: {:?}", start_date, due_date);
+
             Ok(Todo {
                 id: row.get("id")?,
                 title: row.get("title")?,
                 description: row.get("description")?,
                 status,
                 priority: row.get("priority")?,
-                is_marked: row.get::<_, i32>("is_marked")? == 1,
                 group_id: row.get("group_id")?,
                 assignee: row.get("assignee")?,
-                start_date: row.get("start_date")?,
-                due_date: row.get("due_date")?,
+                start_date,
+                due_date,
                 completed_at: row.get("completed_at")?,
                 created_at: row.get("created_at")?,
                 updated_at: row.get("updated_at")?,
                 tags: None,
                 steps: None,
                 attachments: None,
-                group: None,
+                group_info: None,
             })
         })
         .optional()
         .context("Failed to execute get_todo query")?;
 
         if let Some(mut todo) = todo_opt {
+            tracing::info!("Todo found before loading relations - start_date: {:?}, due_date: {:?}",
+                todo.start_date, todo.due_date);
             Self::load_relations(conn, &mut todo)?;
+            tracing::info!("Todo after loading relations - start_date: {:?}, due_date: {:?}",
+                todo.start_date, todo.due_date);
             Ok(Some(todo))
         } else {
+            tracing::warn!("Todo not found with id: {}", id);
             Ok(None)
         }
     }
@@ -211,16 +243,15 @@ impl TodoRepository {
         conn.execute(
             "INSERT INTO todos (
                 id, title, description, status, priority,
-                is_marked, group_id, start_date, due_date,
+                group_id, start_date, due_date,
                 created_at, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
             params![
                 id,
                 title,
                 description,
                 status as i32,
                 priority,
-                0, // is_marked
                 group_id,
                 start_date,
                 due_date,
@@ -253,13 +284,15 @@ impl TodoRepository {
         description: Option<Option<String>>,
         status: Option<i32>,
         priority: Option<i32>,
-        is_marked: Option<bool>,
         group_id: Option<Option<String>>,
         assignee: Option<Option<String>>,
         start_date: Option<Option<i64>>,
         due_date: Option<Option<i64>>,
         tag_ids: Option<Vec<String>>,
     ) -> Result<Todo> {
+        tracing::info!("TodoRepository::update called with id={}, start_date={:?}, due_date={:?}",
+            id, start_date, due_date);
+
         let now = Utc::now().timestamp_millis();
 
         // 构建 SET 子句
@@ -269,17 +302,20 @@ impl TodoRepository {
         if let Some(t) = title {
             sets.push("title = ?");
             params.push(Box::new(t.to_string()));
+            tracing::debug!("Will update title: {}", t);
         }
         if let Some(d) = description {
+            tracing::debug!("Will update description: {:?}", d);
             sets.push("description = ?");
             match d {
-                Some(val) => params.push(Box::new(val)),
+                Some(ref val) => params.push(Box::new(val.clone())),
                 None => params.push(Box::new(None::<String>)),
             }
         }
         if let Some(s) = status {
             sets.push("status = ?");
             params.push(Box::new(s));
+            tracing::debug!("Will update status: {}", s);
 
             // 如果状态变为完成 (2)，设置完成时间
             if s == 2 {
@@ -293,12 +329,10 @@ impl TodoRepository {
         if let Some(p) = priority {
             sets.push("priority = ?");
             params.push(Box::new(p));
-        }
-        if let Some(m) = is_marked {
-            sets.push("is_marked = ?");
-            params.push(Box::new(if m { 1 } else { 0 }));
+            tracing::debug!("Will update priority: {}", p);
         }
         if let Some(g) = group_id {
+            tracing::debug!("Will update group_id: {:?}", g);
             sets.push("group_id = ?");
             match g {
                 Some(val) => params.push(Box::new(val)),
@@ -306,25 +340,45 @@ impl TodoRepository {
             }
         }
         if let Some(a) = assignee {
+            tracing::debug!("Will update assignee: {:?}", a);
             sets.push("assignee = ?");
             match a {
                 Some(val) => params.push(Box::new(val)),
                 None => params.push(Box::new(None::<String>)),
             }
         }
+        // 关键：添加 start_date 和 due_date 的日志
         if let Some(sd) = start_date {
+            tracing::info!("Will update start_date: {:?}", sd);
             sets.push("start_date = ?");
             match sd {
-                Some(val) => params.push(Box::new(val)),
-                None => params.push(Box::new(None::<i64>)),
+                Some(val) => {
+                    params.push(Box::new(val));
+                    tracing::info!("Will update start_date to: {}", val);
+                },
+                None => {
+                    params.push(Box::new(None::<i64>));
+                    tracing::info!("Will clear start_date");
+                },
             }
+        } else {
+            tracing::debug!("start_date is None, not updating");
         }
         if let Some(dd) = due_date {
+            tracing::info!("Will update due_date: {:?}", dd);
             sets.push("due_date = ?");
             match dd {
-                Some(val) => params.push(Box::new(val)),
-                None => params.push(Box::new(None::<i64>)),
+                Some(val) => {
+                    params.push(Box::new(val));
+                    tracing::info!("Will update due_date to: {}", val);
+                },
+                None => {
+                    params.push(Box::new(None::<i64>));
+                    tracing::info!("Will clear due_date");
+                },
             }
+        } else {
+            tracing::debug!("due_date is None, not updating");
         }
 
         sets.push("updated_at = ?");
@@ -332,23 +386,29 @@ impl TodoRepository {
 
         if sets.is_empty() && tag_ids.is_none() {
             // 没有要更新的字段，直接返回现有数据
+            tracing::warn!("No fields to update, returning existing data");
             return Self::get(conn, id)?.context("Todo not found");
         }
 
         // 执行更新（如果有没有字段需要更新）
         if !sets.is_empty() {
             let query = format!("UPDATE todos SET {} WHERE id = ?", sets.join(", "));
+            tracing::info!("Update query: {}", query);
+            tracing::info!("Number of parameters: {}", params.len());
 
             // 添加 id 参数（需要借用）
             let mut param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
             param_refs.push(&id);
 
-            conn.execute(&query, param_refs.as_slice())
+            let rows_affected = conn.execute(&query, param_refs.as_slice())
                 .context("Failed to update todo")?;
+
+            tracing::info!("Update executed, rows affected: {}", rows_affected);
         }
 
         // 更新标签关联（如果提供）
         if let Some(tags) = tag_ids {
+            tracing::info!("Updating tags: {:?}", tags);
             // 先删除旧关联
             conn.execute(
                 "DELETE FROM todo_tags WHERE todo_id = ?",
@@ -366,7 +426,12 @@ impl TodoRepository {
             }
         }
 
-        Self::get(conn, id)?.context("Updated todo not found")
+        tracing::info!("Fetching updated todo from database...");
+        let updated_todo = Self::get(conn, id)?.context("Updated todo not found")?;
+        tracing::info!("Updated todo fetched: start_date={:?}, due_date={:?}",
+            updated_todo.start_date, updated_todo.due_date);
+
+        Ok(updated_todo)
     }
 
     /// 删除任务
@@ -394,28 +459,6 @@ impl TodoRepository {
             params![status, completed_at, now, id],
         )
         .context("Failed to update todo status")?;
-
-        Self::get(conn, id)?.context("Updated todo not found")
-    }
-
-    /// 切换任务重要标记
-    pub fn toggle_mark(conn: &Connection, id: &str) -> Result<Todo> {
-        // 先获取当前状态
-        let current: i32 = conn.query_row(
-            "SELECT is_marked FROM todos WHERE id = ?",
-            params![id],
-            |row| row.get(0),
-        )
-        .context("Failed to get current mark status")?;
-
-        let new_mark = if current == 0 { 1 } else { 0 };
-        let now = Utc::now().timestamp_millis();
-
-        conn.execute(
-            "UPDATE todos SET is_marked = ?1, updated_at = ?2 WHERE id = ?3",
-            params![new_mark, now, id],
-        )
-        .context("Failed to toggle todo mark")?;
 
         Self::get(conn, id)?.context("Updated todo not found")
     }
@@ -527,7 +570,7 @@ impl TodoRepository {
             .context("Failed to execute group query")?;
 
             if let Some(group) = group_opt {
-                todo.group = Some(group);
+                todo.group_info = Some(group);
             }
         }
 

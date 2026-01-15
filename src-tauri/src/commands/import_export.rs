@@ -35,7 +35,6 @@ pub async fn export_all_data(
         None,  // tag_id
         None,  // status
         None,  // search
-        None,  // is_marked
         None,  // priority
         None,  // start_date
         None,  // end_date
@@ -134,16 +133,15 @@ pub async fn import_data(
             transaction.execute(
                 "UPDATE todos SET
                     title = ?1, description = ?2, status = ?3, priority = ?4,
-                    is_marked = ?5, group_id = ?6, assignee = ?7,
-                    start_date = ?8, due_date = ?9, completed_at = ?10,
-                    updated_at = ?11
-                 WHERE id = ?12",
+                    group_id = ?5, assignee = ?6,
+                    start_date = ?7, due_date = ?8, completed_at = ?9,
+                    updated_at = ?10
+                 WHERE id = ?11",
                 params![
                     todo.title,
                     todo.description,
                     todo.status as i32,
                     todo.priority,
-                    if todo.is_marked { 1 } else { 0 },
                     todo.group_id,
                     todo.assignee,
                     todo.start_date,
@@ -157,17 +155,16 @@ pub async fn import_data(
             // 不存在，插入
             transaction.execute(
                 "INSERT INTO todos (
-                    id, title, description, status, priority, is_marked,
+                    id, title, description, status, priority,
                     group_id, assignee, start_date, due_date, completed_at,
                     created_at, updated_at
-                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)",
+                ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
                 params![
                     todo.id,
                     todo.title,
                     todo.description,
                     todo.status as i32,
                     todo.priority,
-                    if todo.is_marked { 1 } else { 0 },
                     todo.group_id,
                     todo.assignee,
                     todo.start_date,
