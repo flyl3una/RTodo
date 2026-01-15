@@ -143,13 +143,33 @@ async fn main() {
             commands::app_commands::toggle_window_visibility,
             commands::app_commands::show_window,
             commands::app_commands::hide_window,
+            commands::app_commands::set_close_behavior,
+            commands::app_commands::get_close_behavior,
         ])
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. } => {
-                // 阻止窗口关闭，改为隐藏
-                api.prevent_close();
-                let _ = window.hide();
-                tracing::info!("Window close requested - hiding instead");
+                // 检查关闭行为设置
+                let app_handle = window.app_handle();
+                if let Some(state) = app_handle.try_state::<commands::app_commands::AppState>() {
+                    let close_behavior = state.close_behavior.lock().unwrap();
+                    match *close_behavior {
+                        commands::app_commands::CloseBehavior::Direct => {
+                            // 直接关闭，不做任何处理
+                            tracing::info!("Window close requested - closing directly");
+                        }
+                        commands::app_commands::CloseBehavior::MinimizeToTray => {
+                            // 阻止窗口关闭，改为隐藏到托盘
+                            api.prevent_close();
+                            let _ = window.hide();
+                            tracing::info!("Window close requested - hiding to tray");
+                        }
+                    }
+                } else {
+                    // 默认行为：隐藏到托盘（保持向后兼容）
+                    api.prevent_close();
+                    let _ = window.hide();
+                    tracing::info!("Window close requested - hiding to tray (default)");
+                }
             }
             _ => {}
         })

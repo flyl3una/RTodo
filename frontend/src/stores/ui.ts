@@ -6,6 +6,7 @@ export type ViewMode = 'list' | 'card';
 export type Theme = 'light' | 'dark' | 'auto';
 export type Language = 'zh-CN' | 'zh-TW' | 'en-US' | 'ja-JP';
 export type DensityMode = 'comfortable' | 'compact';
+export type CloseBehavior = 'direct' | 'minimize_to_tray';
 
 export const useUIStore = defineStore('ui', () => {
   const { locale } = useI18n();
@@ -67,6 +68,9 @@ export const useUIStore = defineStore('ui', () => {
   // Global shortcut
   const globalShortcut = ref<string>('CmdOrCtrl+Shift+T');
 
+  // Close behavior
+  const closeBehavior = ref<CloseBehavior>('direct');
+
   // Selected todo
   const selectedTodoId = ref<string | null>(null);
 
@@ -106,6 +110,18 @@ export const useUIStore = defineStore('ui', () => {
   const savedGlobalShortcut = localStorage.getItem('rtodo-global-shortcut');
   if (savedGlobalShortcut) {
     globalShortcut.value = savedGlobalShortcut;
+  }
+
+  // Initialize close behavior from localStorage and sync with backend
+  const savedCloseBehavior = localStorage.getItem('rtodo-close-behavior') as CloseBehavior;
+  if (savedCloseBehavior && ['direct', 'minimize_to_tray'].includes(savedCloseBehavior)) {
+    closeBehavior.value = savedCloseBehavior;
+    // 异步同步到后端（不使用 await，因为是顶层初始化）
+    import('@/api/tauri').then(({ setCloseBehavior: setBehavior }) => {
+      setBehavior(savedCloseBehavior).catch((error) => {
+        console.error('Failed to sync close behavior to backend:', error);
+      });
+    });
   }
 
   // Actions
@@ -172,6 +188,19 @@ export const useUIStore = defineStore('ui', () => {
     }
   }
 
+  async function setCloseBehavior(behavior: CloseBehavior) {
+    closeBehavior.value = behavior;
+    localStorage.setItem('rtodo-close-behavior', behavior);
+    // 调用后端 API 设置关闭行为
+    try {
+      const { setCloseBehavior: setBehavior } = await import('@/api/tauri');
+      await setBehavior(behavior);
+    } catch (error) {
+      console.error('Failed to set close behavior:', error);
+      throw error;
+    }
+  }
+
   function selectTodo(id: string | null) {
     selectedTodoId.value = id;
   }
@@ -210,6 +239,7 @@ export const useUIStore = defineStore('ui', () => {
     developerMode,
     densityMode,
     globalShortcut,
+    closeBehavior,
     selectedTodoId,
     createTodoDialogVisible,
     groupManagerVisible,
@@ -224,6 +254,7 @@ export const useUIStore = defineStore('ui', () => {
     setDeveloperMode,
     setDensityMode,
     setGlobalShortcut,
+    setCloseBehavior,
     selectTodo,
     showCreateTodoDialog,
     hideCreateTodoDialog,

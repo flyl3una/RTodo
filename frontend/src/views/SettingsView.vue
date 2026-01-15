@@ -42,6 +42,13 @@
             <el-radio-button value="compact">{{ t('settings.densityCompact') }}</el-radio-button>
           </el-radio-group>
         </div>
+        <div class="setting-item">
+          <span class="setting-label">{{ t('settings.closeBehavior') }}</span>
+          <el-radio-group v-model="currentCloseBehavior" @change="handleCloseBehaviorChange">
+            <el-radio-button value="direct">{{ t('settings.closeDirect') }}</el-radio-button>
+            <el-radio-button value="minimize_to_tray">{{ t('settings.closeMinimizeToTray') }}</el-radio-button>
+          </el-radio-group>
+        </div>
       </section>
 
       <!-- Shortcuts -->
@@ -122,6 +129,7 @@ import { ref, computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useUIStore } from '@/stores';
+import type { CloseBehavior } from '@/stores';
 import * as api from '@/api/tauri';
 import Logo from '@/components/icon/logo.vue';
 import { save, open } from '@tauri-apps/plugin-dialog';
@@ -136,6 +144,7 @@ const currentThemeColor = ref(uiStore.themeColor);
 const currentDeveloperMode = ref(uiStore.developerMode);
 const currentDensityMode = ref(uiStore.densityMode);
 const currentGlobalShortcut = ref(uiStore.globalShortcut);
+const currentCloseBehavior = ref<CloseBehavior>(uiStore.closeBehavior);
 const exportLoading = ref(false);
 
 function handleThemeChange(value: 'light' | 'dark' | 'auto') {
@@ -164,6 +173,11 @@ function handleDeveloperModeChange(enabled: boolean) {
 function handleDensityModeChange(mode: 'comfortable' | 'compact') {
   uiStore.setDensityMode(mode);
   ElMessage.success(mode === 'compact' ? t('messages.densityCompact') : t('messages.densityComfortable'));
+}
+
+function handleCloseBehaviorChange(behavior: CloseBehavior) {
+  uiStore.setCloseBehavior(behavior);
+  ElMessage.success(behavior === 'minimize_to_tray' ? t('messages.closeBehaviorMinimizeToTray') : t('messages.closeBehaviorDirect'));
 }
 
 async function handleGlobalShortcutChange() {
@@ -275,6 +289,7 @@ onMounted(() => {
   currentDeveloperMode.value = uiStore.developerMode;
   currentDensityMode.value = uiStore.densityMode;
   currentGlobalShortcut.value = uiStore.globalShortcut;
+  currentCloseBehavior.value = uiStore.closeBehavior;
 });
 </script>
 

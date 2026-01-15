@@ -8,15 +8,43 @@ use tauri::{AppHandle, State, Window};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use std::sync::Mutex;
 
+/// 关闭行为选项
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CloseBehavior {
+    /// 直接关闭
+    Direct,
+    /// 最小化到托盘
+    MinimizeToTray,
+}
+
+impl CloseBehavior {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            CloseBehavior::Direct => "direct",
+            CloseBehavior::MinimizeToTray => "minimize_to_tray",
+        }
+    }
+
+    pub fn from_str(s: &str) -> Option<Self> {
+        match s {
+            "direct" => Some(CloseBehavior::Direct),
+            "minimize_to_tray" => Some(CloseBehavior::MinimizeToTray),
+            _ => None,
+        }
+    }
+}
+
 /// 应用程序状态
 pub struct AppState {
     pub hide_hotkey: Mutex<Option<String>>,
+    pub close_behavior: Mutex<CloseBehavior>,
 }
 
 impl AppState {
     pub fn new() -> Self {
         Self {
             hide_hotkey: Mutex::new(None),
+            close_behavior: Mutex::new(CloseBehavior::Direct), // 默认直接关闭
         }
     }
 }
@@ -96,4 +124,29 @@ pub async fn hide_window(window: Window) -> Result<(), String> {
     window.hide().map_err(|e| format!("Failed to hide window: {}", e))?;
     tracing::info!("Window hidden");
     Ok(())
+}
+
+/// 设置关闭行为
+#[tauri::command]
+pub async fn set_close_behavior(
+    behavior: String,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    let close_behavior = CloseBehavior::from_str(behavior.as_str())
+        .ok_or_else(|| format!("Invalid close behavior: {}", behavior))?;
+
+    let mut current_behavior = state.close_behavior.lock().map_err(|e| format!("Lock error: {}", e))?;
+    *current_behavior = close_behavior;
+
+    tracing::info!("Close behavior set to: {:?}", close_behavior);
+    Ok(())
+}
+
+/// 获取关闭行为
+#[tauri::command]
+pub async fn get_close_behavior(
+    state: State<'_, AppState>,
+) -> Result<String, String> {
+    let behavior = state.close_behavior.lock().map_err(|e| format!("Lock error: {}", e))?;
+    Ok(behavior.as_str().to_string())
 }

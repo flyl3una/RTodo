@@ -354,3 +354,17 @@ export async function showWindow(): Promise<void> {
 export async function hideWindow(): Promise<void> {
   return safeInvoke<void>('hide_window');
 }
+
+/**
+ * 设置关闭行为
+ */
+export async function setCloseBehavior(behavior: 'direct' | 'minimize_to_tray'): Promise<void> {
+  return safeInvoke<void>('set_close_behavior', { behavior });
+}
+
+/**
+ * 获取关闭行为
+ */
+export async function getCloseBehavior(): Promise<'direct' | 'minimize_to_tray'> {
+  return safeInvoke<string>('get_close_behavior');
+}
