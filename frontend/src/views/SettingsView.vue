@@ -35,6 +35,13 @@
           <span class="setting-label">开发模式</span>
           <el-switch v-model="currentDeveloperMode" @change="handleDeveloperModeChange" />
         </div>
+        <div class="setting-item">
+          <span class="setting-label">展示模式</span>
+          <el-radio-group v-model="currentDensityMode" @change="handleDensityModeChange">
+            <el-radio-button value="comfortable">宽松</el-radio-button>
+            <el-radio-button value="compact">紧凑</el-radio-button>
+          </el-radio-group>
+        </div>
       </section>
 
       <!-- Data Management -->
@@ -96,6 +103,7 @@ const currentTheme = ref(uiStore.theme);
 const currentLanguage = ref(uiStore.language);
 const currentThemeColor = ref(uiStore.themeColor);
 const currentDeveloperMode = ref(uiStore.developerMode);
+const currentDensityMode = ref(uiStore.densityMode);
 const exportLoading = ref(false);
 
 function handleThemeChange(value: 'light' | 'dark' | 'auto') {
@@ -119,6 +127,11 @@ function handleDeveloperModeChange(enabled: boolean) {
   uiStore.setDeveloperMode(enabled);
   console.log('[Settings] uiStore.developerMode after:', uiStore.developerMode);
   ElMessage.success(enabled ? '开发模式已开启' : '开发模式已关闭');
+}
+
+function handleDensityModeChange(mode: 'comfortable' | 'compact') {
+  uiStore.setDensityMode(mode);
+  ElMessage.success(mode === 'compact' ? '已切换到紧凑模式' : '已切换到宽松模式');
 }
 
 async function handleExport() {
@@ -214,6 +227,7 @@ onMounted(() => {
   currentLanguage.value = uiStore.language;
   currentThemeColor.value = uiStore.themeColor;
   currentDeveloperMode.value = uiStore.developerMode;
+  currentDensityMode.value = uiStore.densityMode;
 });
 </script>
 
@@ -352,5 +366,38 @@ onMounted(() => {
 [data-theme='dark'] .tech-stack span {
   background: #1a1a1a;
   color: #b0b0b0;
+}
+
+/* 紧凑模式 */
+[data-density='compact'] .settings-view {
+  padding: 14px;
+}
+
+[data-density='compact'] .page-title {
+  margin-bottom: 16px;
+}
+
+[data-density='compact'] .settings-content {
+  gap: 16px;
+}
+
+[data-density='compact'] .settings-section {
+  padding: 14px;
+}
+
+[data-density='compact'] .section-title {
+  margin-bottom: 10px;
+}
+
+[data-density='compact'] .setting-item {
+  padding: 8px 0;
+}
+
+[data-density='compact'] .about-content {
+  gap: 10px;
+}
+
+[data-density='compact'] .app-info {
+  gap: 12px;
 }
 </style>

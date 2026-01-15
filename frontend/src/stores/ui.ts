@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n';
 export type ViewMode = 'list' | 'card';
 export type Theme = 'light' | 'dark' | 'auto';
 export type Language = 'zh-CN' | 'zh-TW' | 'en-US' | 'ja-JP';
+export type DensityMode = 'comfortable' | 'compact';
 
 export const useUIStore = defineStore('ui', () => {
   const { locale } = useI18n();
@@ -14,6 +15,9 @@ export const useUIStore = defineStore('ui', () => {
 
   // View mode
   const viewMode = ref<ViewMode>('list');
+
+  // Density mode
+  const densityMode = ref<DensityMode>('comfortable');
 
   // Theme
   const theme = ref<Theme>('light');
@@ -53,6 +57,13 @@ export const useUIStore = defineStore('ui', () => {
   const savedDeveloperMode = localStorage.getItem('rtodo-developer-mode');
   if (savedDeveloperMode) {
     developerMode.value = savedDeveloperMode === 'true';
+  }
+
+  // Initialize density mode from localStorage
+  const savedDensityMode = localStorage.getItem('rtodo-density-mode') as DensityMode;
+  if (savedDensityMode && ['comfortable', 'compact'].includes(savedDensityMode)) {
+    densityMode.value = savedDensityMode;
+    document.documentElement.setAttribute('data-density', savedDensityMode);
   }
 
   // Actions
@@ -104,6 +115,12 @@ export const useUIStore = defineStore('ui', () => {
     localStorage.setItem('rtodo-developer-mode', String(enabled));
   }
 
+  function setDensityMode(mode: DensityMode) {
+    densityMode.value = mode;
+    document.documentElement.setAttribute('data-density', mode);
+    localStorage.setItem('rtodo-density-mode', mode);
+  }
+
   function selectTodo(id: string | null) {
     selectedTodoId.value = id;
   }
@@ -140,6 +157,7 @@ export const useUIStore = defineStore('ui', () => {
     language,
     themeColor,
     developerMode,
+    densityMode,
     selectedTodoId,
     createTodoDialogVisible,
     groupManagerVisible,
@@ -152,6 +170,7 @@ export const useUIStore = defineStore('ui', () => {
     setLanguage,
     setThemeColor,
     setDeveloperMode,
+    setDensityMode,
     selectTodo,
     showCreateTodoDialog,
     hideCreateTodoDialog,

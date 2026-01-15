@@ -13,12 +13,12 @@
     "windows": [
       {
         "title": "RTodo",
-        "width": 1400,
+        "width": 1200,
         "height": 900,
         "resizable": true,
         "fullscreen": false,
-        "minWidth": 1000,
-        "minHeight": 600
+        "minWidth": 1100,
+        "minHeight": 700
       }
     ],
     "security": {

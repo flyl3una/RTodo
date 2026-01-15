@@ -72,3 +72,28 @@ body {
 [data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
   background: #5a5a5a;
 }
+
+/* 紧凑模式样式 */
+[data-density='compact'] {
+  /* 紧凑模式的CSS变量 */
+  --sidebar-width: 200px;
+  --sidebar-collapsed-width: 50px;
+  --header-height: 40px;
+  --spacing-xs: 2px;
+  --spacing-sm: 4px;
+  --spacing-md: 6px;
+  --spacing-lg: 8px;
+  --spacing-xl: 10px;
+}
+
+/* 宽松模式默认样式（保持不变） */
+:root {
+  --sidebar-width: 240px;
+  --sidebar-collapsed-width: 60px;
+  --header-height: 56px;
+  --spacing-xs: 6px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 20px;
+}

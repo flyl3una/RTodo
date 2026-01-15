@@ -632,4 +632,59 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 [data-theme='dark'] .card-steps {
   border-top-color: #3a3a3a;
 }
+
+/* 紧凑模式 */
+[data-density='compact'] .todo-list {
+  gap: 8px;
+}
+
+[data-density='compact'] .todo-item {
+  padding: 12px;
+}
+
+[data-density='compact'] .todo-left {
+  gap: 10px;
+}
+
+[data-density='compact'] .todo-title {
+  margin-bottom: 6px;
+  gap: 6px;
+}
+
+[data-density='compact'] .todo-description {
+  margin-bottom: 6px;
+}
+
+[data-density='compact'] .todo-steps {
+  margin-top: 10px;
+  padding-top: 10px;
+  padding-left: 32px;
+}
+
+[data-density='compact'] .step-item {
+  padding: 4px 0;
+  gap: 6px;
+}
+
+[data-density='compact'] .todo-cards {
+  gap: 12px;
+}
+
+[data-density='compact'] .todo-card {
+  padding: 12px;
+  gap: 8px;
+}
+
+[data-density='compact'] .card-header {
+  gap: 6px;
+}
+
+[data-density='compact'] .card-title {
+  margin-bottom: 6px;
+  gap: 6px;
+}
+
+[data-density='compact'] .card-steps {
+  padding: 10px 0 10px 20px;
+}
 </style>

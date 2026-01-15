@@ -121,15 +121,28 @@
             </el-select>
           </div>
 
-          <!-- Date Range Filter -->
+          <!-- Start Date Filter -->
           <div class="filter-item">
-            <div class="filter-label">日期范围</div>
+            <div class="filter-label">开始日期</div>
             <el-date-picker
-              v-model="filterDateRange"
-              type="daterange"
-              range-separator="至"
-              start-placeholder="开始日期"
-              end-placeholder="结束日期"
+              v-model="filterStartDate"
+              type="date"
+              placeholder="开始日期之后"
+              format="YYYY-MM-DD"
+              value-format="x"
+              clearable
+              style="width: 100%"
+              @change="applyFilters"
+            />
+          </div>
+
+          <!-- End Date Filter -->
+          <div class="filter-item">
+            <div class="filter-label">结束日期</div>
+            <el-date-picker
+              v-model="filterEndDate"
+              type="date"
+              placeholder="结束日期之前"
               format="YYYY-MM-DD"
               value-format="x"
               clearable
@@ -216,7 +229,8 @@ const filterStatus = ref<TodoStatus | undefined>();
 const filterPriority = ref<number | undefined>();
 const filterGroupId = ref<string | undefined>();
 const filterTagIds = ref<string[]>([]);
-const filterDateRange = ref<[number, number] | null>(null);
+const filterStartDate = ref<number | undefined>();
+const filterEndDate = ref<number | undefined>();
 
 // Computed
 const groups = computed(() => groupStore.groups);
@@ -232,7 +246,8 @@ const activeFilterCount = computed(() => {
   if (filterPriority.value !== undefined) count++;
   if (filterGroupId.value !== undefined) count++;
   if (filterTagIds.value.length > 0) count++;
-  if (filterDateRange.value !== null) count++;
+  if (filterStartDate.value !== undefined) count++;
+  if (filterEndDate.value !== undefined) count++;
   return count;
 });
 
@@ -264,9 +279,14 @@ function applyFilters() {
     // Use first tag for now (API only supports single tag)
     params.tag_id = filterTagIds.value[0];
   }
-  if (filterDateRange.value !== null) {
-    params.start_date = filterDateRange.value[0];
-    params.end_date = filterDateRange.value[1];
+  // 新的时间筛选逻辑：
+  // - filterStartDate 筛选 start_date 在该时间之后的任务
+  // - filterEndDate 筛选 due_date 在该时间之前的任务
+  if (filterStartDate.value !== undefined) {
+    params.start_date = filterStartDate.value;
+  }
+  if (filterEndDate.value !== undefined) {
+    params.end_date = filterEndDate.value;
   }
 
   todoStore.setFilter(params);
@@ -277,7 +297,8 @@ function resetFilters() {
   filterPriority.value = undefined;
   filterGroupId.value = undefined;
   filterTagIds.value = [];
-  filterDateRange.value = null;
+  filterStartDate.value = undefined;
+  filterEndDate.value = undefined;
   todoStore.setFilter({});
 }
 
@@ -366,5 +387,24 @@ function setViewMode(mode: 'list' | 'card') {
 
 [data-theme='dark'] .filter-actions {
   border-top-color: #2a2a2a;
+}
+
+/* 紧凑模式 */
+[data-density='compact'] .header {
+  height: 48px;
+  padding: 0 16px;
+}
+
+[data-density='compact'] .header-left,
+[data-density='compact'] .header-right {
+  gap: 8px;
+}
+
+[data-density='compact'] .filter-panel {
+  gap: 12px;
+}
+
+[data-density='compact'] .filter-item {
+  gap: 6px;
 }
 </style>

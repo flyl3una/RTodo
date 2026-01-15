@@ -16,7 +16,7 @@
         <a
           href="#"
           class="quick-link"
-          :class="{ active: currentView === 'all' }"
+          :class="{ active: currentView === 'all' && route.path === '/' }"
           @click.prevent="setFilter('all')"
         >
           <el-icon><List /></el-icon>
@@ -25,7 +25,7 @@
         <!-- <a
           href="#"
           class="quick-link"
-          :class="{ active: currentView === 'today' }"
+          :class="{ active: currentView === 'today' && route.path === '/' }"
           @click.prevent="setFilter('today')"
         >
           <el-icon><Calendar /></el-icon>
@@ -34,7 +34,7 @@
         <a
           href="#"
           class="quick-link"
-          :class="{ active: currentView === 'important' }"
+          :class="{ active: currentView === 'important' && route.path === '/' }"
           @click.prevent="setFilter('important')"
         >
           <el-icon><Star /></el-icon>
@@ -43,7 +43,7 @@
         <a
           href="#"
           class="quick-link"
-          :class="{ active: currentView === 'urgent' }"
+          :class="{ active: currentView === 'urgent' && route.path === '/' }"
           @click.prevent="setFilter('urgent')"
         >
           <el-icon><Warning /></el-icon>
@@ -52,7 +52,7 @@
         <a
           href="#"
           class="quick-link"
-          :class="{ active: currentView === 'completed' }"
+          :class="{ active: currentView === 'completed' && route.path === '/' }"
           @click.prevent="setFilter('completed')"
         >
           <el-icon><CircleCheck /></el-icon>
@@ -73,7 +73,7 @@
         <a
           href="#"
           class="group-item"
-          :class="{ active: filterGroupId === group.id }"
+          :class="{ active: filterGroupId === group.id && route.path === '/' }"
           v-for="group in groups"
           :key="group.id"
           @click.prevent="selectGroup(group.id)"
@@ -476,5 +476,61 @@ defineExpose({
 
 [data-theme='dark'] .sidebar-footer {
   border-top-color: #2a2a2a;
+}
+
+/* 紧凑模式 */
+[data-density='compact'] .sidebar {
+  width: 200px;
+}
+
+[data-density='compact'] .sidebar.collapsed {
+  width: 50px;
+}
+
+[data-density='compact'] .sidebar-header {
+  padding: 12px;
+}
+
+[data-density='compact'] .sidebar-section {
+  padding: 8px 0;
+}
+
+[data-density='compact'] .section-title {
+  padding: 0 12px 6px;
+}
+
+[data-density='compact'] .quick-links,
+[data-density='compact'] .groups {
+  gap: 3px;
+  padding: 0 6px;
+}
+
+[data-density='compact'] .tags {
+  gap: 4px;
+  padding: 0 6px;
+}
+
+[data-density='compact'] .quick-link,
+[data-density='compact'] .group-item {
+  gap: 8px;
+  padding: 6px 10px;
+}
+
+[data-density='compact'] .tag-item {
+  padding: 3px 10px;
+}
+
+[data-density='compact'] .empty-tags {
+  padding: 6px 10px;
+}
+
+[data-density='compact'] .sidebar-footer {
+  padding: 8px 6px;
+  gap: 3px;
+}
+
+[data-density='compact'] .footer-item {
+  gap: 8px;
+  padding: 6px 10px;
 }
 </style>
