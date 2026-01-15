@@ -5,6 +5,7 @@ use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     Manager,
+    include_image,
 };
 
 mod commands;
@@ -49,8 +50,9 @@ async fn main() {
             let menu = Menu::with_items(app, &[&show_item, &quit_item]).unwrap();
 
             // 创建托盘图标
+            let tray_icon = include_image!("icons/tray-icon.png");
             let _tray = TrayIconBuilder::new()
-                .icon_as_template(true)
+                .icon(tray_icon)
                 .menu(&menu)
                 .show_menu_on_left_click(false)
                 .on_tray_icon_event(|tray, event| {
