@@ -5,7 +5,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onUnmounted, watch } from 'vue';
+import { computed, onMounted, onUnmounted, watch } from 'vue';
 import { useUIStore } from '@/stores';
 import { useI18n } from 'vue-i18n';
 import zhCn from 'element-plus/es/locale/lang/zh-cn';
@@ -15,6 +15,15 @@ import MainLayout from '@/components/layout/MainLayout.vue';
 
 const uiStore = useUIStore();
 const { locale } = useI18n();
+
+// Initialize theme on mount
+onMounted(() => {
+  // Theme is already initialized in the store, but we ensure it's applied here
+  const savedTheme = localStorage.getItem('rtodo-theme') as 'light' | 'dark' | 'auto' | null;
+  if (savedTheme) {
+    uiStore.setTheme(savedTheme);
+  }
+});
 
 // Element Plus locale mapping
 const localeMap = {

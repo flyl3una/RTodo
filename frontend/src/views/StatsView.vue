@@ -369,7 +369,7 @@ onMounted(async () => {
   font-size: 28px;
   font-weight: 600;
   margin: 0;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .stats-cards {
@@ -384,9 +384,9 @@ onMounted(async () => {
   align-items: center;
   gap: 16px;
   padding: 20px;
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 12px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--el-border-color-light);
   transition: all 0.2s ease;
 }
 
@@ -405,21 +405,21 @@ onMounted(async () => {
 
 .stat-label {
   font-size: 13px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   margin-bottom: 4px;
 }
 
 .stat-value {
   font-size: 28px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .stats-section {
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 12px;
   padding: 20px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--el-border-color-light);
   margin-bottom: 16px;
 }
 
@@ -427,7 +427,7 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 20px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .chart-container {
@@ -466,16 +466,16 @@ onMounted(async () => {
 }
 
 .bar.completed {
-  background: #67c23a;
+  background: var(--el-color-success);
 }
 
 .bar.created {
-  background: #409eff;
+  background: var(--el-color-primary);
 }
 
 .bar-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .chart-legend {
@@ -490,7 +490,7 @@ onMounted(async () => {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .legend-color {
@@ -500,11 +500,11 @@ onMounted(async () => {
 }
 
 .legend-color.completed {
-  background: #67c23a;
+  background: var(--el-color-success);
 }
 
 .legend-color.created {
-  background: #409eff;
+  background: var(--el-color-primary);
 }
 
 .group-stats {
@@ -534,7 +534,7 @@ onMounted(async () => {
 
 .group-name {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .group-progress {
@@ -552,7 +552,7 @@ onMounted(async () => {
   min-width: 60px;
   text-align: right;
   font-size: 13px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .tag-stats {
@@ -595,15 +595,15 @@ onMounted(async () => {
 }
 
 .status-dot.todo {
-  background: #909399;
+  background: var(--el-text-color-secondary);
 }
 
 .status-dot.in-progress {
-  background: #409eff;
+  background: var(--el-color-primary);
 }
 
 .status-dot.done {
-  background: #67c23a;
+  background: var(--el-color-success);
 }
 
 .task-list {
@@ -618,13 +618,13 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: 8px;
   transition: all 0.2s ease;
 }
 
 .task-item:hover {
-  background: #e4e7ed;
+  background: var(--el-fill-color);
 }
 
 .task-item.completed {
@@ -633,12 +633,12 @@ onMounted(async () => {
 
 .task-item.completed .task-title {
   text-decoration: line-through;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .task-title {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
   font-weight: 500;
 }
 
@@ -647,7 +647,7 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .task-group {
@@ -657,53 +657,53 @@ onMounted(async () => {
 }
 
 .task-due {
-  color: #e6a23c;
+  color: var(--el-color-warning);
 }
 
 .task-completed {
-  color: #67c23a;
+  color: var(--el-color-success);
 }
 
 /* Dark theme */
-[data-theme='dark'] .page-title {
-  color: #e0e0e0;
+:global(html.dark) .page-title {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .stat-card {
-  background: #2a2a2a;
-  border-color: #3a3a3a;
+:global(html.dark) .stat-card {
+  background: var(--el-fill-color-light);
+  border-color: var(--el-border-color);
 }
 
-[data-theme='dark'] .stat-value {
-  color: #e0e0e0;
+:global(html.dark) .stat-value {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .stats-section {
-  background: #2a2a2a;
-  border-color: #3a3a3a;
+:global(html.dark) .stats-section {
+  background: var(--el-fill-color-light);
+  border-color: var(--el-border-color);
 }
 
-[data-theme='dark'] .section-title {
-  color: #e0e0e0;
+:global(html.dark) .section-title {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .group-name {
-  color: #e0e0e0;
+:global(html.dark) .group-name {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .task-item {
-  background: #3a3a3a;
+:global(html.dark) .task-item {
+  background: var(--el-fill-color);
 }
 
-[data-theme='dark'] .task-item:hover {
-  background: #4a4a4a;
+:global(html.dark) .task-item:hover {
+  background: var(--el-fill-color-light);
 }
 
-[data-theme='dark'] .task-title {
-  color: #e0e0e0;
+:global(html.dark) .task-title {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .task-item.completed .task-title {
-  color: #909399;
+:global(html.dark) .task-item.completed .task-title {
+  color: var(--el-text-color-secondary);
 }
 </style>

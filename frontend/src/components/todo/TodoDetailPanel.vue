@@ -563,7 +563,7 @@ onMounted(async () => {
   margin: 0;
   font-size: 20px;
   font-weight: 600;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .detail-meta {
@@ -573,7 +573,7 @@ onMounted(async () => {
 
 .detail-section {
   padding: 16px 0;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid var(--el-border-color-light);
 }
 
 .section-header {
@@ -587,12 +587,12 @@ onMounted(async () => {
   margin: 0 0 12px;
   font-size: 14px;
   font-weight: 600;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .section-content {
   margin: 0;
-  color: #606266;
+  color: var(--el-text-color-regular);
   line-height: 1.6;
   white-space: pre-wrap;
 }
@@ -602,7 +602,7 @@ onMounted(async () => {
   flex-direction: column;
   gap: 8px;
   font-size: 14px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .time-label {
@@ -626,51 +626,51 @@ onMounted(async () => {
   align-items: center;
   gap: 12px;
   padding: 8px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: 4px;
 }
 
 .step-title {
   flex: 1;
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .step-title.completed {
   text-decoration: line-through;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 /* Dark theme */
-[data-theme='dark'] .detail-title {
-  color: #e0e0e0;
+:global(html.dark) .detail-title {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .section-title {
-  color: #a0a0a0;
+:global(html.dark) .section-title {
+  color: var(--el-text-color-secondary);
 }
 
-[data-theme='dark'] .section-content {
-  color: #b0b0b0;
+:global(html.dark) .section-content {
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .detail-section {
-  border-top-color: #3a3a3a;
+:global(html.dark) .detail-section {
+  border-top-color: var(--el-border-color);
 }
 
-[data-theme='dark'] .time-info {
-  color: #b0b0b0;
+:global(html.dark) .time-info {
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .step-item {
-  background: #2a2a2a;
+:global(html.dark) .step-item {
+  background: var(--el-fill-color-light);
 }
 
-[data-theme='dark'] .step-title {
-  color: #e0e0e0;
+:global(html.dark) .step-title {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .step-title.completed {
-  color: #707070;
+:global(html.dark) .step-title.completed {
+  color: var(--el-text-color-secondary);
 }
 </style>

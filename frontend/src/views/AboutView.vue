@@ -29,11 +29,11 @@
 .placeholder h1 {
   font-size: 2rem;
   margin-bottom: 1rem;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .placeholder p {
-  color: #606266;
+  color: var(--el-text-color-regular);
   margin-bottom: 0.5rem;
 }
 </style>

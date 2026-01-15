@@ -289,7 +289,7 @@ onMounted(() => {
   font-size: 28px;
   font-weight: 600;
   margin-bottom: 24px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .settings-content {
@@ -299,17 +299,17 @@ onMounted(() => {
 }
 
 .settings-section {
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 8px;
   padding: 20px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--el-border-color-light);
 }
 
 .section-title {
   font-size: 16px;
   font-weight: 600;
   margin: 0 0 16px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .setting-item {
@@ -320,16 +320,16 @@ onMounted(() => {
 }
 
 .setting-item:not(:last-child) {
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
 }
 
 .setting-item.danger {
-  color: #f56c6c;
+  color: var(--el-color-danger);
 }
 
 .setting-label {
   font-size: 14px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .about-content {
@@ -360,19 +360,19 @@ onMounted(() => {
 .app-details h3 {
   margin: 0 0 4px;
   font-size: 20px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .app-version {
   margin: 0;
   font-size: 14px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .app-description {
   margin: 0;
   font-size: 14px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .tech-stack {
@@ -383,23 +383,23 @@ onMounted(() => {
 
 .tech-stack span {
   padding: 4px 12px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: 12px;
   font-size: 12px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .shortcut-hint {
   margin-top: 12px;
   padding: 12px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: 6px;
   font-size: 13px;
 }
 
 .shortcut-hint p {
   margin: 0 0 8px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .shortcut-hint ul {
@@ -409,12 +409,12 @@ onMounted(() => {
 
 .shortcut-hint li {
   margin: 4px 0;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .shortcut-hint code {
   padding: 2px 6px;
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 4px;
   font-family: 'Courier New', monospace;
   font-size: 12px;
@@ -422,51 +422,51 @@ onMounted(() => {
 }
 
 /* Dark theme */
-[data-theme='dark'] .page-title {
-  color: #e0e0e0;
+:global(html.dark) .page-title {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .settings-section {
-  background: #2a2a2a;
-  border-color: #3a3a3a;
+:global(html.dark) .settings-section {
+  background: var(--el-fill-color-light);
+  border-color: var(--el-border-color);
 }
 
-[data-theme='dark'] .section-title {
-  color: #e0e0e0;
+:global(html.dark) .section-title {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .setting-item:not(:last-child) {
-  border-bottom-color: #3a3a3a;
+:global(html.dark) .setting-item:not(:last-child) {
+  border-bottom-color: var(--el-border-color);
 }
 
-[data-theme='dark'] .setting-label {
-  color: #b0b0b0;
+:global(html.dark) .setting-label {
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .app-details h3 {
-  color: #e0e0e0;
+:global(html.dark) .app-details h3 {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .app-description {
-  color: #b0b0b0;
+:global(html.dark) .app-description {
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .tech-stack span {
-  background: #1a1a1a;
-  color: #b0b0b0;
+:global(html.dark) .tech-stack span {
+  background: var(--el-fill-color);
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .shortcut-hint {
-  background: #1a1a1a;
+:global(html.dark) .shortcut-hint {
+  background: var(--el-fill-color);
 }
 
-[data-theme='dark'] .shortcut-hint p,
-[data-theme='dark'] .shortcut-hint li {
-  color: #b0b0b0;
+:global(html.dark) .shortcut-hint p,
+:global(html.dark) .shortcut-hint li {
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .shortcut-hint code {
-  background: #2a2a2a;
+:global(html.dark) .shortcut-hint code {
+  background: var(--el-fill-color-light);
 }
 
 /* 紧凑模式 */

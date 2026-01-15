@@ -104,7 +104,7 @@ function handleRandom() {
   justify-content: space-between;
   gap: 12px;
   padding: 8px;
-  background: #f5f7fa;
+  background: var(--el-fill-color-light);
   border-radius: 6px;
 }
 
@@ -152,21 +152,25 @@ function handleRandom() {
 }
 
 .color-option.selected {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px white, 0 0 0 4px #409eff;
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--el-color-primary);
 }
 
 /* Dark theme */
-[data-theme='dark'] .control-row {
-  background: #2a2a2a;
+:global(html.dark) .control-row {
+  background: #1f1f1f !important;
 }
 
-[data-theme='dark'] .color-option.selected {
-  border-color: #409eff;
-  box-shadow: 0 0 0 2px #1a1a1a, 0 0 0 4px #409eff;
+:global(html.dark) .color-option.selected {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 2px #1f1f1f, 0 0 0 4px var(--el-color-primary);
 }
 
-[data-theme='dark'] .category-label {
-  color: #a0a0a0;
+:global(html.dark) .category-label {
+  color: var(--el-text-color-secondary);
+}
+
+:global(html.dark) .preset-colors {
+  background: transparent;
 }
 </style>

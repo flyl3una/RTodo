@@ -409,9 +409,9 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   display: flex;
   flex-direction: column;
   padding: 16px;
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 8px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--el-border-color-light);
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -427,7 +427,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
 .todo-item.completed .title-text {
   text-decoration: line-through;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .todo-left {
@@ -457,7 +457,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
 .todo-description {
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   line-height: 1.5;
   margin-bottom: 8px;
   display: -webkit-box;
@@ -471,7 +471,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   margin-top: 12px;
   padding-top: 12px;
   padding-left: 40px;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid var(--el-border-color-light);
 }
 
 .step-item {
@@ -484,18 +484,18 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
 .step-text {
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .step-text.completed {
   text-decoration: line-through;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .title-text {
   font-size: 16px;
   font-weight: 500;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .todo-meta {
@@ -503,7 +503,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   align-items: center;
   gap: 12px;
   font-size: 13px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .meta-item {
@@ -519,9 +519,9 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 }
 
 .todo-card {
-  background: white;
+  background: var(--el-bg-color);
   border-radius: 12px;
-  border: 1px solid #e4e7ed;
+  border: 1px solid var(--el-border-color-light);
   padding: 16px;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -542,7 +542,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
 .todo-card.completed .title-text {
   text-decoration: line-through;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .card-header {
@@ -565,13 +565,13 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 .card-title .title-text {
   font-size: 16px;
   font-weight: 500;
-  color: #303133;
+  color: var(--el-text-color-primary);
   line-height: 1.4;
 }
 
 .card-description {
   font-size: 13px;
-  color: #606266;
+  color: var(--el-text-color-regular);
   line-height: 1.5;
   display: -webkit-box;
   -webkit-line-clamp: 3;
@@ -582,7 +582,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
 .card-steps {
   padding: 12px 0 12px 24px;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid var(--el-border-color-light);
 }
 
 .card-footer {
@@ -600,7 +600,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   display: flex;
   align-items: center;
   gap: 4px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
 }
 
 .card-tags {
@@ -611,7 +611,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
 .more-tags {
   font-size: 12px;
-  color: #909399;
+  color: var(--el-text-color-secondary);
   padding: 0 4px;
 }
 
@@ -620,64 +620,64 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 }
 
 /* Dark theme */
-[data-theme='dark'] .todo-item {
-  background: #2a2a2a;
-  border-color: #3a3a3a;
+:global(html.dark) .todo-item {
+  background: var(--el-fill-color-light);
+  border-color: var(--el-border-color);
 }
 
 /* Note: hover colors are already using var(--el-color-primary) */
 
-[data-theme='dark'] .title-text {
-  color: #e0e0e0;
+:global(html.dark) .title-text {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .todo-description {
-  color: #b0b0b0;
+:global(html.dark) .todo-description {
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .todo-meta {
-  color: #a0a0a0;
+:global(html.dark) .todo-meta {
+  color: var(--el-text-color-secondary);
 }
 
-[data-theme='dark'] .todo-steps {
-  border-top-color: #3a3a3a;
+:global(html.dark) .todo-steps {
+  border-top-color: var(--el-border-color);
 }
 
-[data-theme='dark'] .step-text {
-  color: #b0b0b0;
+:global(html.dark) .step-text {
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .step-text.completed {
-  color: #909399;
+:global(html.dark) .step-text.completed {
+  color: var(--el-text-color-secondary);
 }
 
-[data-theme='dark'] .todo-card {
-  background: #2a2a2a;
-  border-color: #3a3a3a;
+:global(html.dark) .todo-card {
+  background: var(--el-fill-color-light);
+  border-color: var(--el-border-color);
 }
 
-[data-theme='dark'] .todo-card:hover {
+:global(html.dark) .todo-card:hover {
   border-color: var(--el-color-primary);
 }
 
-[data-theme='dark'] .todo-card .title-text {
-  color: #e0e0e0;
+:global(html.dark) .todo-card .title-text {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .todo-card .card-description {
-  color: #b0b0b0;
+:global(html.dark) .todo-card .card-description {
+  color: var(--el-text-color-regular);
 }
 
-[data-theme='dark'] .todo-card .meta-item {
-  color: #a0a0a0;
+:global(html.dark) .todo-card .meta-item {
+  color: var(--el-text-color-secondary);
 }
 
-[data-theme='dark'] .todo-card .more-tags {
-  color: #a0a0a0;
+:global(html.dark) .todo-card .more-tags {
+  color: var(--el-text-color-secondary);
 }
 
-[data-theme='dark'] .card-steps {
-  border-top-color: #3a3a3a;
+:global(html.dark) .card-steps {
+  border-top-color: var(--el-border-color);
 }
 
 /* 紧凑模式 */

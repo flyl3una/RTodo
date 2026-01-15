@@ -137,28 +137,28 @@ function handleTodoCreated() {
 }
 
 .content-area::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: var(--el-fill-color);
 }
 
 .content-area::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
+  background: var(--el-border-color);
   border-radius: 4px;
 }
 
 .content-area::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+  background: var(--el-border-color-dark);
 }
 
 /* Dark theme */
-[data-theme='dark'] .content-area::-webkit-scrollbar-track {
-  background: #2a2a2a;
+:global(html.dark) .content-area::-webkit-scrollbar-track {
+  background: var(--el-fill-color-darker);
 }
 
-[data-theme='dark'] .content-area::-webkit-scrollbar-thumb {
-  background: #4a4a4a;
+:global(html.dark) .content-area::-webkit-scrollbar-thumb {
+  background: var(--el-border-color-dark);
 }
 
-[data-theme='dark'] .content-area::-webkit-scrollbar-thumb:hover {
-  background: #5a5a5a;
+:global(html.dark) .content-area::-webkit-scrollbar-thumb:hover {
+  background: var(--el-border-color-darker);
 }
 </style>

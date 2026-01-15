@@ -216,8 +216,8 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: white;
-  border: 1px solid #e4e7ed;
+  background: var(--el-bg-color);
+  border: 1px solid var(--el-border-color-light);
   border-left-width: 4px;
   border-radius: 6px;
   transition: all 0.2s ease;
@@ -241,7 +241,7 @@ onMounted(() => {
 
 .tag-name {
   font-size: 14px;
-  color: #303133;
+  color: var(--el-text-color-primary);
 }
 
 .tag-actions {
@@ -250,13 +250,21 @@ onMounted(() => {
 }
 
 /* Dark theme */
-[data-theme='dark'] .tag-list-item {
-  background: #2a2a2a;
-  border-color: #3a3a3a;
+:global(html.dark) .tag-list-item {
+  background: var(--el-fill-color-blank) !important;
+  border-color: var(--el-border-color) !important;
 }
 
-[data-theme='dark'] .tag-name {
-  color: #e0e0e0;
+:global(html.dark) .tag-list-item:hover {
+  background: var(--el-fill-color-light) !important;
+}
+
+:global(html.dark) .tag-name {
+  color: var(--el-text-color-primary);
+}
+
+:global(html.dark) .tag-header h3 {
+  color: var(--el-text-color-primary);
 }
 
 /* ColorPicker component handles its own styling */

@@ -22,6 +22,39 @@ export const useUIStore = defineStore('ui', () => {
   // Theme
   const theme = ref<Theme>('light');
 
+  // Helper function to apply theme (defined before initialization)
+  function applyTheme(newTheme: Theme) {
+    if (newTheme === 'dark') {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      // Add Element Plus dark theme class
+      document.documentElement.classList.add('dark');
+    } else if (newTheme === 'light') {
+      document.documentElement.removeAttribute('data-theme');
+      document.documentElement.classList.remove('dark');
+    } else {
+      // Auto: check system preference
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (prefersDark) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.documentElement.classList.remove('dark');
+      }
+    }
+  }
+
+  // Initialize theme from localStorage
+  const savedTheme = localStorage.getItem('rtodo-theme') as Theme;
+  if (savedTheme && ['light', 'dark', 'auto'].includes(savedTheme)) {
+    theme.value = savedTheme;
+    // Apply saved theme immediately
+    applyTheme(savedTheme);
+  } else {
+    // Default to light theme
+    applyTheme('light');
+  }
+
   // Language
   const language = ref<Language>('zh-CN');
 
@@ -90,21 +123,17 @@ export const useUIStore = defineStore('ui', () => {
 
   function setTheme(newTheme: Theme) {
     theme.value = newTheme;
-    // Apply theme to document
-    if (newTheme === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else if (newTheme === 'light') {
-      document.documentElement.removeAttribute('data-theme');
-    } else {
-      // Auto: check system preference
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-      } else {
-        document.documentElement.removeAttribute('data-theme');
-      }
-    }
+    applyTheme(newTheme);
+    // Persist to localStorage
+    localStorage.setItem('rtodo-theme', newTheme);
   }
+
+  // Listen for system theme changes when in auto mode
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+    if (theme.value === 'auto') {
+      applyTheme('auto');
+    }
+  });
 
   function setLanguage(newLanguage: Language) {
     language.value = newLanguage;

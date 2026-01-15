@@ -325,8 +325,8 @@ function setViewMode(mode: 'list' | 'card') {
 <style scoped>
 .header {
   height: 56px;
-  background: white;
-  border-bottom: 1px solid #e4e7ed;
+  background: var(--el-bg-color);
+  border-bottom: 1px solid var(--el-border-color-light);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -368,28 +368,28 @@ function setViewMode(mode: 'list' | 'card') {
 .filter-label {
   font-size: 13px;
   font-weight: 500;
-  color: #606266;
+  color: var(--el-text-color-regular);
 }
 
 .filter-actions {
   display: flex;
   justify-content: flex-end;
   padding-top: 8px;
-  border-top: 1px solid #e4e7ed;
+  border-top: 1px solid var(--el-border-color-light);
 }
 
 /* Dark theme */
-[data-theme='dark'] .header {
-  background: #1a1a1a;
-  border-bottom-color: #2a2a2a;
+:global(html.dark) .header {
+  background: var(--el-bg-color);
+  border-bottom-color: var(--el-border-color);
 }
 
-[data-theme='dark'] .filter-label {
-  color: #e0e0e0;
+:global(html.dark) .filter-label {
+  color: var(--el-text-color-primary);
 }
 
-[data-theme='dark'] .filter-actions {
-  border-top-color: #2a2a2a;
+:global(html.dark) .filter-actions {
+  border-top-color: var(--el-border-color);
 }
 
 /* 紧凑模式 */

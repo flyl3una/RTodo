@@ -107,27 +107,37 @@ function handleRandom() {
 }
 
 .icon-option:hover {
-  border-color: #409eff;
-  background: #f0f7ff;
+  border-color: var(--el-color-primary);
+  background: var(--el-fill-color-light);
   transform: scale(1.1);
 }
 
 .icon-option.selected {
-  border-color: #409eff;
-  background: #e6f4ff;
-  box-shadow: 0 0 0 2px #409eff;
+  border-color: var(--el-color-primary);
+  background: var(--el-fill-color-lighter);
+  box-shadow: 0 0 0 2px var(--el-color-primary);
 }
 
 /* Dark theme */
-[data-theme='dark'] .icon-option {
-  border-color: #3a3a3a;
+:global(html.dark) .category-tabs {
+  background: transparent;
 }
 
-[data-theme='dark'] .icon-option:hover {
-  background: #2a2a2a;
+:global(html.dark) .icon-option {
+  border-color: var(--el-border-color);
+  background: transparent !important;
 }
 
-[data-theme='dark'] .icon-option.selected {
-  background: #1a1a1a;
+:global(html.dark) .icon-option:hover {
+  background: #1f1f1f !important;
+}
+
+:global(html.dark) .icon-option.selected {
+  background: #1f1f1f !important;
+  box-shadow: 0 0 0 2px var(--el-color-primary);
+}
+
+:global(html.dark) .icon-grid {
+  background: transparent;
 }
 </style>
