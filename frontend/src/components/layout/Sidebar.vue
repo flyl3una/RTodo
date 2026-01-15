@@ -1,6 +1,6 @@
 <template>
   <div class="sidebar" :class="{ collapsed }">
-    <!-- Header -->
+    <!-- Header - Fixed -->
     <div class="sidebar-header">
       <div class="logo" v-if="!collapsed">
         <span class="logo-icon">
@@ -14,119 +14,122 @@
       </div>
     </div>
 
-    <!-- Quick Access -->
-    <div class="sidebar-section" v-if="!collapsed">
-      <div class="section-title">快速访问</div>
-      <div class="quick-links">
-        <a
-          href="#"
-          class="quick-link"
-          :class="{ active: currentView === 'all' && route.path === '/' }"
-          @click.prevent="setFilter('all')"
-        >
-          <el-icon><List /></el-icon>
-          <span>全部任务</span>
-        </a>
-        <!-- <a
-          href="#"
-          class="quick-link"
-          :class="{ active: currentView === 'today' && route.path === '/' }"
-          @click.prevent="setFilter('today')"
-        >
-          <el-icon><Calendar /></el-icon>
-          <span>今天</span>
-        </a> -->
-        <a
-          href="#"
-          class="quick-link"
-          :class="{ active: currentView === 'important' && route.path === '/' }"
-          @click.prevent="setFilter('important')"
-        >
-          <el-icon><Star /></el-icon>
-          <span>重要</span>
-        </a>
-        <a
-          href="#"
-          class="quick-link"
-          :class="{ active: currentView === 'urgent' && route.path === '/' }"
-          @click.prevent="setFilter('urgent')"
-        >
-          <el-icon><Warning /></el-icon>
-          <span>紧急</span>
-        </a>
-        <a
-          href="#"
-          class="quick-link"
-          :class="{ active: currentView === 'completed' && route.path === '/' }"
-          @click.prevent="setFilter('completed')"
-        >
-          <el-icon><CircleCheck /></el-icon>
-          <span>已完成</span>
-        </a>
+    <!-- Scrollable Content Area -->
+    <div class="sidebar-content">
+      <!-- Quick Access -->
+      <div class="sidebar-section" v-if="!collapsed">
+        <div class="section-title">{{ t('nav.quickAccess') }}</div>
+        <div class="quick-links">
+          <a
+            href="#"
+            class="quick-link"
+            :class="{ active: currentView === 'all' && route.path === '/' }"
+            @click.prevent="setFilter('all')"
+          >
+            <el-icon><List /></el-icon>
+            <span>{{ t('nav.allTodos') }}</span>
+          </a>
+          <!-- <a
+            href="#"
+            class="quick-link"
+            :class="{ active: currentView === 'today' && route.path === '/' }"
+            @click.prevent="setFilter('today')"
+          >
+            <el-icon><Calendar /></el-icon>
+            <span>今天</span>
+          </a> -->
+          <a
+            href="#"
+            class="quick-link"
+            :class="{ active: currentView === 'important' && route.path === '/' }"
+            @click.prevent="setFilter('important')"
+          >
+            <el-icon><Star /></el-icon>
+            <span>{{ t('nav.important') }}</span>
+          </a>
+          <a
+            href="#"
+            class="quick-link"
+            :class="{ active: currentView === 'urgent' && route.path === '/' }"
+            @click.prevent="setFilter('urgent')"
+          >
+            <el-icon><Warning /></el-icon>
+            <span>{{ t('nav.urgent') }}</span>
+          </a>
+          <a
+            href="#"
+            class="quick-link"
+            :class="{ active: currentView === 'completed' && route.path === '/' }"
+            @click.prevent="setFilter('completed')"
+          >
+            <el-icon><CircleCheck /></el-icon>
+            <span>{{ t('nav.completed') }}</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Task Groups -->
+      <div class="sidebar-section">
+        <div class="section-title" v-if="!collapsed">
+          {{ t('group.title') }}
+          <el-link type="primary" @click="showAddGroup" style="float: right; font-size: 12px;">
+            {{ t('common.add') }}
+          </el-link>
+        </div>
+        <div class="groups">
+          <a
+            href="#"
+            class="group-item"
+            :class="{ active: filterGroupId === group.id && route.path === '/' }"
+            v-for="group in groups"
+            :key="group.id"
+            @click.prevent="selectGroup(group.id)"
+            @contextmenu.prevent="editGroup(group)"
+            data-allow-context-menu
+          >
+            <span class="group-icon">{{ group.icon || '📁' }}</span>
+            <span class="group-name" v-if="!collapsed">{{ group.name }}</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Tags -->
+      <div class="sidebar-section" v-if="!collapsed">
+        <div class="section-title">
+          {{ t('common.tags') }}
+          <el-link type="primary" @click="showTagManage" style="float: right; font-size: 12px;">
+            {{ t('common.add') }}
+          </el-link>
+        </div>
+        <div class="tags" v-if="tags.length > 0">
+          <span
+            class="tag-item"
+            v-for="tag in tags"
+            :key="tag.id"
+            :style="{ backgroundColor: tag.color }"
+            @click="selectTag(tag.id)"
+            @contextmenu.prevent="editTag(tag)"
+            data-allow-context-menu
+          >
+            {{ tag.name }}
+          </span>
+        </div>
+        <div v-else class="empty-tags">
+          <span class="empty-text">{{ t('tag.noTags') }}</span>
+          <el-link type="primary" @click="showTagManage">{{ t('placeholder.addTag') }}</el-link>
+        </div>
       </div>
     </div>
 
-    <!-- Task Groups -->
-    <div class="sidebar-section">
-      <div class="section-title" v-if="!collapsed">
-        任务组
-        <el-link type="primary" @click="showAddGroup" style="float: right; font-size: 12px;">
-          新增
-        </el-link>
-      </div>
-      <div class="groups">
-        <a
-          href="#"
-          class="group-item"
-          :class="{ active: filterGroupId === group.id && route.path === '/' }"
-          v-for="group in groups"
-          :key="group.id"
-          @click.prevent="selectGroup(group.id)"
-          @contextmenu.prevent="editGroup(group)"
-          data-allow-context-menu
-        >
-          <span class="group-icon">{{ group.icon || '📁' }}</span>
-          <span class="group-name" v-if="!collapsed">{{ group.name }}</span>
-        </a>
-      </div>
-    </div>
-
-    <!-- Tags -->
-    <div class="sidebar-section" v-if="!collapsed">
-      <div class="section-title">
-        标签
-        <el-link type="primary" @click="showTagManage" style="float: right; font-size: 12px;">
-          新增
-        </el-link>
-      </div>
-      <div class="tags" v-if="tags.length > 0">
-        <span
-          class="tag-item"
-          v-for="tag in tags.slice(0, 8)"
-          :key="tag.id"
-          :style="{ backgroundColor: tag.color }"
-          @click="selectTag(tag.id)"
-          @contextmenu.prevent="editTag(tag)"
-          data-allow-context-menu
-        >
-          {{ tag.name }}
-        </span>
-      </div>
-      <div v-else class="empty-tags">
-        <span class="empty-text">暂无标签</span>
-        <el-link type="primary" @click="showTagManage">添加标签</el-link>
-      </div>
-    </div>
-
-    <!-- Bottom Actions -->
+    <!-- Bottom Actions - Fixed -->
     <div class="sidebar-footer">
-      <router-link to="/stats" class="footer-item" title="统计">
+      <router-link to="/stats" class="footer-item" :title="t('stats.title')">
         <el-icon><TrendCharts /></el-icon>
-        <span v-if="!collapsed">统计</span>
+        <span v-if="!collapsed">{{ t('stats.title') }}</span>
       </router-link>
-      <router-link to="/settings" class="footer-item" title="设置">
+      <router-link to="/settings" class="footer-item" :title="t('settings.title')">
         <el-icon><Setting /></el-icon>
-        <span v-if="!collapsed">设置</span>
+        <span v-if="!collapsed">{{ t('settings.title') }}</span>
       </router-link>
     </div>
 
@@ -149,6 +152,7 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import {
   List, Calendar, Star, Plus, TrendCharts, Setting, Warning, CircleCheck,
 } from '@element-plus/icons-vue';
@@ -161,6 +165,8 @@ import type { Tag } from '@/types';
 import GroupManageDialog from '../group/GroupManageDialog.vue';
 import TagCreateDialog from '../tag/TagCreateDialog.vue';
 import Logo from '@/components/icon/logo.vue';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   collapsed: boolean;
@@ -316,6 +322,7 @@ defineExpose({
 }
 
 .sidebar-header {
+  flex-shrink: 0;
   padding: 16px;
   border-bottom: 1px solid #e4e7ed;
   display: flex;
@@ -356,6 +363,29 @@ defineExpose({
 .logo-icon-only :deep(svg) {
   width: 100%;
   height: 100%;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: #dcdfe6;
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: #c0c4cc;
 }
 
 .sidebar-section {
@@ -439,7 +469,7 @@ defineExpose({
 }
 
 .sidebar-footer {
-  margin-top: auto;
+  flex-shrink: 0;
   padding: 12px 8px;
   border-top: 1px solid #e4e7ed;
   display: flex;
@@ -480,6 +510,14 @@ defineExpose({
 
 [data-theme='dark'] .section-title {
   color: #909399;
+}
+
+[data-theme='dark'] .sidebar-content::-webkit-scrollbar-thumb {
+  background: #4a4a4a;
+}
+
+[data-theme='dark'] .sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: #5a5a5a;
 }
 
 [data-theme='dark'] .quick-link,

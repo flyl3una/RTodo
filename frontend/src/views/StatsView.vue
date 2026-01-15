@@ -1,7 +1,7 @@
 <template>
   <div class="stats-view">
     <div class="stats-header">
-      <h1 class="page-title">任务统计</h1>
+      <h1 class="page-title">{{ t('stats.title') }}</h1>
       <el-segmented v-model="dateRange" :options="dateRangeOptions" />
     </div>
 
@@ -10,35 +10,35 @@
       <div class="stat-card total">
         <div class="stat-icon">📊</div>
         <div class="stat-content">
-          <div class="stat-label">总任务数</div>
+          <div class="stat-label">{{ t('stats.total') }}</div>
           <div class="stat-value">{{ stats.total }}</div>
         </div>
       </div>
       <div class="stat-card todo">
         <div class="stat-icon">📝</div>
         <div class="stat-content">
-          <div class="stat-label">待办</div>
+          <div class="stat-label">{{ t('status.todo') }}</div>
           <div class="stat-value">{{ stats.todo }}</div>
         </div>
       </div>
       <div class="stat-card in-progress">
         <div class="stat-icon">🔄</div>
         <div class="stat-content">
-          <div class="stat-label">进行中</div>
+          <div class="stat-label">{{ t('stats.inProgress') }}</div>
           <div class="stat-value">{{ stats.in_progress }}</div>
         </div>
       </div>
       <div class="stat-card done">
         <div class="stat-icon">✅</div>
         <div class="stat-content">
-          <div class="stat-label">已完成</div>
+          <div class="stat-label">{{ t('stats.completed') }}</div>
           <div class="stat-value">{{ stats.done }}</div>
         </div>
       </div>
       <div class="stat-card marked">
         <div class="stat-icon">⭐</div>
         <div class="stat-content">
-          <div class="stat-label">重要</div>
+          <div class="stat-label">{{ t('nav.important') }}</div>
           <div class="stat-value">{{ stats.marked }}</div>
         </div>
       </div>
@@ -46,15 +46,15 @@
 
     <!-- Task Details by Status -->
     <div class="stats-section">
-      <h2 class="section-title">任务详情</h2>
+      <h2 class="section-title">{{ t('stats.taskDetails') }}</h2>
 
       <!-- Pending Tasks -->
       <el-collapse v-model="activeCollapse" class="task-collapse">
-        <el-collapse-item title="待办任务" name="todo">
+        <el-collapse-item name="todo">
           <template #title>
             <span class="collapse-title">
               <span class="status-dot todo"></span>
-              <span>待办任务 ({{ statsWithDetails.todos.length }})</span>
+              <span>{{ t('stats.todoTasks') }} ({{ statsWithDetails.todos.length }})</span>
             </span>
           </template>
           <div v-if="statsWithDetails.todos.length > 0" class="task-list">
@@ -66,15 +66,15 @@
               </div>
             </div>
           </div>
-          <el-empty v-else description="暂无待办任务" :image-size="40" />
+          <el-empty v-else :description="t('stats.noTodoTasks')" :image-size="40" />
         </el-collapse-item>
 
         <!-- In Progress Tasks -->
-        <el-collapse-item title="进行中" name="in_progress">
+        <el-collapse-item name="in_progress">
           <template #title>
             <span class="collapse-title">
               <span class="status-dot in-progress"></span>
-              <span>进行中 ({{ statsWithDetails.in_progress_tasks.length }})</span>
+              <span>{{ t('stats.inProgressTasks') }} ({{ statsWithDetails.in_progress_tasks.length }})</span>
             </span>
           </template>
           <div v-if="statsWithDetails.in_progress_tasks.length > 0" class="task-list">
@@ -86,33 +86,33 @@
               </div>
             </div>
           </div>
-          <el-empty v-else description="暂无进行中任务" :image-size="40" />
+          <el-empty v-else :description="t('stats.noInProgressTasks')" :image-size="40" />
         </el-collapse-item>
 
         <!-- Completed Tasks -->
-        <el-collapse-item title="已完成" name="done">
+        <el-collapse-item name="done">
           <template #title>
             <span class="collapse-title">
               <span class="status-dot done"></span>
-              <span>已完成 ({{ statsWithDetails.done_tasks.length }})</span>
+              <span>{{ t('stats.completedTasks') }} ({{ statsWithDetails.done_tasks.length }})</span>
             </span>
           </template>
           <div v-if="statsWithDetails.done_tasks.length > 0" class="task-list">
             <div v-for="task in statsWithDetails.done_tasks" :key="task.id" class="task-item completed">
               <span class="task-title">{{ task.title }}</span>
               <div class="task-meta">
-                <span v-if="task.completed_at" class="task-completed">完成于 {{ formatDateTime(task.completed_at) }}</span>
+                <span v-if="task.completed_at" class="task-completed">{{ t('stats.completedAt') }} {{ formatDateTime(task.completed_at) }}</span>
               </div>
             </div>
           </div>
-          <el-empty v-else description="暂无已完成任务" :image-size="40" />
+          <el-empty v-else :description="t('stats.noCompletedTasks')" :image-size="40" />
         </el-collapse-item>
       </el-collapse>
     </div>
 
     <!-- Completion Trend -->
     <div class="stats-section">
-      <h2 class="section-title">完成趋势</h2>
+      <h2 class="section-title">{{ t('stats.completionTrend') }}</h2>
       <div class="chart-container">
         <div v-if="dateStats.length > 0" class="bar-chart">
           <div
@@ -133,23 +133,23 @@
             <div class="bar-label">{{ formatBarLabel(item.date) }}</div>
           </div>
         </div>
-        <el-empty v-else description="暂无数据" :image-size="60" />
+        <el-empty v-else :description="t('messages.noData')" :image-size="60" />
       </div>
       <div class="chart-legend">
         <span class="legend-item">
           <span class="legend-color completed"></span>
-          <span>已完成</span>
+          <span>{{ t('stats.completed') }}</span>
         </span>
         <span class="legend-item">
           <span class="legend-color created"></span>
-          <span>已创建</span>
+          <span>{{ t('stats.created') }}</span>
         </span>
       </div>
     </div>
 
     <!-- Group Distribution -->
     <div v-if="groupStats.length > 0" class="stats-section">
-      <h2 class="section-title">任务组分布</h2>
+      <h2 class="section-title">{{ t('stats.groupDistribution') }}</h2>
       <div class="group-stats">
         <div
           v-for="group in groupStats"
@@ -177,7 +177,7 @@
 
     <!-- Tag Usage -->
     <div v-if="tagStats.length > 0" class="stats-section">
-      <h2 class="section-title">标签使用</h2>
+      <h2 class="section-title">{{ t('stats.tagUsage') }}</h2>
       <div class="tag-stats">
         <span
           v-for="tag in tagStats"
@@ -194,12 +194,15 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import type { TodoStats, StatsByDate, TodoStatsWithDetails } from '@/types';
 import { TodoStatus } from '@/types';
 import * as api from '@/api/tauri';
+
+const { t } = useI18n();
 
 const todoStore = useTodoStore();
 const groupStore = useGroupStore();
@@ -226,11 +229,11 @@ const statsWithDetails = ref<TodoStatsWithDetails>({
 });
 const activeCollapse = ref<string[]>(['todo', 'in_progress', 'done']);
 
-const dateRangeOptions = [
-  { label: '按天', value: 'day' },
-  { label: '按周', value: 'week' },
-  { label: '按月', value: 'month' },
-];
+const dateRangeOptions = computed(() => [
+  { label: t('stats.byDay'), value: 'day' },
+  { label: t('stats.byWeek'), value: 'week' },
+  { label: t('stats.byMonth'), value: 'month' },
+]);
 
 const groupStats = computed(() => {
   const groups = groupStore.groups;
@@ -271,14 +274,14 @@ function formatBarLabel(date: string): string {
   if (dateRange.value === 'day') {
     return `${d.getMonth() + 1}/${d.getDate()}`;
   } else if (dateRange.value === 'week') {
-    return `周${getWeekDay(d.getDay())}`;
+    return `${t('stats.week')}${getWeekDay(d.getDay())}`;
   } else {
-    return `${d.getMonth() + 1}月`;
+    return `${d.getMonth() + 1}${t('date.month')}`;
   }
 }
 
 function getWeekDay(day: number): string {
-  const days = ['日', '一', '二', '三', '四', '五', '六'];
+  const days = [t('date.sunday'), t('date.monday'), t('date.tuesday'), t('date.wednesday'), t('date.thursday'), t('date.friday'), t('date.saturday')];
   return days[day];
 }
 
@@ -289,12 +292,12 @@ function getCompletionPercentage(done: number, total: number): number {
 
 function formatDate(timestamp: number): string {
   const date = new Date(timestamp);
-  return `${date.getMonth() + 1}月${date.getDate()}日`;
+  return `${date.getMonth() + 1}${t('date.month')}${date.getDate()}${t('date.day')}`;
 }
 
 function formatDateTime(timestamp: number): string {
   const date = new Date(timestamp);
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+  return `${date.getMonth() + 1}${t('date.month')}${date.getDate()}${t('date.day')} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
 }
 
 async function loadStats() {

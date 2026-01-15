@@ -23,7 +23,7 @@
                   size="small"
                   effect="plain"
                 >
-                  {{ todo.priority === 3 ? '紧急' : '重要' }}
+                  {{ todo.priority === 3 ? t('priority.urgent') : t('priority.important') }}
                 </el-tag>
                 <span class="title-text">{{ todo.title }}</span>
               </div>
@@ -108,7 +108,7 @@
                 size="small"
                 effect="plain"
               >
-                {{ todo.priority === 3 ? '紧急' : '重要' }}
+                {{ todo.priority === 3 ? t('priority.urgent') : t('priority.important') }}
               </el-tag>
               <span class="title-text">{{ todo.title }}</span>
             </div>
@@ -183,7 +183,7 @@
     <!-- Empty State -->
     <el-empty
       v-if="filteredTodos.length === 0 && !loading"
-      description="暂无任务，点击上方新建任务开始使用"
+      :description="t('todo.noTodosHint')"
     />
 
     <!-- Loading -->
@@ -194,7 +194,7 @@
     <!-- Detail Panel (when a todo is selected) -->
     <el-drawer
       v-model="detailVisible"
-      title="任务详情"
+      :title="t('todo.todoDetail')"
       size="40%"
       direction="rtl"
     >
@@ -213,12 +213,15 @@
 import { ref, computed, watch, toRef } from 'vue';
 import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete } from '@element-plus/icons-vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
+import { useI18n } from 'vue-i18n';
 import { useTodoStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import type { Todo, TodoStep } from '@/types';
 import { TodoStatus } from '@/types';
 import TodoDetailPanel from '../components/todo/TodoDetailPanel.vue';
 import * as api from '@/api/tauri';
+
+const { t } = useI18n();
 
 const todoStore = useTodoStore();
 const uiStore = useUIStore();
@@ -274,7 +277,7 @@ async function toggleStatus(todo: Todo) {
   } catch (error: any) {
     console.error('Failed to toggle status:', error);
     const errorMsg = error?.toString() || JSON.stringify(error) || 'Unknown error';
-    ElMessage.error(`状态更新失败: ${errorMsg}`);
+    ElMessage.error(`${t('todo.statusUpdateFailed')}: ${errorMsg}`);
   }
 }
 
@@ -288,7 +291,7 @@ async function toggleMark(todo: Todo) {
     });
   } catch (error) {
     console.error('Failed to toggle priority:', error);
-    ElMessage.error('优先级更新失败');
+    ElMessage.error(t('todo.priorityUpdateFailed'));
   }
 }
 
@@ -319,7 +322,7 @@ async function toggleStep(step: TodoStep) {
     }
   } catch (error) {
     console.error('Failed to toggle step:', error);
-    ElMessage.error('步骤状态更新失败');
+    ElMessage.error(t('step.stepStatusUpdateFailed'));
   }
 }
 
@@ -346,17 +349,17 @@ function handleTodoDeleted() {
 async function handleDeleteTodo(todo: Todo) {
   try {
     await ElMessageBox.confirm(
-      `确定要删除任务 "${todo.title}" 吗？`,
-      '删除任务',
+      t('todo.deleteConfirm', { title: todo.title }),
+      t('todo.deleteTodo'),
       {
         type: 'warning',
-        confirmButtonText: '确定删除',
-        cancelButtonText: '取消',
+        confirmButtonText: t('todo.confirmDelete'),
+        cancelButtonText: t('common.cancel'),
       }
     );
 
     await todoStore.deleteTodo(todo.id);
-    ElMessage.success('任务已删除');
+    ElMessage.success(t('todo.deleteSuccess'));
 
     // 如果删除的是当前选中的任务，关闭详情面板
     if (selectedTodo.value?.id === todo.id) {
@@ -367,13 +370,13 @@ async function handleDeleteTodo(todo: Todo) {
     // User cancelled or error occurred
     if (error !== 'cancel') {
       console.error('Failed to delete todo:', error);
-      ElMessage.error('删除失败');
+      ElMessage.error(t('todo.deleteFailed'));
     }
   }
 }
 
 function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
-  if (!timestamp) return '无截止日期';
+  if (!timestamp) return t('todo.noDueDate');
   const date = new Date(timestamp);
   const now = new Date();
   const isOverdue = date < now && todoStatus !== TodoStatus.Done;
@@ -386,7 +389,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   };
 
   const formatted = date.toLocaleDateString('zh-CN', options);
-  return isOverdue ? `${formatted} (已逾期)` : formatted;
+  return isOverdue ? `${formatted} (${t('todo.overdue')})` : formatted;
 }
 </script>
 

@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="新建任务"
+    :title="t('todo.createTodo')"
     width="600px"
     @close="handleClose"
   >
@@ -12,27 +12,27 @@
       label-width="80px"
       @submit.prevent="handleSubmit"
     >
-      <el-form-item label="标题" prop="title">
+      <el-form-item :label="t('common.title')" prop="title">
         <el-input
           v-model="form.title"
-          placeholder="请输入任务标题"
+          :placeholder="t('todo.titlePlaceholder')"
           @keyup.enter="handleSubmit"
         />
       </el-form-item>
 
-      <el-form-item label="描述">
+      <el-form-item :label="t('common.description')">
         <el-input
           v-model="form.description"
           type="textarea"
           :rows="3"
-          placeholder="请输入任务描述（可选）"
+          :placeholder="t('todo.descriptionPlaceholder')"
         />
       </el-form-item>
 
-      <el-form-item label="任务组">
+      <el-form-item :label="t('common.group')">
         <el-select
           v-model="form.group_id"
-          placeholder="选择任务组（可选）"
+          :placeholder="t('todo.selectGroup')"
           clearable
           style="width: 100%"
         >
@@ -45,11 +45,11 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="开始时间">
+      <el-form-item :label="t('todo.startDate')">
         <el-date-picker
           v-model="form.start_date"
           type="datetime"
-          placeholder="选择开始时间（可选）"
+          :placeholder="t('todo.selectStartDate')"
           format="YYYY-MM-DD HH:mm"
           value-format="x"
           :clearable="true"
@@ -58,11 +58,11 @@
         />
       </el-form-item>
 
-      <el-form-item label="截止时间">
+      <el-form-item :label="t('todo.dueDate')">
         <el-date-picker
           v-model="form.due_date"
           type="datetime"
-          placeholder="选择截止时间（可选）"
+          :placeholder="t('todo.selectDueDate')"
           format="YYYY-MM-DD HH:mm"
           value-format="x"
           :clearable="true"
@@ -71,19 +71,19 @@
         />
       </el-form-item>
 
-      <el-form-item label="优先级">
+      <el-form-item :label="t('common.priority')">
         <el-radio-group v-model="form.priority">
-          <el-radio :label="0">普通</el-radio>
-          <el-radio :label="1">重要</el-radio>
-          <el-radio :label="2">紧急</el-radio>
+          <el-radio :label="0">{{ t('priority.normal') }}</el-radio>
+          <el-radio :label="1">{{ t('priority.important') }}</el-radio>
+          <el-radio :label="2">{{ t('priority.urgent') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
-      <el-form-item label="标签">
+      <el-form-item :label="t('common.tags')">
         <el-select
           v-model="form.tag_ids"
           multiple
-          placeholder="选择标签（可选）"
+          :placeholder="t('todo.selectTags')"
           style="width: 100%"
         >
           <el-option
@@ -97,9 +97,9 @@
     </el-form>
 
     <template #footer>
-      <el-button @click="handleClose">取消</el-button>
+      <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
       <el-button type="primary" @click="handleSubmit" :loading="loading">
-        创建
+        {{ t('common.create') }}
       </el-button>
     </template>
   </el-dialog>
@@ -107,12 +107,15 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import type { CreateTodoRequest } from '@/types';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: boolean;
@@ -142,7 +145,7 @@ const form = ref<CreateTodoRequest>({
 
 const rules: FormRules = {
   title: [
-    { required: true, message: '请输入任务标题', trigger: 'blur' },
+    { required: true, message: t('todo.titleRequired'), trigger: 'blur' },
   ],
 };
 
@@ -172,7 +175,7 @@ async function handleSubmit() {
     };
 
     await todoStore.createTodo(request);
-    ElMessage.success('任务创建成功');
+    ElMessage.success(t('todo.createSuccess'));
     emit('created');
     handleClose();
   } catch (error: any) {
@@ -180,7 +183,7 @@ async function handleSubmit() {
       // Validation error, do nothing
       return;
     }
-    ElMessage.error(`创建失败: ${error}`);
+    ElMessage.error(`${t('todo.createFailed')}: ${error}`);
   } finally {
     loading.value = false;
   }

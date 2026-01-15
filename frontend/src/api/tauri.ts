@@ -317,3 +317,40 @@ export async function importData(data: ExportData): Promise<void> {
 export async function clearAllData(): Promise<void> {
   return safeInvoke<void>('clear_all_data');
 }
+
+// ==================== App API ====================
+
+/**
+ * 设置全局快捷键
+ */
+export async function setGlobalShortcut(shortcut: string): Promise<void> {
+  return safeInvoke<void>('set_global_shortcut', { shortcut });
+}
+
+/**
+ * 获取当前注册的全局快捷键
+ */
+export async function getGlobalShortcut(): Promise<string | null> {
+  return safeInvoke<string | null>('get_global_shortcut');
+}
+
+/**
+ * 切换窗口显示/隐藏
+ */
+export async function toggleWindowVisibility(): Promise<void> {
+  return safeInvoke<void>('toggle_window_visibility');
+}
+
+/**
+ * 显示窗口
+ */
+export async function showWindow(): Promise<void> {
+  return safeInvoke<void>('show_window');
+}
+
+/**
+ * 隐藏窗口
+ */
+export async function hideWindow(): Promise<void> {
+  return safeInvoke<void>('hide_window');
+}

@@ -9,7 +9,7 @@
       <el-divider direction="vertical" />
       <el-input
         v-model="searchQuery"
-        placeholder="搜索任务..."
+        :placeholder="t('placeholder.searchTodo')"
         :prefix-icon="Search"
         clearable
         style="width: 200px"
@@ -25,7 +25,7 @@
             :icon="Filter"
             :type="hasActiveFilters ? 'primary' : ''"
           >
-            筛选
+            {{ t('filter.title') }}
             <el-badge
               v-if="activeFilterCount > 0"
               :value="activeFilterCount"
@@ -37,10 +37,10 @@
         <div class="filter-panel">
           <!-- Status Filter -->
           <div class="filter-item">
-            <div class="filter-label">状态</div>
+            <div class="filter-label">{{ t('common.status') }}</div>
             <el-select
               v-model="filterStatus"
-              placeholder="全部状态"
+              :placeholder="t('filter.allStatus')"
               clearable
               style="width: 100%"
               @change="applyFilters"
@@ -53,10 +53,10 @@
 
           <!-- Priority Filter -->
           <div class="filter-item">
-            <div class="filter-label">优先级</div>
+            <div class="filter-label">{{ t('common.priority') }}</div>
             <el-select
               v-model="filterPriority"
-              placeholder="全部优先级"
+              :placeholder="t('filter.allPriority')"
               clearable
               style="width: 100%"
               @change="applyFilters"
@@ -69,10 +69,10 @@
 
           <!-- Task Group Filter -->
           <div class="filter-item">
-            <div class="filter-label">任务组</div>
+            <div class="filter-label">{{ t('common.group') }}</div>
             <el-select
               v-model="filterGroupId"
-              placeholder="全部任务组"
+              :placeholder="t('filter.allGroups')"
               clearable
               style="width: 100%"
               @change="applyFilters"
@@ -90,10 +90,10 @@
 
           <!-- Tags Filter -->
           <div class="filter-item">
-            <div class="filter-label">标签</div>
+            <div class="filter-label">{{ t('common.tags') }}</div>
             <el-select
               v-model="filterTagIds"
-              placeholder="选择标签"
+              :placeholder="t('filter.selectTags')"
               clearable
               multiple
               collapse-tags
@@ -123,11 +123,11 @@
 
           <!-- Start Date Filter -->
           <div class="filter-item">
-            <div class="filter-label">开始日期</div>
+            <div class="filter-label">{{ t('filter.startDate') }}</div>
             <el-date-picker
               v-model="filterStartDate"
               type="date"
-              placeholder="开始日期之后"
+              :placeholder="t('filter.startDateAfter')"
               format="YYYY-MM-DD"
               value-format="x"
               clearable
@@ -138,11 +138,11 @@
 
           <!-- End Date Filter -->
           <div class="filter-item">
-            <div class="filter-label">结束日期</div>
+            <div class="filter-label">{{ t('filter.endDate') }}</div>
             <el-date-picker
               v-model="filterEndDate"
               type="date"
-              placeholder="结束日期之前"
+              :placeholder="t('filter.endDateBefore')"
               format="YYYY-MM-DD"
               value-format="x"
               clearable
@@ -153,7 +153,7 @@
 
           <!-- Actions -->
           <div class="filter-actions">
-            <el-button size="small" @click="resetFilters">重置</el-button>
+            <el-button size="small" @click="resetFilters">{{ t('filter.reset') }}</el-button>
           </div>
         </div>
       </el-popover>
@@ -166,14 +166,14 @@
           :icon="List"
           @click="setViewMode('list')"
         >
-          列表
+          {{ t('view.list') }}
         </el-button>
         <el-button
           :type="viewMode === 'card' ? 'primary' : ''"
           :icon="Grid"
           @click="setViewMode('card')"
         >
-          卡片
+          {{ t('view.card') }}
         </el-button>
       </el-button-group>
 
@@ -184,7 +184,7 @@
         :icon="Plus"
         @click="$emit('show-create')"
       >
-        新建任务
+        {{ t('todo.createTodo') }}
       </el-button>
     </div>
   </div>
@@ -193,6 +193,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { useRoute } from 'vue-router';
+import { useI18n } from 'vue-i18n';
 import {
   Search, Fold, Expand, List, Grid, Plus, Filter,
 } from '@element-plus/icons-vue';
@@ -201,6 +202,8 @@ import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import { TodoStatus } from '@/types';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   collapsed: boolean;

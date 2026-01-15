@@ -1,7 +1,11 @@
 // Copyright 2025 RTodo Team. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-use tauri::Manager;
+use tauri::{
+    menu::{Menu, MenuItem},
+    tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
+    Manager,
+};
 
 mod commands;
 mod database;
@@ -11,6 +15,7 @@ mod logging;
 
 use database::Database;
 use logging::{load_config, init_logging};
+use commands::app_commands::AppState;
 
 #[tokio::main]
 async fn main() {
@@ -27,12 +32,76 @@ async fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             tracing::info!("Setting up application...");
+
+            // 初始化应用状态
+            app.manage(AppState::new());
 
             // 初始化数据库连接池
             let db = Database::new().expect("Failed to initialize database");
             app.manage(db);
+
+            // 创建托盘图标菜单
+            let show_item = MenuItem::with_id(app, "show", "显示", true, None::<&str>).unwrap();
+            let quit_item = MenuItem::with_id(app, "quit", "退出", true, None::<&str>).unwrap();
+            let menu = Menu::with_items(app, &[&show_item, &quit_item]).unwrap();
+
+            // 创建托盘图标
+            let _tray = TrayIconBuilder::new()
+                .icon_as_template(true)
+                .menu(&menu)
+                .show_menu_on_left_click(false)
+                .on_tray_icon_event(|tray, event| {
+                    match event {
+                        TrayIconEvent::Click {
+                            button: MouseButton::Left,
+                            ..
+                        } => {
+                            tracing::info!("Tray left click");
+                            if let Some(window) = tray.app_handle().get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        TrayIconEvent::DoubleClick {
+                            button: MouseButton::Left,
+                            ..
+                        } => {
+                            tracing::info!("Tray left double click");
+                            if let Some(window) = tray.app_handle().get_webview_window("main") {
+                                let _ = window.show();
+                                let _ = window.set_focus();
+                            }
+                        }
+                        TrayIconEvent::Click {
+                            button: MouseButton::Right,
+                            ..
+                        } => {
+                            tracing::info!("Tray right click - show menu");
+                        }
+                        _ => {}
+                    }
+                })
+                .build(app)?;
+
+            // 处理托盘菜单事件
+            app.on_menu_event(|app, event| {
+                match event.id.0.as_str() {
+                    "show" => {
+                        if let Some(window) = app.get_webview_window("main") {
+                            let _ = window.show();
+                            let _ = window.set_focus();
+                        }
+                    }
+                    "quit" => {
+                        tracing::info!("Quit requested from tray menu");
+                        app.exit(0);
+                    }
+                    _ => {}
+                }
+            });
 
             tracing::info!("Application setup completed successfully");
             Ok(())
@@ -67,7 +136,21 @@ async fn main() {
             commands::data_manager_command::export_data_as_csv,
             commands::data_manager_command::import_data_from_csv,
             commands::data_manager_command::clear_all_data,
+            commands::app_commands::set_global_shortcut,
+            commands::app_commands::get_global_shortcut,
+            commands::app_commands::toggle_window_visibility,
+            commands::app_commands::show_window,
+            commands::app_commands::hide_window,
         ])
+        .on_window_event(|window, event| match event {
+            tauri::WindowEvent::CloseRequested { api, .. } => {
+                // 阻止窗口关闭，改为隐藏
+                api.prevent_close();
+                let _ = window.hide();
+                tracing::info!("Window close requested - hiding instead");
+            }
+            _ => {}
+        })
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

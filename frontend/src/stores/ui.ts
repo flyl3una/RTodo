@@ -31,6 +31,9 @@ export const useUIStore = defineStore('ui', () => {
   // Developer mode
   const developerMode = ref<boolean>(false);
 
+  // Global shortcut
+  const globalShortcut = ref<string>('CmdOrCtrl+Shift+T');
+
   // Selected todo
   const selectedTodoId = ref<string | null>(null);
 
@@ -64,6 +67,12 @@ export const useUIStore = defineStore('ui', () => {
   if (savedDensityMode && ['comfortable', 'compact'].includes(savedDensityMode)) {
     densityMode.value = savedDensityMode;
     document.documentElement.setAttribute('data-density', savedDensityMode);
+  }
+
+  // Initialize global shortcut from localStorage
+  const savedGlobalShortcut = localStorage.getItem('rtodo-global-shortcut');
+  if (savedGlobalShortcut) {
+    globalShortcut.value = savedGlobalShortcut;
   }
 
   // Actions
@@ -121,6 +130,19 @@ export const useUIStore = defineStore('ui', () => {
     localStorage.setItem('rtodo-density-mode', mode);
   }
 
+  async function setGlobalShortcut(shortcut: string) {
+    globalShortcut.value = shortcut;
+    localStorage.setItem('rtodo-global-shortcut', shortcut);
+    // 调用后端 API 注册快捷键
+    try {
+      const { setGlobalShortcut: setShortcut } = await import('@/api/tauri');
+      await setShortcut(shortcut);
+    } catch (error) {
+      console.error('Failed to register global shortcut:', error);
+      throw error;
+    }
+  }
+
   function selectTodo(id: string | null) {
     selectedTodoId.value = id;
   }
@@ -158,6 +180,7 @@ export const useUIStore = defineStore('ui', () => {
     themeColor,
     developerMode,
     densityMode,
+    globalShortcut,
     selectedTodoId,
     createTodoDialogVisible,
     groupManagerVisible,
@@ -171,6 +194,7 @@ export const useUIStore = defineStore('ui', () => {
     setThemeColor,
     setDeveloperMode,
     setDensityMode,
+    setGlobalShortcut,
     selectTodo,
     showCreateTodoDialog,
     hideCreateTodoDialog,

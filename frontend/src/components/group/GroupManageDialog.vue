@@ -1,7 +1,7 @@
 <template>
   <el-dialog
     v-model="visible"
-    :title="isEdit ? '编辑任务组' : '新建任务组'"
+    :title="isEdit ? t('group.editGroup') : t('group.createGroup')"
     width="600px"
     @close="handleClose"
   >
@@ -11,35 +11,35 @@
       :rules="rules"
       label-width="80px"
     >
-      <el-form-item label="名称" prop="name">
+      <el-form-item :label="t('common.name')" prop="name">
         <el-input
           v-model="form.name"
-          placeholder="请输入任务组名称"
+          :placeholder="t('group.groupNamePlaceholder')"
           @keyup.enter="handleSubmit"
         />
       </el-form-item>
 
-      <el-form-item label="图标">
+      <el-form-item :label="t('common.icon')">
         <IconPicker v-model="form.icon" :used-icons="usedIcons" />
       </el-form-item>
 
-      <el-form-item label="颜色">
+      <el-form-item :label="t('common.color')">
         <ColorPicker v-model="form.color" :used-colors="usedColors" />
       </el-form-item>
     </el-form>
 
     <template #footer>
-      <el-button @click="handleClose">取消</el-button>
+      <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
       <el-button
         v-if="isEdit"
         type="danger"
         @click="handleDelete"
         :loading="deleteLoading"
       >
-        删除
+        {{ t('common.delete') }}
       </el-button>
       <el-button type="primary" @click="handleSubmit" :loading="loading">
-        {{ isEdit ? '保存' : '创建' }}
+        {{ isEdit ? t('common.save') : t('common.create') }}
       </el-button>
     </template>
   </el-dialog>
@@ -47,11 +47,14 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useGroupStore } from '@/stores';
 import IconPicker from '@/components/common/IconPicker.vue';
 import ColorPicker from '@/components/common/ColorPicker.vue';
 import type { TaskGroup } from '@/types';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: boolean;
@@ -77,8 +80,8 @@ const form = ref({
 
 const rules: FormRules = {
   name: [
-    { required: true, message: '请输入任务组名称', trigger: 'blur' },
-    { min: 1, max: 20, message: '长度在 1 到 20 个字符', trigger: 'blur' },
+    { required: true, message: t('group.groupNameRequired'), trigger: 'blur' },
+    { min: 1, max: 20, message: t('group.groupNameLengthRule'), trigger: 'blur' },
   ],
 };
 
@@ -137,14 +140,14 @@ async function handleSubmit() {
         icon: form.value.icon,
         color: form.value.color,
       });
-      ElMessage.success('任务组更新成功');
+      ElMessage.success(t('group.groupUpdated'));
     } else {
       await groupStore.createGroup({
         name: form.value.name,
         icon: form.value.icon,
         color: form.value.color,
       });
-      ElMessage.success('任务组创建成功');
+      ElMessage.success(t('group.groupCreated'));
     }
 
     emit('updated');
@@ -153,7 +156,7 @@ async function handleSubmit() {
     if (error?.errors) {
       return;
     }
-    ElMessage.error(`操作失败: ${error}`);
+    ElMessage.error(`${t('group.operationFailed')}: ${error}`);
   } finally {
     loading.value = false;
   }
@@ -164,23 +167,23 @@ async function handleDelete() {
 
   try {
     await ElMessageBox.confirm(
-      '删除任务组不会删除其中的任务，确定要删除吗？',
-      '删除任务组',
+      t('group.deleteConfirm'),
+      t('group.deleteGroupTitle'),
       {
         type: 'warning',
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel'),
       }
     );
 
     deleteLoading.value = true;
     await groupStore.deleteGroup(props.group.id);
-    ElMessage.success('删除成功');
+    ElMessage.success(t('group.deleteSuccess'));
     emit('updated');
     handleClose();
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败');
+      ElMessage.error(t('group.deleteFailed'));
     }
   } finally {
     deleteLoading.value = false;

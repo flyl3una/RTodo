@@ -1,9 +1,9 @@
 <template>
   <div class="tag-manage">
     <div class="tag-header">
-      <h3>标签管理</h3>
+      <h3>{{ t('tag.manageTags') }}</h3>
       <el-button :icon="Plus" size="small" @click="showCreateDialog">
-        新建标签
+        {{ t('tag.createTag') }}
       </el-button>
     </div>
 
@@ -39,12 +39,12 @@
       </div>
     </div>
 
-    <el-empty v-else description="暂无标签" :image-size="60" />
+    <el-empty v-else :description="t('tag.noTags')" :image-size="60" />
 
     <!-- Create/Edit Dialog -->
     <el-dialog
       v-model="dialogVisible"
-      :title="isEdit ? '编辑标签' : '新建标签'"
+      :title="isEdit ? t('tag.editTag') : t('tag.createTag')"
       width="400px"
     >
       <el-form
@@ -53,23 +53,23 @@
         :rules="rules"
         label-width="60px"
       >
-        <el-form-item label="名称" prop="name">
+        <el-form-item :label="t('common.name')" prop="name">
           <el-input
             v-model="form.name"
-            placeholder="请输入标签名称"
+            :placeholder="t('tag.tagNamePlaceholder')"
             @keyup.enter="handleSubmit"
           />
         </el-form-item>
 
-        <el-form-item label="颜色">
+        <el-form-item :label="t('common.color')">
           <ColorPicker v-model="form.color" :used-colors="usedColors" />
         </el-form-item>
       </el-form>
 
       <template #footer>
-        <el-button @click="dialogVisible = false">取消</el-button>
+        <el-button @click="dialogVisible = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="handleSubmit" :loading="loading">
-          {{ isEdit ? '保存' : '创建' }}
+          {{ isEdit ? t('common.save') : t('common.create') }}
         </el-button>
       </template>
     </el-dialog>
@@ -78,11 +78,14 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Edit, Delete, Plus } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useTagStore } from '@/stores';
 import ColorPicker from '@/components/common/ColorPicker.vue';
 import type { Tag } from '@/types';
+
+const { t } = useI18n();
 
 const emit = defineEmits<{
   updated: [];
@@ -102,8 +105,8 @@ const form = ref({
 
 const rules: FormRules = {
   name: [
-    { required: true, message: '请输入标签名称', trigger: 'blur' },
-    { min: 1, max: 15, message: '长度在 1 到 15 个字符', trigger: 'blur' },
+    { required: true, message: t('tag.tagNameRequired'), trigger: 'blur' },
+    { min: 1, max: 15, message: t('tag.tagNameLengthRule'), trigger: 'blur' },
   ],
 };
 
@@ -139,10 +142,10 @@ async function handleSubmit() {
 
     if (isEdit.value && editingTag.value) {
       await tagStore.updateTag(editingTag.value.id, form.value);
-      ElMessage.success('标签更新成功');
+      ElMessage.success(t('tag.tagUpdated'));
     } else {
       await tagStore.createTag(form.value.name, form.value.color);
-      ElMessage.success('标签创建成功');
+      ElMessage.success(t('tag.tagCreated'));
     }
 
     dialogVisible.value = false;
@@ -151,7 +154,7 @@ async function handleSubmit() {
     if (error?.errors) {
       return;
     }
-    ElMessage.error(`操作失败: ${error}`);
+    ElMessage.error(`${t('tag.operationFailed')}: ${error}`);
   } finally {
     loading.value = false;
   }
@@ -160,21 +163,21 @@ async function handleSubmit() {
 async function deleteTag(tag: Tag) {
   try {
     await ElMessageBox.confirm(
-      `确定要删除标签 "${tag.name}" 吗？`,
-      '删除标签',
+      t('tag.deleteConfirm', { name: tag.name }),
+      t('tag.deleteTagTitle'),
       {
         type: 'warning',
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel'),
       }
     );
 
     await tagStore.deleteTag(tag.id);
-    ElMessage.success('删除成功');
+    ElMessage.success(t('tag.deleteSuccess'));
     emit('updated');
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败');
+      ElMessage.error(t('tag.deleteFailed'));
     }
   }
 }

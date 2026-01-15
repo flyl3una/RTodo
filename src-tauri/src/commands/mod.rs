@@ -8,3 +8,4 @@ pub mod step_commands;
 pub mod attachment_commands;
 pub mod stats_commands;
 pub mod data_manager_command;
+pub mod app_commands;

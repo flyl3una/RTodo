@@ -14,7 +14,7 @@
         :icon="Refresh"
         @click="handleRandom"
       >
-        随机颜色
+        {{ t('tag.randomColor') }}
       </el-button>
     </div>
 

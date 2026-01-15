@@ -1,13 +1,33 @@
 <template>
-  <MainLayout />
+  <el-config-provider :locale="elementLocale">
+    <MainLayout />
+  </el-config-provider>
 </template>
 
 <script setup lang="ts">
-import { onUnmounted, watch } from 'vue';
+import { computed, onUnmounted, watch } from 'vue';
 import { useUIStore } from '@/stores';
+import { useI18n } from 'vue-i18n';
+import zhCn from 'element-plus/es/locale/lang/zh-cn';
+import en from 'element-plus/es/locale/lang/en';
+import ja from 'element-plus/es/locale/lang/ja';
 import MainLayout from '@/components/layout/MainLayout.vue';
 
 const uiStore = useUIStore();
+const { locale } = useI18n();
+
+// Element Plus locale mapping
+const localeMap = {
+  'zh-CN': zhCn,
+  'zh-TW': zhCn,
+  'en-US': en,
+  'ja-JP': ja,
+};
+
+// 响应式的 Element Plus locale
+const elementLocale = computed(() => {
+  return localeMap[locale.value as keyof typeof localeMap] || zhCn;
+});
 
 // 处理右键菜单限制
 function handleContextMenu(event: MouseEvent) {

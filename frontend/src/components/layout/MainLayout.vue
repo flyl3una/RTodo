@@ -32,6 +32,7 @@
 
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { useUIStore } from '@/stores';
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
@@ -40,6 +41,8 @@ import { getEnvironmentInfo, isTauriAvailable, testIPCConnection } from '@/utils
 import Sidebar from './Sidebar.vue';
 import Header from './Header.vue';
 import CreateTodoDialog from '../todo/CreateTodoDialog.vue';
+
+const { t } = useI18n();
 
 const uiStore = useUIStore();
 const todoStore = useTodoStore();
@@ -66,11 +69,8 @@ onMounted(async () => {
     const showError = () => {
       import('element-plus').then(({ ElMessageBox }) => {
         ElMessageBox.alert(
-          '应用需要在Tauri桌面窗口中运行。\n\n' +
-          '请确保：\n' +
-          '1. 使用 "cargo tauri dev" 命令启动应用\n' +
-          '2. 在弹出的桌面窗口中测试，不要在浏览器中访问',
-          '环境错误',
+          t('messages.tauriEnvironmentError'),
+          t('messages.environmentError'),
           { type: 'error' }
         );
       });

@@ -1,30 +1,30 @@
 <template>
   <div class="settings-view">
-    <h1 class="page-title">设置</h1>
+    <h1 class="page-title">{{ t('settings.title') }}</h1>
 
     <div class="settings-content">
       <!-- Appearance -->
       <section class="settings-section">
-        <h2 class="section-title">外观</h2>
+        <h2 class="section-title">{{ t('settings.appearance') }}</h2>
         <div class="setting-item">
-          <span class="setting-label">主题</span>
+          <span class="setting-label">{{ t('settings.theme') }}</span>
           <el-radio-group v-model="currentTheme" @change="handleThemeChange">
-            <el-radio-button value="light">浅色</el-radio-button>
-            <el-radio-button value="dark">深色</el-radio-button>
-            <el-radio-button value="auto">跟随系统</el-radio-button>
+            <el-radio-button value="light">{{ t('settings.themeLight') }}</el-radio-button>
+            <el-radio-button value="dark">{{ t('settings.themeDark') }}</el-radio-button>
+            <el-radio-button value="auto">{{ t('settings.themeAuto') }}</el-radio-button>
           </el-radio-group>
         </div>
         <div class="setting-item">
-          <span class="setting-label">语言</span>
+          <span class="setting-label">{{ t('settings.language') }}</span>
           <el-select v-model="currentLanguage" @change="handleLanguageChange" style="width: 200px">
-            <el-option label="简体中文" value="zh-CN" />
-            <el-option label="繁體中文" value="zh-TW" />
-            <el-option label="English" value="en-US" />
-            <el-option label="日本語" value="ja-JP" />
+            <el-option :label="t('languages.zh-CN')" value="zh-CN" />
+            <el-option :label="t('languages.zh-TW')" value="zh-TW" />
+            <el-option :label="t('languages.en-US')" value="en-US" />
+            <el-option :label="t('languages.ja-JP')" value="ja-JP" />
           </el-select>
         </div>
         <div class="setting-item">
-          <span class="setting-label">主题色</span>
+          <span class="setting-label">{{ t('settings.themeColor') }}</span>
           <el-color-picker
             v-model="currentThemeColor"
             @change="handleThemeColorChange"
@@ -32,60 +32,84 @@
           />
         </div>
         <div class="setting-item">
-          <span class="setting-label">开发模式</span>
+          <span class="setting-label">{{ t('settings.developerMode') }}</span>
           <el-switch v-model="currentDeveloperMode" @change="handleDeveloperModeChange" />
         </div>
         <div class="setting-item">
-          <span class="setting-label">展示模式</span>
+          <span class="setting-label">{{ t('settings.densityMode') }}</span>
           <el-radio-group v-model="currentDensityMode" @change="handleDensityModeChange">
-            <el-radio-button value="comfortable">宽松</el-radio-button>
-            <el-radio-button value="compact">紧凑</el-radio-button>
+            <el-radio-button value="comfortable">{{ t('settings.densityComfortable') }}</el-radio-button>
+            <el-radio-button value="compact">{{ t('settings.densityCompact') }}</el-radio-button>
           </el-radio-group>
+        </div>
+      </section>
+
+      <!-- Shortcuts -->
+      <section class="settings-section">
+        <h2 class="section-title">{{ t('settings.shortcuts') }}</h2>
+        <div class="setting-item">
+          <span class="setting-label">{{ t('settings.globalShortcut') }}</span>
+          <el-input
+            v-model="currentGlobalShortcut"
+            :placeholder="t('settings.shortcutPlaceholder')"
+            style="width: 200px"
+            @blur="handleGlobalShortcutChange"
+          />
+        </div>
+        <div class="shortcut-hint">
+          <p>{{ t('settings.shortcutHint') }}</p>
+          <ul>
+            <li><code>CmdOrCtrl</code> - {{ t('settings.shortcutCmdOrCtrl') }}</li>
+            <li><code>Shift</code> - {{ t('settings.shortcutShift') }}</li>
+            <li><code>Alt</code> - {{ t('settings.shortcutAlt') }}</li>
+            <li><code>A</code> - {{ t('settings.shortcutKey') }}</li>
+          </ul>
+          <p>{{ t('settings.shortcutExample') }}<code>CmdOrCtrl+Shift+T</code>、<code>CmdOrCtrl+Alt+Space</code></p>
         </div>
       </section>
 
       <!-- Data Management -->
       <section class="settings-section">
-        <h2 class="section-title">数据管理</h2>
+        <h2 class="section-title">{{ t('settings.dataManagement') }}</h2>
         <div class="setting-item">
-          <span class="setting-label">导出数据</span>
+          <span class="setting-label">{{ t('settings.exportData') }}</span>
           <el-button @click="handleExport" :loading="exportLoading">
-            导出所有数据
+            {{ t('settings.exportAllData') }}
           </el-button>
         </div>
         <div class="setting-item">
-          <span class="setting-label">导入数据</span>
-          <el-button @click="handleImport">导入数据</el-button>
+          <span class="setting-label">{{ t('settings.importData') }}</span>
+          <el-button @click="handleImport">{{ t('settings.importData') }}</el-button>
         </div>
         <div class="setting-item danger">
-          <span class="setting-label">清空数据</span>
+          <span class="setting-label">{{ t('settings.clearData') }}</span>
           <el-button type="danger" @click="handleClear">
-            清空所有数据
+            {{ t('settings.clearAllData') }}
           </el-button>
         </div>
       </section>
 
       <!-- About -->
       <section class="settings-section">
-        <h2 class="section-title">关于</h2>
+        <h2 class="section-title">{{ t('settings.about') }}</h2>
         <div class="about-content">
           <div class="app-info">
             <div class="app-logo">
               <Logo />
             </div>
             <div class="app-details">
-              <h3>RTodo</h3>
-              <p class="app-version">版本 0.1.0</p>
+              <h3>{{ t('settings.appName') }}</h3>
+              <p class="app-version">{{ t('settings.appVersion') }}</p>
             </div>
           </div>
           <p class="app-description">
-            基于 Tauri + Vue 3 的跨平台待办事项管理应用
+            {{ t('settings.appDescription') }}
           </p>
           <div class="tech-stack">
-            <span>Tauri 2.0</span>
-            <span>Vue 3</span>
-            <span>Element Plus</span>
-            <span>SQLite</span>
+            <span>{{ t('techStack.tauri') }}</span>
+            <span>{{ t('techStack.vue') }}</span>
+            <span>{{ t('techStack.elementPlus') }}</span>
+            <span>{{ t('techStack.sqlite') }}</span>
           </div>
         </div>
       </section>
@@ -95,11 +119,14 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useUIStore } from '@/stores';
 import * as api from '@/api/tauri';
 import Logo from '@/components/icon/logo.vue';
 import { save, open } from '@tauri-apps/plugin-dialog';
+
+const { t } = useI18n();
 
 const uiStore = useUIStore();
 
@@ -108,21 +135,22 @@ const currentLanguage = ref(uiStore.language);
 const currentThemeColor = ref(uiStore.themeColor);
 const currentDeveloperMode = ref(uiStore.developerMode);
 const currentDensityMode = ref(uiStore.densityMode);
+const currentGlobalShortcut = ref(uiStore.globalShortcut);
 const exportLoading = ref(false);
 
 function handleThemeChange(value: 'light' | 'dark' | 'auto') {
   uiStore.setTheme(value);
-  ElMessage.success('主题已切换');
+  ElMessage.success(t('messages.themeChanged'));
 }
 
 function handleLanguageChange(value: 'zh-CN' | 'zh-TW' | 'en-US' | 'ja-JP') {
   uiStore.setLanguage(value);
-  ElMessage.success('语言已切换');
+  ElMessage.success(t('messages.languageChanged'));
 }
 
 function handleThemeColorChange(color: string) {
   uiStore.setThemeColor(color);
-  ElMessage.success('主题色已切换');
+  ElMessage.success(t('messages.themeColorChanged'));
 }
 
 function handleDeveloperModeChange(enabled: boolean) {
@@ -130,12 +158,24 @@ function handleDeveloperModeChange(enabled: boolean) {
   console.log('[Settings] uiStore.developerMode before:', uiStore.developerMode);
   uiStore.setDeveloperMode(enabled);
   console.log('[Settings] uiStore.developerMode after:', uiStore.developerMode);
-  ElMessage.success(enabled ? '开发模式已开启' : '开发模式已关闭');
+  ElMessage.success(enabled ? t('messages.developerModeEnabled') : t('messages.developerModeDisabled'));
 }
 
 function handleDensityModeChange(mode: 'comfortable' | 'compact') {
   uiStore.setDensityMode(mode);
-  ElMessage.success(mode === 'compact' ? '已切换到紧凑模式' : '已切换到宽松模式');
+  ElMessage.success(mode === 'compact' ? t('messages.densityCompact') : t('messages.densityComfortable'));
+}
+
+async function handleGlobalShortcutChange() {
+  try {
+    await uiStore.setGlobalShortcut(currentGlobalShortcut.value);
+    ElMessage.success(t('messages.globalShortcutSet'));
+  } catch (error) {
+    console.error('Failed to set global shortcut:', error);
+    ElMessage.error(t('messages.globalShortcutFailed'));
+    // 恢复原值
+    currentGlobalShortcut.value = uiStore.globalShortcut;
+  }
 }
 
 async function handleExport() {
@@ -144,7 +184,7 @@ async function handleExport() {
     const filePath = await save({
       defaultPath: `rtodo-backup-${new Date().toISOString().split('T')[0]}.zip`,
       filters: [{
-        name: 'ZIP Archive',
+        name: t('fileTypes.zipArchive'),
         extensions: ['zip']
       }]
     });
@@ -158,10 +198,10 @@ async function handleExport() {
 
     // 将文件路径传递给后端，后端直接写入文件
     await api.exportDataAsCsv(filePath);
-    ElMessage.success('数据导出成功');
+    ElMessage.success(t('messages.dataExported'));
   } catch (error) {
     console.error('Export error:', error);
-    ElMessage.error('导出失败');
+    ElMessage.error(t('messages.exportFailed'));
   } finally {
     exportLoading.value = false;
   }
@@ -170,12 +210,12 @@ async function handleExport() {
 async function handleImport() {
   try {
     await ElMessageBox.confirm(
-      '导入将覆盖现有数据，确定要继续吗？',
-      '导入数据',
+      t('messages.importConfirm'),
+      t('messages.importData'),
       {
         type: 'warning',
-        confirmButtonText: '选择文件',
-        cancelButtonText: '取消',
+        confirmButtonText: t('messages.importSelectFile'),
+        cancelButtonText: t('common.cancel'),
       }
     );
 
@@ -183,7 +223,7 @@ async function handleImport() {
     const selectedPath = await open({
       multiple: false,
       filters: [{
-        name: 'ZIP Archive',
+        name: t('fileTypes.zipArchive'),
         extensions: ['zip']
       }]
     });
@@ -197,11 +237,11 @@ async function handleImport() {
 
     // 将文件路径传给后端，后端负责读取和解析
     await api.importDataFromCsv(selectedPath);
-    ElMessage.success('数据导入成功，页面将重新加载');
+    ElMessage.success(t('messages.importSuccess'));
     setTimeout(() => window.location.reload(), 1500);
   } catch (error) {
     console.error('Import error:', error);
-    ElMessage.error('导入失败：文件格式错误');
+    ElMessage.error(t('messages.importFailed'));
   } finally {
     exportLoading.value = false;
   }
@@ -210,18 +250,18 @@ async function handleImport() {
 async function handleClear() {
   try {
     await ElMessageBox.confirm(
-      '此操作将清空所有数据且无法恢复，确定要继续吗？',
-      '清空所有数据',
+      t('messages.clearConfirm'),
+      t('messages.clearAllData'),
       {
         type: 'error',
-        confirmButtonText: '确定清空',
-        cancelButtonText: '取消',
+        confirmButtonText: t('messages.clearConfirmButton'),
+        cancelButtonText: t('common.cancel'),
         distinguishCancelAndClose: true,
       }
     );
 
     await api.clearAllData();
-    ElMessage.success('数据已清空');
+    ElMessage.success(t('messages.dataCleared'));
     setTimeout(() => window.location.reload(), 1000);
   } catch (error) {
     // User cancelled
@@ -234,6 +274,7 @@ onMounted(() => {
   currentThemeColor.value = uiStore.themeColor;
   currentDeveloperMode.value = uiStore.developerMode;
   currentDensityMode.value = uiStore.densityMode;
+  currentGlobalShortcut.value = uiStore.globalShortcut;
 });
 </script>
 
@@ -348,6 +389,38 @@ onMounted(() => {
   color: #606266;
 }
 
+.shortcut-hint {
+  margin-top: 12px;
+  padding: 12px;
+  background: #f5f7fa;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.shortcut-hint p {
+  margin: 0 0 8px;
+  color: #606266;
+}
+
+.shortcut-hint ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.shortcut-hint li {
+  margin: 4px 0;
+  color: #606266;
+}
+
+.shortcut-hint code {
+  padding: 2px 6px;
+  background: white;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--el-color-primary);
+}
+
 /* Dark theme */
 [data-theme='dark'] .page-title {
   color: #e0e0e0;
@@ -381,6 +454,19 @@ onMounted(() => {
 [data-theme='dark'] .tech-stack span {
   background: #1a1a1a;
   color: #b0b0b0;
+}
+
+[data-theme='dark'] .shortcut-hint {
+  background: #1a1a1a;
+}
+
+[data-theme='dark'] .shortcut-hint p,
+[data-theme='dark'] .shortcut-hint li {
+  color: #b0b0b0;
+}
+
+[data-theme='dark'] .shortcut-hint code {
+  background: #2a2a2a;
 }
 
 /* 紧凑模式 */

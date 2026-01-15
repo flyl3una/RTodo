@@ -24,7 +24,11 @@
     "security": {
       "csp": null
     },
-    "withGlobalTauri": true
+    "withGlobalTauri": true,
+    "trayIcon": {
+      "iconPath": "icons/tray-icon.png",
+      "iconAsTemplate": true
+    }
   },
   "bundle": {
     "active": false,

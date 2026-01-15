@@ -7,31 +7,31 @@
       :rules="rules"
       label-width="80px"
     >
-      <el-form-item label="标题" prop="title">
-        <el-input v-model="form.title" placeholder="请输入任务标题" />
+      <el-form-item :label="t('common.title')" prop="title">
+        <el-input v-model="form.title" :placeholder="t('todo.titlePlaceholder')" />
       </el-form-item>
 
-      <el-form-item label="描述">
+      <el-form-item :label="t('common.description')">
         <el-input
           v-model="form.description"
           type="textarea"
           :rows="3"
-          placeholder="请输入任务描述"
+          :placeholder="t('todo.descriptionPlaceholder')"
         />
       </el-form-item>
 
-      <el-form-item label="状态">
+      <el-form-item :label="t('common.status')">
         <el-select v-model="form.status" style="width: 100%">
-          <el-option label="待办" :value="TodoStatus.Todo" />
-          <el-option label="进行中" :value="TodoStatus.InProgress" />
-          <el-option label="已完成" :value="TodoStatus.Done" />
+          <el-option :label="t('status.todo')" :value="TodoStatus.Todo" />
+          <el-option :label="t('status.inProgress')" :value="TodoStatus.InProgress" />
+          <el-option :label="t('status.done')" :value="TodoStatus.Done" />
         </el-select>
       </el-form-item>
 
-      <el-form-item label="任务组">
+      <el-form-item :label="t('common.group')">
         <el-select
           v-model="form.group_id"
-          placeholder="选择任务组"
+          :placeholder="t('todo.selectGroup')"
           clearable
           style="width: 100%"
         >
@@ -44,19 +44,19 @@
         </el-select>
       </el-form-item>
 
-      <el-form-item label="优先级">
+      <el-form-item :label="t('common.priority')">
         <el-radio-group v-model="form.priority">
-          <el-radio :label="0">普通</el-radio>
-          <el-radio :label="1">重要</el-radio>
-          <el-radio :label="3">紧急</el-radio>
+          <el-radio :label="0">{{ t('priority.normal') }}</el-radio>
+          <el-radio :label="1">{{ t('priority.important') }}</el-radio>
+          <el-radio :label="3">{{ t('priority.urgent') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
-      <el-form-item label="开始时间">
+      <el-form-item :label="t('todo.startDate')">
         <el-date-picker
           v-model="form.start_date"
           type="datetime"
-          placeholder="选择开始时间"
+          :placeholder="t('todo.selectStartDate')"
           format="YYYY-MM-DD HH:mm"
           value-format="x"
           :clearable="true"
@@ -65,11 +65,11 @@
         />
       </el-form-item>
 
-      <el-form-item label="截止时间">
+      <el-form-item :label="t('todo.dueDate')">
         <el-date-picker
           v-model="form.due_date"
           type="datetime"
-          placeholder="选择截止时间"
+          :placeholder="t('todo.selectDueDate')"
           format="YYYY-MM-DD HH:mm"
           value-format="x"
           :clearable="true"
@@ -78,11 +78,11 @@
         />
       </el-form-item>
 
-      <el-form-item label="标签">
+      <el-form-item :label="t('tag.tags')">
         <el-select
           v-model="form.tag_ids"
           multiple
-          placeholder="选择标签"
+          :placeholder="t('todo.selectTags')"
           style="width: 100%"
         >
           <el-option
@@ -96,9 +96,9 @@
 
       <el-form-item>
         <el-button type="primary" @click="handleSave" :loading="loading">
-          保存
+          {{ t('common.save') }}
         </el-button>
-        <el-button @click="cancelEdit">取消</el-button>
+        <el-button @click="cancelEdit">{{ t('common.cancel') }}</el-button>
       </el-form-item>
     </el-form>
 
@@ -129,26 +129,26 @@
       </div>
 
       <div v-if="todo.description" class="detail-section">
-        <h4 class="section-title">描述</h4>
+        <h4 class="section-title">{{ t('common.description') }}</h4>
         <p class="section-content">{{ todo.description }}</p>
       </div>
 
       <div class="detail-section">
-        <h4 class="section-title">时间</h4>
+        <h4 class="section-title">{{ t('todo.time') }}</h4>
         <div class="time-info">
           <div v-if="displayStartDate">
-            <span class="time-label">开始:</span>
+            <span class="time-label">{{ t('todo.start') }}:</span>
             <span>{{ formatDate(displayStartDate) }}</span>
           </div>
           <div v-if="displayDueDate">
-            <span class="time-label">截止:</span>
+            <span class="time-label">{{ t('todo.due') }}:</span>
             <span>{{ formatDate(displayDueDate) }}</span>
           </div>
         </div>
       </div>
 
       <div v-if="todo.tags && todo.tags.length > 0" class="detail-section">
-        <h4 class="section-title">标签</h4>
+        <h4 class="section-title">{{ t('tag.tags') }}</h4>
         <div class="tags-list">
           <el-tag
             v-for="tag in todo.tags"
@@ -163,14 +163,14 @@
 
       <div class="detail-section">
         <div class="section-header">
-          <h4 class="section-title">执行步骤</h4>
+          <h4 class="section-title">{{ t('step.title') }}</h4>
           <el-button
             :icon="Plus"
             size="small"
             text
             @click="showAddStep = true"
           >
-            添加
+            {{ t('common.add') }}
           </el-button>
         </div>
         <div v-if="steps.length > 0" class="steps-list">
@@ -198,25 +198,25 @@
             />
           </div>
         </div>
-        <el-empty v-else description="暂无执行步骤" :image-size="60" />
+        <el-empty v-else :description="t('step.noSteps')" :image-size="60" />
       </div>
     </div>
 
     <!-- Add Step Dialog -->
     <el-dialog
       v-model="showAddStep"
-      title="添加执行步骤"
+      :title="t('step.addStep')"
       width="500px"
     >
       <el-input
         v-model="newStepTitle"
-        placeholder="请输入步骤标题"
+        :placeholder="t('step.stepPlaceholder')"
         @keyup.enter="addStep"
       />
       <template #footer>
-        <el-button @click="showAddStep = false">取消</el-button>
+        <el-button @click="showAddStep = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="addStep" :disabled="!newStepTitle.trim()">
-          添加
+          {{ t('common.add') }}
         </el-button>
       </template>
     </el-dialog>
@@ -227,11 +227,14 @@
 import { ref, computed, onMounted, watch } from 'vue';
 import { Edit, Delete, Star, StarFilled, Plus } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import { useI18n } from 'vue-i18n';
 import { useTodoStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import type { Todo, UpdateTodoRequest, TodoStep } from '@/types';
 import { TodoStatus, getStatusLabel, getStatusType } from '@/types';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   todo: Todo;
@@ -266,7 +269,7 @@ const form = ref<UpdateTodoRequest>({
 
 const rules: FormRules = {
   title: [
-    { required: true, message: '请输入任务标题', trigger: 'blur' },
+    { required: true, message: t('todo.titleRequired'), trigger: 'blur' },
   ],
 };
 
@@ -314,9 +317,9 @@ const priorityType = computed(() => {
 
 const priorityText = computed(() => {
   switch (props.todo.priority) {
-    case 3: return '紧急';
-    case 1: return '重要';
-    default: return '普通';
+    case 3: return t('priority.urgent');
+    case 1: return t('priority.important');
+    default: return t('priority.normal');
   }
 });
 
@@ -410,7 +413,7 @@ async function handleSave() {
     console.log('Updated todo received:', updated);
     console.log('Updated start_date:', updated.start_date, 'due_date:', updated.due_date);
 
-    ElMessage.success('保存成功');
+    ElMessage.success(t('todo.updateSuccess'));
 
     // 先退出编辑模式
     isEditing.value = false;
@@ -424,7 +427,7 @@ async function handleSave() {
     if (error?.errors) {
       return;
     }
-    ElMessage.error(`保存失败: ${error}`);
+    ElMessage.error(`${t('todo.createFailed')}: ${error}`);
   } finally {
     loading.value = false;
   }
@@ -436,7 +439,7 @@ async function handleStatusToggle() {
     await todoStore.updateTodoStatus(props.todo.id, newStatus);
     emit('updated', { ...props.todo, status: newStatus });
   } catch (error) {
-    ElMessage.error('状态切换失败');
+    ElMessage.error(t('todo.statusUpdateFailed'));
   }
 }
 
@@ -450,24 +453,24 @@ async function handleMarkToggle() {
     });
     emit('updated', { ...props.todo, priority: newPriority });
   } catch (error) {
-    ElMessage.error('优先级切换失败');
+    ElMessage.error(t('todo.priorityUpdateFailed'));
   }
 }
 
 async function handleDelete() {
   try {
-    await ElMessageBox.confirm('确定要删除这个任务吗？', '删除任务', {
+    await ElMessageBox.confirm(t('todo.deleteConfirm', { title: props.todo.title }), t('todo.deleteTodo'), {
       type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
+      confirmButtonText: t('common.delete'),
+      cancelButtonText: t('common.cancel'),
     });
 
     await todoStore.deleteTodo(props.todo.id);
-    ElMessage.success('删除成功');
+    ElMessage.success(t('todo.deleteSuccess'));
     emit('deleted');
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败');
+      ElMessage.error(t('todo.deleteFailed'));
     }
   }
 }
@@ -480,7 +483,7 @@ async function toggleStep(step: TodoStep) {
     );
     steps.value = updatedSteps;
   } catch (error) {
-    ElMessage.error('步骤状态更新失败');
+    ElMessage.error(t('step.stepStatusUpdateFailed'));
   }
 }
 
@@ -489,29 +492,29 @@ async function addStep() {
 
   try {
     await todoStore.createStep(props.todo.id, newStepTitle.value);
-    ElMessage.success('步骤添加成功');
+    ElMessage.success(t('step.stepCreated'));
     newStepTitle.value = '';
     showAddStep.value = false;
     await loadSteps();
   } catch (error) {
-    ElMessage.error('添加步骤失败');
+    ElMessage.error(t('step.addStepFailed'));
   }
 }
 
 async function deleteStep(stepId: string) {
   try {
-    await ElMessageBox.confirm('确定要删除这个步骤吗？', '删除步骤', {
+    await ElMessageBox.confirm(t('step.deleteConfirm'), t('step.deleteStep'), {
       type: 'warning',
-      confirmButtonText: '删除',
-      cancelButtonText: '取消',
+      confirmButtonText: t('common.delete'),
+      cancelButtonText: t('common.cancel'),
     });
 
     await todoStore.deleteStep(stepId);
-    ElMessage.success('删除成功');
+    ElMessage.success(t('step.deleteSuccess'));
     await loadSteps();
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败');
+      ElMessage.error(t('step.deleteStepFailed'));
     }
   }
 }
