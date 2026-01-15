@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 /// 标签
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Tag {
-    pub id: String,
+    pub id: i64,
     pub name: String,
     pub color: String,
     pub created_at: i64,
@@ -22,7 +22,7 @@ pub struct CreateTagRequest {
 /// 更新标签请求
 #[derive(Debug, Deserialize)]
 pub struct UpdateTagRequest {
-    pub id: String,
+    pub id: i64,
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]

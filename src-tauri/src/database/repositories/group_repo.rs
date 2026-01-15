@@ -40,7 +40,7 @@ impl GroupRepository {
     }
 
     /// 根据 ID 获取单个任务组
-    pub fn get(conn: &Connection, id: &str) -> Result<Option<TaskGroup>> {
+    pub fn get(conn: &Connection, id: i64) -> Result<Option<TaskGroup>> {
         let group = conn.query_row(
             "SELECT id, name, parent_id, icon, color, sort_order, created_at, updated_at
              FROM task_groups WHERE id = ?",
@@ -68,7 +68,7 @@ impl GroupRepository {
     pub fn create(
         conn: &Connection,
         name: &str,
-        parent_id: Option<&str>,
+        parent_id: Option<i64>,
         icon: Option<&str>,
         color: Option<&str>,
     ) -> Result<TaskGroup> {
@@ -80,15 +80,13 @@ impl GroupRepository {
             .unwrap_or(10);
 
         let now = Utc::now().timestamp_millis();
-        let id = uuid::Uuid::new_v4().to_string();
         let icon_value = icon.unwrap_or("📁");
         let color_value = color.unwrap_or("#409EFF");
 
         conn.execute(
-            "INSERT INTO task_groups (id, name, parent_id, icon, color, sort_order, created_at, updated_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
+            "INSERT INTO task_groups (name, parent_id, icon, color, sort_order, created_at, updated_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
             params![
-                &id,
                 name,
                 parent_id,
                 icon_value,
@@ -100,10 +98,13 @@ impl GroupRepository {
         )
         .context("Failed to insert group")?;
 
+        // 获取新插入的ID
+        let id: i64 = conn.last_insert_rowid();
+
         Ok(TaskGroup {
             id,
             name: name.to_string(),
-            parent_id: parent_id.map(|s| s.to_string()),
+            parent_id,
             icon: Some(icon_value.to_string()),
             color: Some(color_value.to_string()),
             sort_order,
@@ -115,9 +116,9 @@ impl GroupRepository {
     /// 更新任务组
     pub fn update(
         conn: &Connection,
-        id: &str,
+        id: i64,
         name: Option<&str>,
-        parent_id: Option<&str>,
+        parent_id: Option<i64>,
         icon: Option<&str>,
         color: Option<&str>,
     ) -> Result<TaskGroup> {
@@ -128,7 +129,7 @@ impl GroupRepository {
         let new_name = name.unwrap_or(existing.name.as_str());
         let new_icon = icon.or(existing.icon.as_deref());
         let new_color = color.or(existing.color.as_deref());
-        let new_parent_id = parent_id.or(existing.parent_id.as_deref());
+        let new_parent_id = parent_id.or(existing.parent_id);
 
         let now = Utc::now().timestamp_millis();
 
@@ -141,9 +142,9 @@ impl GroupRepository {
         .context("Failed to update group")?;
 
         Ok(TaskGroup {
-            id: id.to_string(),
+            id,
             name: new_name.to_string(),
-            parent_id: new_parent_id.map(|s| s.to_string()),
+            parent_id: new_parent_id,
             icon: new_icon.map(|s| s.to_string()),
             color: new_color.map(|s| s.to_string()),
             sort_order: existing.sort_order,
@@ -155,7 +156,7 @@ impl GroupRepository {
     /// 删除任务组
     /// 注意：由于外键约束 ON DELETE SET NULL，删除任务组后，关联的任务 group_id 会自动设置为 NULL
     /// 这里我们显式执行以确保数据一致性
-    pub fn delete(conn: &Connection, id: &str) -> Result<()> {
+    pub fn delete(conn: &Connection, id: i64) -> Result<()> {
         // 显式将关联任务的 group_id 设置为 NULL
         conn.execute(
             "UPDATE todos SET group_id = NULL WHERE group_id = ?",

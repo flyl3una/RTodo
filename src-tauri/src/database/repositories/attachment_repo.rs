@@ -12,7 +12,7 @@ pub struct AttachmentRepository;
 
 impl AttachmentRepository {
     /// 获取任务的所有附件
-    pub fn list_by_todo(conn: &Connection, todo_id: &str) -> Result<Vec<Attachment>> {
+    pub fn list_by_todo(conn: &Connection, todo_id: i64) -> Result<Vec<Attachment>> {
         let mut stmt = conn.prepare(
             "SELECT id, todo_id, name, file_path, file_size, mime_type, created_at
              FROM attachments
@@ -40,7 +40,7 @@ impl AttachmentRepository {
     }
 
     /// 根据 ID 获取单个附件
-    pub fn get(conn: &Connection, id: &str) -> Result<Option<Attachment>> {
+    pub fn get(conn: &Connection, id: i64) -> Result<Option<Attachment>> {
         let attachment = conn.query_row(
             "SELECT id, todo_id, name, file_path, file_size, mime_type, created_at
              FROM attachments WHERE id = ?",
@@ -66,25 +66,27 @@ impl AttachmentRepository {
     /// 创建附件
     pub fn create(
         conn: &Connection,
-        todo_id: &str,
+        todo_id: i64,
         name: &str,
         file_path: &str,
         file_size: i64,
         mime_type: Option<&str>,
     ) -> Result<Attachment> {
         let now = Utc::now().timestamp_millis();
-        let id = uuid::Uuid::new_v4().to_string();
 
         conn.execute(
-            "INSERT INTO attachments (id, todo_id, name, file_path, file_size, mime_type, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
-            params![&id, todo_id, name, file_path, file_size, mime_type, now],
+            "INSERT INTO attachments (todo_id, name, file_path, file_size, mime_type, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![todo_id, name, file_path, file_size, mime_type, now],
         )
         .context("Failed to insert attachment")?;
 
+        // 获取新插入的ID
+        let id: i64 = conn.last_insert_rowid();
+
         Ok(Attachment {
             id,
-            todo_id: todo_id.to_string(),
+            todo_id,
             name: name.to_string(),
             file_path: file_path.to_string(),
             file_size,
@@ -94,7 +96,7 @@ impl AttachmentRepository {
     }
 
     /// 删除附件
-    pub fn delete(conn: &Connection, id: &str) -> Result<()> {
+    pub fn delete(conn: &Connection, id: i64) -> Result<()> {
         let rows_affected = conn.execute(
             "DELETE FROM attachments WHERE id = ?",
             params![id],

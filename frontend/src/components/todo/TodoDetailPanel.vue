@@ -28,6 +28,22 @@
         </el-select>
       </el-form-item>
 
+      <el-form-item label="任务组">
+        <el-select
+          v-model="form.group_id"
+          placeholder="选择任务组"
+          clearable
+          style="width: 100%"
+        >
+          <el-option
+            v-for="group in groups"
+            :key="group.id"
+            :label="group.name"
+            :value="group.id"
+          />
+        </el-select>
+      </el-form-item>
+
       <el-form-item label="优先级">
         <el-radio-group v-model="form.priority">
           <el-radio :label="0">普通</el-radio>
@@ -213,6 +229,7 @@ import { Edit, Delete, Star, StarFilled, Plus } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useTodoStore } from '@/stores';
 import { useTagStore } from '@/stores';
+import { useGroupStore } from '@/stores';
 import type { Todo, UpdateTodoRequest, TodoStep } from '@/types';
 import { TodoStatus, getStatusLabel, getStatusType } from '@/types';
 
@@ -227,6 +244,7 @@ const emit = defineEmits<{
 
 const todoStore = useTodoStore();
 const tagStore = useTagStore();
+const groupStore = useGroupStore();
 
 const isEditing = ref(false);
 const loading = ref(false);
@@ -240,6 +258,7 @@ const form = ref<UpdateTodoRequest>({
   description: '',
   status: TodoStatus.Todo,
   priority: 0,
+  group_id: undefined,
   start_date: undefined,
   due_date: undefined,
   tag_ids: [],
@@ -252,6 +271,7 @@ const rules: FormRules = {
 };
 
 const tags = computed(() => tagStore.tags);
+const groups = computed(() => groupStore.groups);
 
 // Watch for todo prop changes (when store updates the todo)
 watch(() => props.todo, (newTodo, oldTodo) => {
@@ -267,6 +287,7 @@ watch(() => props.todo, (newTodo, oldTodo) => {
       description: newTodo.description || '',
       status: newTodo.status,
       priority: newTodo.priority,
+      group_id: newTodo.group_id,
       start_date: newTodo.start_date,
       due_date: newTodo.due_date,
       tag_ids: newTodo.tags?.map(t => t.id) || [],
@@ -325,6 +346,7 @@ function startEdit() {
     description: props.todo.description || '',
     status: props.todo.status,
     priority: props.todo.priority,
+    group_id: props.todo.group_id,
     start_date: props.todo.start_date,
     due_date: props.todo.due_date,
     tag_ids: props.todo.tags?.map(t => t.id) || [],
@@ -367,6 +389,7 @@ async function handleSave() {
       description: form.value.description || undefined,
       status: form.value.status,
       priority: form.value.priority,
+      group_id: form.value.group_id,
       // 保留原始值（包括 null），让 API 层决定如何处理
       start_date: form.value.start_date,
       due_date: form.value.due_date,
@@ -509,6 +532,7 @@ async function loadSteps() {
 }
 
 onMounted(async () => {
+  await groupStore.fetchGroups();
   await tagStore.fetchTags();
   await loadSteps();
 });

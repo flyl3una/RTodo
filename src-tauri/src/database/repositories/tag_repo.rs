@@ -36,7 +36,7 @@ impl TagRepository {
     }
 
     /// 根据 ID 获取单个标签
-    pub fn get(conn: &Connection, id: &str) -> Result<Option<Tag>> {
+    pub fn get(conn: &Connection, id: i64) -> Result<Option<Tag>> {
         let tag = conn.query_row(
             "SELECT id, name, color, created_at FROM tags WHERE id = ?",
             params![id],
@@ -62,13 +62,15 @@ impl TagRepository {
         color: &str,
     ) -> Result<Tag> {
         let now = Utc::now().timestamp_millis();
-        let id = uuid::Uuid::new_v4().to_string();
 
         conn.execute(
-            "INSERT INTO tags (id, name, color, created_at) VALUES (?1, ?2, ?3, ?4)",
-            params![&id, name, color, now],
+            "INSERT INTO tags (name, color, created_at) VALUES (?1, ?2, ?3)",
+            params![name, color, now],
         )
         .context("Failed to insert tag")?;
+
+        // 获取新插入的ID
+        let id: i64 = conn.last_insert_rowid();
 
         Ok(Tag {
             id,
@@ -81,7 +83,7 @@ impl TagRepository {
     /// 更新标签
     pub fn update(
         conn: &Connection,
-        id: &str,
+        id: i64,
         name: Option<&str>,
         color: Option<&str>,
     ) -> Result<Tag> {
@@ -99,7 +101,7 @@ impl TagRepository {
         .context("Failed to update tag")?;
 
         Ok(Tag {
-            id: id.to_string(),
+            id,
             name: new_name.to_string(),
             color: new_color.to_string(),
             created_at: existing.created_at,
@@ -109,7 +111,7 @@ impl TagRepository {
     /// 删除标签
     /// 注意：由于外键约束 ON DELETE CASCADE，删除标签后，todo_tags 关联会自动删除
     /// 这里我们显式执行以确保数据一致性
-    pub fn delete(conn: &Connection, id: &str) -> Result<()> {
+    pub fn delete(conn: &Connection, id: i64) -> Result<()> {
         // 显式删除标签与任务的关联
         conn.execute(
             "DELETE FROM todo_tags WHERE tag_id = ?",

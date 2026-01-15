@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 /// 任务组
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TaskGroup {
-    pub id: String,
+    pub id: i64,
     pub name: String,
-    pub parent_id: Option<String>,
+    pub parent_id: Option<i64>,
     pub icon: Option<String>,
     pub color: Option<String>,
     pub sort_order: i32,
@@ -20,7 +20,7 @@ pub struct TaskGroup {
 #[derive(Debug, Deserialize)]
 pub struct CreateGroupRequest {
     pub name: String,
-    pub parent_id: Option<String>,
+    pub parent_id: Option<i64>,
     pub icon: Option<String>,
     pub color: Option<String>,
 }
@@ -28,11 +28,11 @@ pub struct CreateGroupRequest {
 /// 更新任务组请求
 #[derive(Debug, Deserialize)]
 pub struct UpdateGroupRequest {
-    pub id: String,
+    pub id: i64,
     #[serde(default)]
     pub name: Option<String>,
     #[serde(default)]
-    pub parent_id: Option<String>,
+    pub parent_id: Option<i64>,
     #[serde(default)]
     pub icon: Option<String>,
     #[serde(default)]

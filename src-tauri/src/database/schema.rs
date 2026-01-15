@@ -9,9 +9,9 @@ pub fn init_database(conn: &Connection) -> Result<()> {
     // 任务组表
     conn.execute(
         "CREATE TABLE IF NOT EXISTS task_groups (
-            id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL,
-            parent_id TEXT,
+            parent_id INTEGER,
             icon TEXT,
             color TEXT,
             sort_order INTEGER DEFAULT 0,
@@ -31,7 +31,7 @@ pub fn init_database(conn: &Connection) -> Result<()> {
     // 标签表
     conn.execute(
         "CREATE TABLE IF NOT EXISTS tags (
-            id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT NOT NULL UNIQUE,
             color TEXT NOT NULL DEFAULT '#409EFF',
             created_at INTEGER NOT NULL
@@ -42,12 +42,12 @@ pub fn init_database(conn: &Connection) -> Result<()> {
     // 任务表
     conn.execute(
         "CREATE TABLE IF NOT EXISTS todos (
-            id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             description TEXT,
             status INTEGER NOT NULL DEFAULT 0,
             priority INTEGER DEFAULT 0,
-            group_id TEXT,
+            group_id INTEGER,
             assignee TEXT,
             start_date INTEGER,
             due_date INTEGER,
@@ -76,8 +76,8 @@ pub fn init_database(conn: &Connection) -> Result<()> {
     // 任务-标签关联表（多对多）
     conn.execute(
         "CREATE TABLE IF NOT EXISTS todo_tags (
-            todo_id TEXT NOT NULL,
-            tag_id TEXT NOT NULL,
+            todo_id INTEGER NOT NULL,
+            tag_id INTEGER NOT NULL,
             PRIMARY KEY (todo_id, tag_id),
             FOREIGN KEY (todo_id) REFERENCES todos(id) ON DELETE CASCADE,
             FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
@@ -98,8 +98,8 @@ pub fn init_database(conn: &Connection) -> Result<()> {
     // 执行步骤表
     conn.execute(
         "CREATE TABLE IF NOT EXISTS todo_steps (
-            id TEXT PRIMARY KEY,
-            todo_id TEXT NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            todo_id INTEGER NOT NULL,
             title TEXT NOT NULL,
             is_completed INTEGER DEFAULT 0,
             sort_order INTEGER DEFAULT 0,
@@ -118,8 +118,8 @@ pub fn init_database(conn: &Connection) -> Result<()> {
     // 附件表
     conn.execute(
         "CREATE TABLE IF NOT EXISTS attachments (
-            id TEXT PRIMARY KEY,
-            todo_id TEXT NOT NULL,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            todo_id INTEGER NOT NULL,
             name TEXT NOT NULL,
             file_path TEXT NOT NULL,
             file_size INTEGER,
@@ -139,7 +139,7 @@ pub fn init_database(conn: &Connection) -> Result<()> {
     // 导出历史表（用于导入导出功能）
     conn.execute(
         "CREATE TABLE IF NOT EXISTS export_history (
-            id TEXT PRIMARY KEY,
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
             version TEXT NOT NULL,
             exported_at INTEGER NOT NULL,
             file_path TEXT NOT NULL

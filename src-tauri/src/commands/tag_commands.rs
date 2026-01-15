@@ -40,7 +40,7 @@ pub async fn create_tag(
 /// 更新标签
 #[tauri::command]
 pub async fn update_tag(
-    id: String,
+    id: i64,
     name: Option<String>,
     color: Option<String>,
     db: tauri::State<'_, Database>,
@@ -53,7 +53,7 @@ pub async fn update_tag(
 
     TagRepository::update(
         inner,
-        &id,
+        id,
         name.as_deref(),
         color.as_deref(),
     )
@@ -63,7 +63,7 @@ pub async fn update_tag(
 /// 删除标签
 #[tauri::command]
 pub async fn delete_tag(
-    id: String,
+    id: i64,
     db: tauri::State<'_, Database>,
 ) -> Result<(), String> {
     tracing::info!("delete_tag called: id={}", id);
@@ -72,6 +72,6 @@ pub async fn delete_tag(
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    TagRepository::delete(inner, &id)
+    TagRepository::delete(inner, id)
         .map_err(|e| format!("Failed to delete tag: {}", e))
 }

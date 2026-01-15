@@ -42,7 +42,7 @@ export async function getTodos(params?: {
   if (params?.end_date !== undefined) args.end_date = params.end_date;
 
   console.log('[API] Sending filtered args to Tauri:', args);
-  const result = await safeInvoke<Todo[]>('get_todos', args);
+  const result = await safeInvoke<Todo[]>('get_todos', { payload: args});
   console.log('[API] getTodos returned', result.length, 'todos');
   return result;
 }

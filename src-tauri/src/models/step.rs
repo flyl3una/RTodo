@@ -6,8 +6,8 @@ use serde::{Deserialize, Serialize};
 /// 执行步骤
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct TodoStep {
-    pub id: String,
-    pub todo_id: String,
+    pub id: i64,
+    pub todo_id: i64,
     pub title: String,
     pub is_completed: bool,
     pub sort_order: i32,
@@ -17,7 +17,7 @@ pub struct TodoStep {
 /// 创建步骤请求
 #[derive(Debug, Deserialize)]
 pub struct CreateStepRequest {
-    pub todo_id: String,
+    pub todo_id: i64,
     pub title: String,
     #[serde(default)]
     pub sort_order: Option<i32>,
@@ -26,7 +26,7 @@ pub struct CreateStepRequest {
 /// 更新步骤请求
 #[derive(Debug, Deserialize)]
 pub struct UpdateStepRequest {
-    pub id: String,
+    pub id: i64,
     #[serde(default)]
     pub title: Option<String>,
     #[serde(default)]

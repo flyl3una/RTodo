@@ -24,7 +24,7 @@ pub async fn get_task_groups(
 #[tauri::command]
 pub async fn create_task_group(
     name: String,
-    parent_id: Option<String>,
+    parent_id: Option<i64>,
     icon: Option<String>,
     color: Option<String>,
     db: tauri::State<'_, Database>,
@@ -38,7 +38,7 @@ pub async fn create_task_group(
     GroupRepository::create(
         inner,
         &name,
-        parent_id.as_deref(),
+        parent_id,
         icon.as_deref(),
         color.as_deref(),
     )
@@ -48,9 +48,9 @@ pub async fn create_task_group(
 /// 更新任务组
 #[tauri::command]
 pub async fn update_task_group(
-    id: String,
+    id: i64,
     name: Option<String>,
-    parent_id: Option<String>,
+    parent_id: Option<i64>,
     icon: Option<String>,
     color: Option<String>,
     db: tauri::State<'_, Database>,
@@ -63,9 +63,9 @@ pub async fn update_task_group(
 
     GroupRepository::update(
         inner,
-        &id,
+        id,
         name.as_deref(),
-        parent_id.as_deref(),
+        parent_id,
         icon.as_deref(),
         color.as_deref(),
     )
@@ -75,7 +75,7 @@ pub async fn update_task_group(
 /// 删除任务组
 #[tauri::command]
 pub async fn delete_task_group(
-    id: String,
+    id: i64,
     db: tauri::State<'_, Database>,
 ) -> Result<(), String> {
     tracing::info!("delete_task_group called: id={}", id);
@@ -84,6 +84,6 @@ pub async fn delete_task_group(
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    GroupRepository::delete(inner, &id)
+    GroupRepository::delete(inner, id)
         .map_err(|e| format!("Failed to delete task group: {}", e))
 }

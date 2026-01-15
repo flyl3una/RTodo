@@ -18,12 +18,12 @@ pub enum TodoStatus {
 /// 任务实体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Todo {
-    pub id: String,
+    pub id: i64,
     pub title: String,
     pub description: Option<String>,
     pub status: TodoStatus,
     pub priority: i32,
-    pub group_id: Option<String>,
+    pub group_id: Option<i64>,
     pub assignee: Option<String>,
     pub start_date: Option<i64>,
     pub due_date: Option<i64>,
@@ -47,19 +47,19 @@ pub struct Todo {
 pub struct CreateTodoRequest {
     pub title: String,
     pub description: Option<String>,
-    pub group_id: Option<String>,
+    pub group_id: Option<i64>,
     pub start_date: Option<i64>,
     pub due_date: Option<i64>,
     pub priority: Option<i32>,
-    pub tag_ids: Option<Vec<String>>,
+    pub tag_ids: Option<Vec<i64>>,
 }
 
 /// 获取任务列表请求
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct GetTodosRequest {
-    pub group_id: Option<String>,
-    pub tag_id: Option<String>,
+    pub group_id: Option<i64>,
+    pub tag_id: Option<i64>,
     pub status: Option<i32>,
     pub search: Option<String>,
     pub priority: Option<i32>,
@@ -71,7 +71,7 @@ pub struct GetTodosRequest {
 #[derive(Debug, Deserialize)]
 #[allow(dead_code)]
 pub struct UpdateTodoRequest {
-    pub id: String,
+    pub id: i64,
     #[serde(default)]
     pub title: Option<String>,
     #[serde(default)]
@@ -81,7 +81,7 @@ pub struct UpdateTodoRequest {
     #[serde(default)]
     pub priority: Option<i32>,
     #[serde(default)]
-    pub group_id: Option<String>,
+    pub group_id: Option<i64>,
     #[serde(default)]
     pub assignee: Option<String>,
     #[serde(default)]
@@ -89,5 +89,5 @@ pub struct UpdateTodoRequest {
     #[serde(default)]
     pub due_date: Option<i64>,
     #[serde(default)]
-    pub tag_ids: Option<Vec<String>>,
+    pub tag_ids: Option<Vec<i64>>,
 }

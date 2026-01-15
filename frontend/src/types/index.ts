@@ -82,12 +82,12 @@ export function getPriorityType(priority: number): 'info' | 'warning' | 'danger'
  * 任务实体
  */
 export interface Todo {
-  id: string;
+  id: number;
   title: string;
   description?: string;
   status: TodoStatus;
   priority: number;
-  group_id?: string;
+  group_id?: number;
   assignee?: string;
   start_date?: number;
   due_date?: number;
@@ -104,9 +104,9 @@ export interface Todo {
  * 任务组
  */
 export interface TaskGroup {
-  id: string;
+  id: number;
   name: string;
-  parent_id?: string;
+  parent_id?: number;
   icon?: string;
   color?: string;
   sort_order: number;
@@ -119,7 +119,7 @@ export interface TaskGroup {
  * 标签
  */
 export interface Tag {
-  id: string;
+  id: number;
   name: string;
   color: string;
   created_at: number;
@@ -129,8 +129,8 @@ export interface Tag {
  * 执行步骤
  */
 export interface TodoStep {
-  id: string;
-  todo_id: string;
+  id: number;
+  todo_id: number;
   title: string;
   is_completed: boolean;
   sort_order: number;
@@ -141,8 +141,8 @@ export interface TodoStep {
  * 附件
  */
 export interface Attachment {
-  id: string;
-  todo_id: string;
+  id: number;
+  todo_id: number;
   name: string;
   file_path: string;
   file_size: number;
@@ -156,27 +156,27 @@ export interface Attachment {
 export interface CreateTodoRequest {
   title: string;
   description?: string;
-  group_id?: string;
+  group_id?: number;
   start_date?: number;
   due_date?: number;
   priority?: number;
-  tag_ids?: string[];
+  tag_ids?: number[];
 }
 
 /**
  * 更新任务请求
  */
 export interface UpdateTodoRequest {
-  id: string;
+  id: number;
   title?: string;
   description?: string;
   status?: TodoStatus;
   priority?: number;
-  group_id?: string;
+  group_id?: number;
   assignee?: string;
   start_date?: number;
   due_date?: number;
-  tag_ids?: string[];
+  tag_ids?: number[];
 }
 
 /**
@@ -217,8 +217,8 @@ export interface TodoStatsWithDetails {
  * 筛选条件
  */
 export interface TodoFilter {
-  group_id?: string;
-  tag_id?: string;
+  group_id?: number;
+  tag_id?: number;
   status?: TodoStatus;
   priority?: number;
   search_keyword?: string;
@@ -226,6 +226,38 @@ export interface TodoFilter {
     start: number;
     end: number;
   };
+}
+
+/**
+ * 任务组统计
+ */
+export interface GroupStats {
+  id: number;
+  name: string;
+  color: string;
+  total: number;
+  done: number;
+}
+
+/**
+ * 标签统计
+ */
+export interface TagStats {
+  id: number;
+  name: string;
+  color: string;
+  count: number;
+}
+
+/**
+ * 导出数据结构
+ */
+export interface ExportData {
+  version: string;
+  exported_at: number;
+  task_groups: TaskGroup[];
+  tags: Tag[];
+  todos: Todo[];
 }
 
 // 导出所有类型
@@ -245,35 +277,3 @@ export type {
   TagStats,
   ExportData,
 };
-
-/**
- * 任务组统计
- */
-export interface GroupStats {
-  id: string;
-  name: string;
-  color: string;
-  total: number;
-  done: number;
-}
-
-/**
- * 标签统计
- */
-export interface TagStats {
-  id: string;
-  name: string;
-  color: string;
-  count: number;
-}
-
-/**
- * 导出数据结构
- */
-export interface ExportData {
-  version: string;
-  exported_at: number;
-  task_groups: TaskGroup[];
-  tags: Tag[];
-  todos: Todo[];
-}

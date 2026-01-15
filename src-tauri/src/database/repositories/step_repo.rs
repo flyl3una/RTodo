@@ -12,7 +12,7 @@ pub struct StepRepository;
 
 impl StepRepository {
     /// 获取任务的所有步骤
-    pub fn list_by_todo(conn: &Connection, todo_id: &str) -> Result<Vec<TodoStep>> {
+    pub fn list_by_todo(conn: &Connection, todo_id: i64) -> Result<Vec<TodoStep>> {
         let mut stmt = conn.prepare(
             "SELECT id, todo_id, title, is_completed, sort_order, created_at
              FROM todo_steps
@@ -39,7 +39,7 @@ impl StepRepository {
     }
 
     /// 根据 ID 获取单个步骤
-    pub fn get(conn: &Connection, id: &str) -> Result<Option<TodoStep>> {
+    pub fn get(conn: &Connection, id: i64) -> Result<Option<TodoStep>> {
         let step = conn.query_row(
             "SELECT id, todo_id, title, is_completed, sort_order, created_at
              FROM todo_steps WHERE id = ?",
@@ -64,7 +64,7 @@ impl StepRepository {
     /// 创建步骤
     pub fn create(
         conn: &Connection,
-        todo_id: &str,
+        todo_id: i64,
         title: &str,
     ) -> Result<TodoStep> {
         // 获取当前最大 sort_order
@@ -75,18 +75,20 @@ impl StepRepository {
         ).unwrap_or(10);
 
         let now = Utc::now().timestamp_millis();
-        let id = uuid::Uuid::new_v4().to_string();
 
         conn.execute(
-            "INSERT INTO todo_steps (id, todo_id, title, is_completed, sort_order, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            params![&id, todo_id, title, 0, sort_order, now],
+            "INSERT INTO todo_steps (todo_id, title, is_completed, sort_order, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            params![todo_id, title, 0, sort_order, now],
         )
         .context("Failed to insert step")?;
 
+        // 获取新插入的ID
+        let id: i64 = conn.last_insert_rowid();
+
         Ok(TodoStep {
             id,
-            todo_id: todo_id.to_string(),
+            todo_id,
             title: title.to_string(),
             is_completed: false,
             sort_order,
@@ -95,7 +97,7 @@ impl StepRepository {
     }
 
     /// 切换步骤状态
-    pub fn toggle(conn: &Connection, id: &str) -> Result<TodoStep> {
+    pub fn toggle(conn: &Connection, id: i64) -> Result<TodoStep> {
         // 先获取当前状态
         let current: i32 = conn.query_row(
             "SELECT is_completed FROM todo_steps WHERE id = ?",
@@ -116,7 +118,7 @@ impl StepRepository {
     }
 
     /// 删除步骤
-    pub fn delete(conn: &Connection, id: &str) -> Result<()> {
+    pub fn delete(conn: &Connection, id: i64) -> Result<()> {
         let rows_affected = conn.execute(
             "DELETE FROM todo_steps WHERE id = ?",
             params![id],

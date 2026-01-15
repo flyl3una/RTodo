@@ -14,8 +14,8 @@ impl TodoRepository {
     /// 获取任务列表（支持筛选）
     pub fn list(
         conn: &Connection,
-        group_id: Option<&str>,
-        tag_id: Option<&str>,
+        group_id: Option<i64>,
+        tag_id: Option<i64>,
         status: Option<i32>,
         search: Option<&str>,
         priority: Option<i32>,
@@ -32,7 +32,7 @@ impl TodoRepository {
         // 按任务组筛选
         if let Some(gid) = group_id {
             where_clauses.push("t.group_id = ?");
-            params.push(Box::new(gid.to_string()));
+            params.push(Box::new(gid));
         }
 
         // 按状态筛选
@@ -49,7 +49,7 @@ impl TodoRepository {
                     WHERE tt.todo_id = t.id AND tt.tag_id = ?
                 )"
             );
-            params.push(Box::new(tid.to_string()));
+            params.push(Box::new(tid));
         }
 
         // 搜索筛选（标题或描述）
@@ -167,7 +167,7 @@ impl TodoRepository {
     }
 
     /// 根据 ID 获取单个任务
-    pub fn get(conn: &Connection, id: &str) -> Result<Option<Todo>> {
+    pub fn get(conn: &Connection, id: i64) -> Result<Option<Todo>> {
         tracing::debug!("TodoRepository::get called with id={}", id);
 
         let mut stmt = conn.prepare(
@@ -230,24 +230,22 @@ impl TodoRepository {
         conn: &Connection,
         title: &str,
         description: Option<&str>,
-        group_id: Option<&str>,
+        group_id: Option<i64>,
         start_date: Option<i64>,
         due_date: Option<i64>,
         priority: i32,
-        tag_ids: Option<Vec<String>>,
+        tag_ids: Option<Vec<i64>>,
     ) -> Result<Todo> {
-        let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now().timestamp_millis();
         let status = TodoStatus::Todo;
 
         conn.execute(
             "INSERT INTO todos (
-                id, title, description, status, priority,
+                title, description, status, priority,
                 group_id, start_date, due_date,
                 created_at, updated_at
-            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+            ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
             params![
-                id,
                 title,
                 description,
                 status as i32,
@@ -261,34 +259,37 @@ impl TodoRepository {
         )
         .context("Failed to insert todo")?;
 
+        // 获取新插入的ID
+        let id: i64 = conn.last_insert_rowid();
+
         // 插入标签关联
         if let Some(tags) = tag_ids {
             for tag_id in tags {
                 conn.execute(
                     "INSERT INTO todo_tags (todo_id, tag_id) VALUES (?1, ?2)",
-                    params![&id, &tag_id],
+                    params![id, tag_id],
                 )
                 .context("Failed to insert todo_tags")?;
             }
         }
 
         // 返回完整的 todo 对象
-        Self::get(conn, &id)?.context("Created todo not found")
+        Self::get(conn, id)?.context("Created todo not found")
     }
 
     /// 更新任务
     pub fn update(
         conn: &Connection,
-        id: &str,
+        id: i64,
         title: Option<&str>,
         description: Option<Option<String>>,
         status: Option<i32>,
         priority: Option<i32>,
-        group_id: Option<Option<String>>,
+        group_id: Option<Option<i64>>,
         assignee: Option<Option<String>>,
         start_date: Option<Option<i64>>,
         due_date: Option<Option<i64>>,
-        tag_ids: Option<Vec<String>>,
+        tag_ids: Option<Vec<i64>>,
     ) -> Result<Todo> {
         tracing::info!("TodoRepository::update called with id={}, start_date={:?}, due_date={:?}",
             id, start_date, due_date);
@@ -420,7 +421,7 @@ impl TodoRepository {
             for tag_id in tags {
                 conn.execute(
                     "INSERT INTO todo_tags (todo_id, tag_id) VALUES (?1, ?2)",
-                    params![id, &tag_id],
+                    params![id, tag_id],
                 )
                 .context("Failed to insert todo_tags")?;
             }
@@ -435,7 +436,7 @@ impl TodoRepository {
     }
 
     /// 删除任务
-    pub fn delete(conn: &Connection, id: &str) -> Result<()> {
+    pub fn delete(conn: &Connection, id: i64) -> Result<()> {
         let rows_affected = conn.execute(
             "DELETE FROM todos WHERE id = ?",
             params![id],
@@ -450,7 +451,7 @@ impl TodoRepository {
     }
 
     /// 更新任务状态
-    pub fn update_status(conn: &Connection, id: &str, status: i32) -> Result<Todo> {
+    pub fn update_status(conn: &Connection, id: i64, status: i32) -> Result<Todo> {
         let now = Utc::now().timestamp_millis();
         let completed_at = if status == 2 { Some(now) } else { None };
 
@@ -476,7 +477,7 @@ impl TodoRepository {
         )
         .context("Failed to prepare tags query")?;
 
-        let tags = tag_stmt.query_map(params![&todo.id], |row| {
+        let tags = tag_stmt.query_map(params![todo.id], |row| {
             Ok(Tag {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -501,7 +502,7 @@ impl TodoRepository {
         )
         .context("Failed to prepare steps query")?;
 
-        let steps = step_stmt.query_map(params![&todo.id], |row| {
+        let steps = step_stmt.query_map(params![todo.id], |row| {
             Ok(TodoStep {
                 id: row.get(0)?,
                 todo_id: row.get(1)?,
@@ -527,7 +528,7 @@ impl TodoRepository {
         )
         .context("Failed to prepare attachments query")?;
 
-        let attachments = attachment_stmt.query_map(params![&todo.id], |row| {
+        let attachments = attachment_stmt.query_map(params![todo.id], |row| {
             Ok(Attachment {
                 id: row.get(0)?,
                 todo_id: row.get(1)?,
