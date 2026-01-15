@@ -22,7 +22,7 @@
           <el-icon><List /></el-icon>
           <span>全部任务</span>
         </a>
-        <a
+        <!-- <a
           href="#"
           class="quick-link"
           :class="{ active: currentView === 'today' }"
@@ -30,7 +30,7 @@
         >
           <el-icon><Calendar /></el-icon>
           <span>今天</span>
-        </a>
+        </a> -->
         <a
           href="#"
           class="quick-link"
@@ -63,7 +63,12 @@
 
     <!-- Task Groups -->
     <div class="sidebar-section">
-      <div class="section-title" v-if="!collapsed">任务组</div>
+      <div class="section-title" v-if="!collapsed">
+        任务组
+        <el-link type="primary" @click="showAddGroup" style="float: right; font-size: 12px;">
+          新增
+        </el-link>
+      </div>
       <div class="groups">
         <a
           href="#"
@@ -73,18 +78,10 @@
           :key="group.id"
           @click.prevent="selectGroup(group.id)"
           @contextmenu.prevent="editGroup(group)"
+          data-allow-context-menu
         >
           <span class="group-icon">{{ group.icon || '📁' }}</span>
           <span class="group-name" v-if="!collapsed">{{ group.name }}</span>
-        </a>
-        <a
-          href="#"
-          class="group-item add-group"
-          @click.prevent="showAddGroup"
-          v-if="!collapsed"
-        >
-          <el-icon><Plus /></el-icon>
-          <span>添加任务组</span>
         </a>
       </div>
     </div>
@@ -94,7 +91,7 @@
       <div class="section-title">
         标签
         <el-link type="primary" @click="showTagManage" style="float: right; font-size: 12px;">
-          新建
+          新增
         </el-link>
       </div>
       <div class="tags" v-if="tags.length > 0">
@@ -104,6 +101,8 @@
           :key="tag.id"
           :style="{ backgroundColor: tag.color }"
           @click="selectTag(tag.id)"
+          @contextmenu.prevent="editTag(tag)"
+          data-allow-context-menu
         >
           {{ tag.name }}
         </span>
@@ -284,6 +283,11 @@ function handleTagUpdated() {
   tagStore.fetchTags();
 }
 
+function editTag(tag: Tag) {
+  editingTag.value = tag;
+  tagDialogVisible.value = true;
+}
+
 // Expose methods to parent components
 defineExpose({
   resetToAllView,
@@ -319,7 +323,7 @@ defineExpose({
   gap: 8px;
   font-size: 18px;
   font-weight: bold;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .logo-icon-only {
@@ -339,11 +343,18 @@ defineExpose({
 }
 
 .quick-links,
-.groups,
-.tags {
+.groups {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  padding: 0 8px;
+}
+
+.tags {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 6px;
   padding: 0 8px;
 }
 
@@ -362,21 +373,13 @@ defineExpose({
 .quick-link:hover,
 .group-item:hover {
   background: #e4e7ed;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .quick-link.active,
 .group-item.active {
-  background: #409eff;
+  background: var(--el-color-primary);
   color: white;
-}
-
-.quick-link.add-group {
-  color: #67c23a;
-}
-
-.quick-link.add-group:hover {
-  background: #e1f3d8;
 }
 
 .group-icon {
@@ -429,11 +432,11 @@ defineExpose({
 
 .footer-item:hover {
   background: #e4e7ed;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 .footer-item.router-link-active {
-  background: #409eff;
+  background: var(--el-color-primary);
   color: white;
 }
 
@@ -461,13 +464,13 @@ defineExpose({
 [data-theme='dark'] .group-item:hover,
 [data-theme='dark'] .footer-item:hover {
   background: #2a2a2a;
-  color: #409eff;
+  color: var(--el-color-primary);
 }
 
 [data-theme='dark'] .quick-link.active,
 [data-theme='dark'] .group-item.active,
 [data-theme='dark'] .footer-item.router-link-active {
-  background: #409eff;
+  background: var(--el-color-primary);
   color: white;
 }
 

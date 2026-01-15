@@ -2,7 +2,7 @@
   <el-dialog
     v-model="visible"
     :title="isEdit ? '编辑任务组' : '新建任务组'"
-    width="500px"
+    width="600px"
     @close="handleClose"
   >
     <el-form
@@ -20,30 +20,11 @@
       </el-form-item>
 
       <el-form-item label="图标">
-        <div class="icon-selector">
-          <div
-            v-for="icon in iconOptions"
-            :key="icon"
-            class="icon-option"
-            :class="{ selected: form.icon === icon }"
-            @click="form.icon = icon"
-          >
-            {{ icon }}
-          </div>
-        </div>
+        <IconPicker v-model="form.icon" :used-icons="usedIcons" />
       </el-form-item>
 
       <el-form-item label="颜色">
-        <div class="color-selector">
-          <div
-            v-for="color in colorOptions"
-            :key="color"
-            class="color-option"
-            :class="{ selected: form.color === color }"
-            :style="{ backgroundColor: color }"
-            @click="form.color = color"
-          />
-        </div>
+        <ColorPicker v-model="form.color" :used-colors="usedColors" />
       </el-form-item>
     </el-form>
 
@@ -68,6 +49,8 @@
 import { ref, computed, watch } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useGroupStore } from '@/stores';
+import IconPicker from '@/components/common/IconPicker.vue';
+import ColorPicker from '@/components/common/ColorPicker.vue';
 import type { TaskGroup } from '@/types';
 
 const props = defineProps<{
@@ -99,18 +82,19 @@ const rules: FormRules = {
   ],
 };
 
-const iconOptions = ['📁', '📂', '💼', '🏠', '🎯', '💡', '🔧', '📊', '🎨', '🚀'];
+// Get used icons for deduplication (exclude current editing group)
+const usedIcons = computed(() => {
+  return groupStore.groups
+    .filter(g => g.id !== props.group?.id)
+    .map(g => g.icon || '');
+});
 
-const colorOptions = [
-  '#409EFF', // 蓝色
-  '#67C23A', // 绿色
-  '#E6A23C', // 橙色
-  '#F56C6C', // 红色
-  '#909399', // 灰色
-  '#C0392B', // 深红
-  '#8E44AD', // 紫色
-  '#16A085', // 青色
-];
+// Get used colors for deduplication (exclude current editing group)
+const usedColors = computed(() => {
+  return groupStore.groups
+    .filter(g => g.id !== props.group?.id)
+    .map(g => g.color || '');
+});
 
 const visible = computed({
   get: () => props.modelValue,
@@ -210,75 +194,5 @@ function handleClose() {
 </script>
 
 <style scoped>
-.icon-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.icon-option {
-  width: 40px;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  border: 2px solid #e4e7ed;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.icon-option:hover {
-  border-color: #409eff;
-  background: #f0f7ff;
-}
-
-.icon-option.selected {
-  border-color: #409eff;
-  background: #e6f4ff;
-}
-
-.color-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.color-option {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.color-option:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.color-option.selected {
-  border-color: #303133;
-  box-shadow: 0 0 0 2px white, 0 0 0 4px #409eff;
-}
-
-/* Dark theme */
-[data-theme='dark'] .icon-option {
-  border-color: #3a3a3a;
-}
-
-[data-theme='dark'] .icon-option:hover {
-  background: #2a2a2a;
-}
-
-[data-theme='dark'] .icon-option.selected {
-  background: #1a1a1a;
-}
-
-[data-theme='dark'] .color-option.selected {
-  border-color: #e0e0e0;
-  box-shadow: 0 0 0 2px #1a1a1a, 0 0 0 4px #409eff;
-}
+/* IconPicker and ColorPicker components handle their own styling */
 </style>

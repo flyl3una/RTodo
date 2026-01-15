@@ -7,49 +7,74 @@
         :key="todo.id"
         class="todo-item"
         :class="{ completed: todo.status === TodoStatus.Done }"
-        @click="selectTodo(todo)"
       >
-        <div class="todo-left">
-          <el-checkbox
-            :model-value="todo.status === TodoStatus.Done"
-            @change="toggleStatus(todo)"
-            @click.stop
-          />
-          <div class="todo-content">
-            <div class="todo-title">
-              <el-tag
-                v-if="todo.priority >= 1"
-                :type="todo.priority === 3 ? 'danger' : 'warning'"
-                size="small"
-                effect="plain"
-              >
-                {{ todo.priority === 3 ? '紧急' : '重要' }}
-              </el-tag>
-              <span class="title-text">{{ todo.title }}</span>
-            </div>
-            <div class="todo-meta">
-              <span class="meta-item">
-                <el-icon><Calendar /></el-icon>
-                {{ formatDate(todo.due_date, todo.status) }}
-              </span>
-              <el-tag
-                v-for="tag in todo.tags"
-                :key="tag.id"
-                size="small"
-                :style="{ backgroundColor: tag.color }"
-              >
-                {{ tag.name }}
-              </el-tag>
+        <div class="todo-main" @click="selectTodo(todo)">
+          <div class="todo-left">
+            <el-checkbox
+              :model-value="todo.status === TodoStatus.Done"
+              @change="toggleStatus(todo)"
+              @click.stop
+            />
+            <div class="todo-content">
+              <div class="todo-title">
+                <el-tag
+                  v-if="todo.priority >= 1"
+                  :type="todo.priority === 3 ? 'danger' : 'warning'"
+                  size="small"
+                  effect="plain"
+                >
+                  {{ todo.priority === 3 ? '紧急' : '重要' }}
+                </el-tag>
+                <span class="title-text">{{ todo.title }}</span>
+              </div>
+              <div v-if="todo.description" class="todo-description">
+                {{ todo.description }}
+              </div>
+              <div class="todo-meta">
+                <span class="meta-item">
+                  <el-icon><Calendar /></el-icon>
+                  {{ formatDate(todo.due_date, todo.status) }}
+                </span>
+                <el-tag
+                  v-for="tag in todo.tags"
+                  :key="tag.id"
+                  size="small"
+                  :style="{ backgroundColor: tag.color }"
+                >
+                  {{ tag.name }}
+                </el-tag>
+              </div>
             </div>
           </div>
+          <div class="todo-actions">
+            <el-button
+              v-if="todo.steps && todo.steps.length > 0"
+              :icon="expandedTodos.has(todo.id) ? ArrowDown : ArrowRight"
+              circle
+              text
+              @click.stop="toggleExpand(todo)"
+            />
+            <el-button
+              :icon="todo.priority >= 1 ? StarFilled : Star"
+              circle
+              text
+              @click.stop="toggleMark(todo)"
+            />
+          </div>
         </div>
-        <div class="todo-actions">
-          <el-button
-            :icon="todo.priority >= 1 ? StarFilled : Star"
-            circle
-            text
-            @click.stop="toggleMark(todo)"
-          />
+        <!-- Sub-steps (collapsible) -->
+        <div v-if="todo.steps && todo.steps.length > 0 && expandedTodos.has(todo.id)" class="todo-steps">
+          <div
+            v-for="step in todo.steps"
+            :key="step.id"
+            class="step-item"
+            @click.stop="toggleStep(step)"
+          >
+            <el-checkbox :model-value="step.is_completed" @click.stop />
+            <span class="step-text" :class="{ completed: step.is_completed }">
+              {{ step.title }}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -61,13 +86,33 @@
         :key="todo.id"
         class="todo-card"
         :class="{ completed: todo.status === TodoStatus.Done }"
-        @click="selectTodo(todo)"
       >
         <div class="card-header">
           <el-checkbox
             :model-value="todo.status === TodoStatus.Done"
             @change="toggleStatus(todo)"
             @click.stop
+          />
+          <div style="flex: 1" @click="selectTodo(todo)">
+            <div class="card-title">
+              <el-tag
+                v-if="todo.priority >= 1"
+                :type="todo.priority === 3 ? 'danger' : 'warning'"
+                size="small"
+                effect="plain"
+              >
+                {{ todo.priority === 3 ? '紧急' : '重要' }}
+              </el-tag>
+              <span class="title-text">{{ todo.title }}</span>
+            </div>
+          </div>
+          <el-button
+            v-if="todo.steps && todo.steps.length > 0"
+            :icon="expandedTodos.has(todo.id) ? ArrowDown : ArrowRight"
+            circle
+            text
+            size="small"
+            @click.stop="toggleExpand(todo)"
           />
           <el-button
             :icon="todo.priority >= 1 ? StarFilled : Star"
@@ -78,19 +123,22 @@
           />
         </div>
         <div class="card-content">
-          <div class="card-title">
-            <el-tag
-              v-if="todo.priority >= 1"
-              :type="todo.priority === 3 ? 'danger' : 'warning'"
-              size="small"
-              effect="plain"
-            >
-              {{ todo.priority === 3 ? '紧急' : '重要' }}
-            </el-tag>
-            <span class="title-text">{{ todo.title }}</span>
-          </div>
           <div v-if="todo.description" class="card-description">
             {{ todo.description }}
+          </div>
+        </div>
+        <!-- Sub-steps (collapsible) -->
+        <div v-if="todo.steps && todo.steps.length > 0 && expandedTodos.has(todo.id)" class="card-steps">
+          <div
+            v-for="step in todo.steps"
+            :key="step.id"
+            class="step-item"
+            @click.stop="toggleStep(step)"
+          >
+            <el-checkbox :model-value="step.is_completed" @click.stop />
+            <span class="step-text" :class="{ completed: step.is_completed }">
+              {{ step.title }}
+            </span>
           </div>
         </div>
         <div class="card-footer">
@@ -148,13 +196,14 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, toRef } from 'vue';
-import { Calendar, Star, StarFilled } from '@element-plus/icons-vue';
+import { Calendar, Star, StarFilled, ArrowDown, ArrowRight } from '@element-plus/icons-vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { useTodoStore } from '@/stores';
 import { useUIStore } from '@/stores';
-import type { Todo } from '@/types';
+import type { Todo, TodoStep } from '@/types';
 import { TodoStatus } from '@/types';
 import TodoDetailPanel from '../components/todo/TodoDetailPanel.vue';
+import * as api from '@/api/tauri';
 
 const todoStore = useTodoStore();
 const uiStore = useUIStore();
@@ -179,6 +228,7 @@ watch(viewMode, (newVal) => {
 
 const selectedTodo = ref<Todo | null>(null);
 const detailVisible = ref(false);
+const expandedTodos = ref<Set<number>>(new Set());
 
 // Watch for store changes and update selectedTodo if it's the same todo
 watch(() => todoStore.todos, (newTodos) => {
@@ -230,6 +280,32 @@ async function toggleMark(todo: Todo) {
 function selectTodo(todo: Todo) {
   selectedTodo.value = todo;
   detailVisible.value = true;
+}
+
+function toggleExpand(todo: Todo) {
+  if (expandedTodos.value.has(todo.id)) {
+    expandedTodos.value.delete(todo.id);
+  } else {
+    expandedTodos.value.add(todo.id);
+  }
+}
+
+async function toggleStep(step: TodoStep) {
+  try {
+    await api.toggleStep(step.id);
+    // Refresh the todo to get updated steps
+    const updatedTodo = await api.getTodo(step.todo_id);
+    const todoIndex = todoStore.todos.findIndex(t => t.id === step.todo_id);
+    if (todoIndex !== -1) {
+      todoStore.todos[todoIndex] = updatedTodo;
+    }
+    if (selectedTodo.value?.id === step.todo_id) {
+      selectedTodo.value = updatedTodo;
+    }
+  } catch (error) {
+    console.error('Failed to toggle step:', error);
+    ElMessage.error('步骤状态更新失败');
+  }
 }
 
 async function handleTodoUpdated(todo: Todo) {
@@ -284,8 +360,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
 .todo-item {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
+  flex-direction: column;
   padding: 16px;
   background: white;
   border-radius: 8px;
@@ -295,7 +370,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 }
 
 .todo-item:hover {
-  border-color: #409eff;
+  border-color: var(--el-color-primary);
   box-shadow: 0 2px 8px rgba(64, 158, 255, 0.1);
 }
 
@@ -315,6 +390,13 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   flex: 1;
 }
 
+.todo-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
 .todo-content {
   flex: 1;
 }
@@ -324,6 +406,43 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   align-items: center;
   gap: 8px;
   margin-bottom: 8px;
+}
+
+.todo-description {
+  font-size: 13px;
+  color: #606266;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.todo-steps {
+  margin-top: 12px;
+  padding-top: 12px;
+  padding-left: 40px;
+  border-top: 1px solid #e4e7ed;
+}
+
+.step-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  cursor: pointer;
+}
+
+.step-text {
+  font-size: 13px;
+  color: #606266;
+}
+
+.step-text.completed {
+  text-decoration: line-through;
+  color: #909399;
 }
 
 .title-text {
@@ -365,7 +484,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 }
 
 .todo-card:hover {
-  border-color: #409eff;
+  border-color: var(--el-color-primary);
   box-shadow: 0 4px 12px rgba(64, 158, 255, 0.15);
   transform: translateY(-2px);
 }
@@ -382,7 +501,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 .card-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
 }
 
 .card-content {
@@ -412,6 +531,11 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   -webkit-box-orient: vertical;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.card-steps {
+  padding: 12px 0 12px 24px;
+  border-top: 1px solid #e4e7ed;
 }
 
 .card-footer {
@@ -454,16 +578,30 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   border-color: #3a3a3a;
 }
 
-[data-theme='dark'] .todo-item:hover {
-  border-color: #409eff;
-}
+/* Note: hover colors are already using var(--el-color-primary) */
 
 [data-theme='dark'] .title-text {
   color: #e0e0e0;
 }
 
+[data-theme='dark'] .todo-description {
+  color: #b0b0b0;
+}
+
 [data-theme='dark'] .todo-meta {
   color: #a0a0a0;
+}
+
+[data-theme='dark'] .todo-steps {
+  border-top-color: #3a3a3a;
+}
+
+[data-theme='dark'] .step-text {
+  color: #b0b0b0;
+}
+
+[data-theme='dark'] .step-text.completed {
+  color: #909399;
 }
 
 [data-theme='dark'] .todo-card {
@@ -472,7 +610,7 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 }
 
 [data-theme='dark'] .todo-card:hover {
-  border-color: #409eff;
+  border-color: var(--el-color-primary);
 }
 
 [data-theme='dark'] .todo-card .title-text {
@@ -489,5 +627,9 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
 [data-theme='dark'] .todo-card .more-tags {
   color: #a0a0a0;
+}
+
+[data-theme='dark'] .card-steps {
+  border-top-color: #3a3a3a;
 }
 </style>

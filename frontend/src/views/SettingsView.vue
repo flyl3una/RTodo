@@ -14,6 +14,27 @@
             <el-radio-button value="auto">跟随系统</el-radio-button>
           </el-radio-group>
         </div>
+        <div class="setting-item">
+          <span class="setting-label">语言</span>
+          <el-select v-model="currentLanguage" @change="handleLanguageChange" style="width: 200px">
+            <el-option label="简体中文" value="zh-CN" />
+            <el-option label="繁體中文" value="zh-TW" />
+            <el-option label="English" value="en-US" />
+            <el-option label="日本語" value="ja-JP" />
+          </el-select>
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">主题色</span>
+          <el-color-picker
+            v-model="currentThemeColor"
+            @change="handleThemeColorChange"
+            show-alpha
+          />
+        </div>
+        <div class="setting-item">
+          <span class="setting-label">开发模式</span>
+          <el-switch v-model="currentDeveloperMode" @change="handleDeveloperModeChange" />
+        </div>
       </section>
 
       <!-- Data Management -->
@@ -35,17 +56,6 @@
             清空所有数据
           </el-button>
         </div>
-      </section>
-
-      <!-- Tag Management -->
-      <section class="settings-section">
-        <h2 class="section-title">标签管理</h2>
-        <TagManageDialog
-          :model-value="true"
-          :group="undefined"
-          @updated="handleTagsUpdated"
-          @update:model-value="() => {}"
-        />
       </section>
 
       <!-- About -->
@@ -79,11 +89,13 @@ import { ref, computed, onMounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useUIStore } from '@/stores';
 import * as api from '@/api/tauri';
-import TagManageDialog from '@/components/tag/TagManageDialog.vue';
 
 const uiStore = useUIStore();
 
 const currentTheme = ref(uiStore.theme);
+const currentLanguage = ref(uiStore.language);
+const currentThemeColor = ref(uiStore.themeColor);
+const currentDeveloperMode = ref(uiStore.developerMode);
 const exportLoading = ref(false);
 
 function handleThemeChange(value: 'light' | 'dark' | 'auto') {
@@ -91,18 +103,37 @@ function handleThemeChange(value: 'light' | 'dark' | 'auto') {
   ElMessage.success('主题已切换');
 }
 
+function handleLanguageChange(value: 'zh-CN' | 'zh-TW' | 'en-US' | 'ja-JP') {
+  uiStore.setLanguage(value);
+  ElMessage.success('语言已切换');
+}
+
+function handleThemeColorChange(color: string) {
+  uiStore.setThemeColor(color);
+  ElMessage.success('主题色已切换');
+}
+
+function handleDeveloperModeChange(enabled: boolean) {
+  console.log('[Settings] handleDeveloperModeChange called with:', enabled);
+  console.log('[Settings] uiStore.developerMode before:', uiStore.developerMode);
+  uiStore.setDeveloperMode(enabled);
+  console.log('[Settings] uiStore.developerMode after:', uiStore.developerMode);
+  ElMessage.success(enabled ? '开发模式已开启' : '开发模式已关闭');
+}
+
 async function handleExport() {
   try {
     exportLoading.value = true;
-    const data = await api.exportAllData();
 
-    // Create JSON file and trigger download
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
+    // 调用后端API导出CSV压缩包
+    const zipData = await api.exportDataAsCsv();
+
+    // 创建Blob并触发下载
+    const blob = new Blob([zipData], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `rtodo-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `rtodo-backup-${new Date().toISOString().split('T')[0]}.zip`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -110,6 +141,7 @@ async function handleExport() {
 
     ElMessage.success('数据导出成功');
   } catch (error) {
+    console.error('Export error:', error);
     ElMessage.error('导出失败');
   } finally {
     exportLoading.value = false;
@@ -118,35 +150,34 @@ async function handleExport() {
 
 async function handleImport() {
   try {
-    const result = await ElMessageBox.prompt(
-      '请选择要导入的 JSON 文件',
+    await ElMessageBox.confirm(
+      '导入将覆盖现有数据，确定要继续吗？',
       '导入数据',
       {
+        type: 'warning',
         confirmButtonText: '选择文件',
         cancelButtonText: '取消',
-        inputPlaceholder: '导入将覆盖现有数据',
       }
     );
-
-    if (result.action !== 'confirm') return;
 
     // Create file input
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.json';
+    input.accept = '.zip';
 
     input.onchange = async (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
 
       try {
-        const text = await file.text();
-        const data = JSON.parse(text);
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
 
-        await api.importData(data);
+        await api.importDataFromCsv(uint8Array);
         ElMessage.success('数据导入成功，页面将重新加载');
         setTimeout(() => window.location.reload(), 1500);
       } catch (error) {
+        console.error('Import error:', error);
         ElMessage.error('导入失败：文件格式错误');
       }
     };
@@ -178,12 +209,11 @@ async function handleClear() {
   }
 }
 
-function handleTagsUpdated() {
-  ElMessage.success('标签已更新');
-}
-
 onMounted(() => {
   currentTheme.value = uiStore.theme;
+  currentLanguage.value = uiStore.language;
+  currentThemeColor.value = uiStore.themeColor;
+  currentDeveloperMode.value = uiStore.developerMode;
 });
 </script>
 

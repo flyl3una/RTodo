@@ -62,16 +62,7 @@
         </el-form-item>
 
         <el-form-item label="颜色">
-          <div class="color-selector">
-            <div
-              v-for="color in colorOptions"
-              :key="color"
-              class="color-option"
-              :class="{ selected: form.color === color }"
-              :style="{ backgroundColor: color }"
-              @click="form.color = color"
-            />
-          </div>
+          <ColorPicker v-model="form.color" :used-colors="usedColors" />
         </el-form-item>
       </el-form>
 
@@ -90,6 +81,7 @@ import { ref, computed, watch, onMounted } from 'vue';
 import { Edit, Delete, Plus } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useTagStore } from '@/stores';
+import ColorPicker from '@/components/common/ColorPicker.vue';
 import type { Tag } from '@/types';
 
 const emit = defineEmits<{
@@ -115,11 +107,12 @@ const rules: FormRules = {
   ],
 };
 
-const colorOptions = [
-  '#409EFF', '#67C23A', '#E6A23C', '#F56C6C',
-  '#909399', '#C0392B', '#8E44AD', '#16A085',
-  '#D35400', '#27AE60', '#2980B9', '#E74C3C',
-];
+// Get used colors for deduplication (exclude current editing tag)
+const usedColors = computed(() => {
+  return tags.value
+    .filter(t => t.id !== editingTag.value?.id)
+    .map(t => t.color);
+});
 
 const tags = computed(() => tagStore.tags);
 
@@ -253,31 +246,6 @@ onMounted(() => {
   gap: 4px;
 }
 
-.color-selector {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.color-option {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: all 0.2s ease;
-}
-
-.color-option:hover {
-  transform: scale(1.1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-}
-
-.color-option.selected {
-  border-color: #303133;
-  box-shadow: 0 0 0 2px white, 0 0 0 4px #409eff;
-}
-
 /* Dark theme */
 [data-theme='dark'] .tag-list-item {
   background: #2a2a2a;
@@ -288,8 +256,5 @@ onMounted(() => {
   color: #e0e0e0;
 }
 
-[data-theme='dark'] .color-option.selected {
-  border-color: #e0e0e0;
-  box-shadow: 0 0 0 2px #1a1a1a, 0 0 0 4px #409eff;
-}
+/* ColorPicker component handles its own styling */
 </style>

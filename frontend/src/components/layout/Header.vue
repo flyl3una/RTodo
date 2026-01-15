@@ -1,5 +1,5 @@
 <template>
-  <div class="header">
+  <div class="header" v-if="!isSettingsPage && !isStatsPage">
     <div class="header-left">
       <el-button
         :icon="collapsed ? Expand : Fold"
@@ -179,6 +179,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import {
   Search, Fold, Expand, List, Grid, Plus, Filter,
 } from '@element-plus/icons-vue';
@@ -197,13 +198,18 @@ defineEmits<{
   'show-create': [];
 }>();
 
+const route = useRoute();
 const uiStore = useUIStore();
 const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
 const searchQuery = ref('');
-const viewMode = uiStore.viewMode;
+const viewMode = computed(() => uiStore.viewMode);
+
+// 判断是否是设置页面或统计页面
+const isSettingsPage = computed(() => route.path === '/settings');
+const isStatsPage = computed(() => route.path === '/stats');
 
 // Filter states
 const filterStatus = ref<TodoStatus | undefined>();
