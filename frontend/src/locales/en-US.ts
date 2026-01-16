@@ -332,6 +332,10 @@ export default {
     appName: 'RTodo',
     appVersion: 'Version 0.1.0',
     appDescription: 'Cross-platform todo application built with Tauri + Vue 3',
+    closeBehavior: 'Close Behavior',
+    closeDirect: 'Close Directly',
+    closeMinimizeToTray: 'Minimize to Tray',
+    autoLaunch: 'Auto Launch',
   },
 
   // Messages - more
@@ -357,6 +361,11 @@ export default {
     importSelectFile: 'Select File',
     importSuccess: 'Data imported successfully, page will reload',
     importFailed: 'Import failed: Invalid file format',
+    closeBehaviorDirect: 'Close behavior set to close directly',
+    closeBehaviorMinimizeToTray: 'Close behavior set to minimize to tray',
+    autoLaunchEnabled: 'Auto launch enabled',
+    autoLaunchDisabled: 'Auto launch disabled',
+    autoLaunchFailed: 'Failed to set auto launch, administrator privileges may be required',
     clearConfirm: 'This will clear all data and cannot be undone. Continue?',
     clearAllData: 'Clear All Data',
     clearConfirmButton: 'Confirm Clear',

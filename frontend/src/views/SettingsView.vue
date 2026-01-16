@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <div class="settings-view">
     <h1 class="page-title">{{ t('settings.title') }}</h1>
 
@@ -6,6 +6,7 @@
       <!-- Appearance -->
       <section class="settings-section">
         <h2 class="section-title">{{ t('settings.appearance') }}</h2>
+
         <div class="setting-item">
           <span class="setting-label">{{ t('settings.theme') }}</span>
           <el-radio-group v-model="currentTheme" @change="handleThemeChange">
@@ -49,6 +50,14 @@
             <el-radio-button value="minimize_to_tray">{{ t('settings.closeMinimizeToTray') }}</el-radio-button>
           </el-radio-group>
         </div>
+        <div class="setting-item">
+          <span class="setting-label">{{ t('settings.autoLaunch') }}</span>
+          <el-switch
+            v-model="currentAutoLaunch"
+            @change="handleAutoLaunchChange"
+            :loading="autoLaunchLoading"
+          />
+        </div>
       </section>
 
       <!-- Shortcuts -->
@@ -71,7 +80,7 @@
             <li><code>Alt</code> - {{ t('settings.shortcutAlt') }}</li>
             <li><code>A</code> - {{ t('settings.shortcutKey') }}</li>
           </ul>
-          <p>{{ t('settings.shortcutExample') }}<code>CmdOrCtrl+Shift+T</code>、<code>CmdOrCtrl+Alt+Space</code></p>
+          <p>{{ t('settings.shortcutExample') }}<code>CmdOrCtrl+Shift+T</code><code>CmdOrCtrl+Alt+Space</code></p>
         </div>
       </section>
 
@@ -125,7 +134,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useUIStore } from '@/stores';
@@ -133,6 +142,7 @@ import type { CloseBehavior } from '@/stores';
 import * as api from '@/api/tauri';
 import Logo from '@/components/icon/logo.vue';
 import { save, open } from '@tauri-apps/plugin-dialog';
+import { listen } from '@tauri-apps/api/event';
 
 const { t } = useI18n();
 
@@ -146,6 +156,8 @@ const currentDensityMode = ref(uiStore.densityMode);
 const currentGlobalShortcut = ref(uiStore.globalShortcut);
 const currentCloseBehavior = ref<CloseBehavior>(uiStore.closeBehavior);
 const exportLoading = ref(false);
+const currentAutoLaunch = ref(false);
+const autoLaunchLoading = ref(false);
 
 function handleThemeChange(value: 'light' | 'dark' | 'auto') {
   uiStore.setTheme(value);
@@ -180,6 +192,20 @@ function handleCloseBehaviorChange(behavior: CloseBehavior) {
   ElMessage.success(behavior === 'minimize_to_tray' ? t('messages.closeBehaviorMinimizeToTray') : t('messages.closeBehaviorDirect'));
 }
 
+async function handleAutoLaunchChange(enabled: boolean) {
+  try {
+    autoLaunchLoading.value = true;
+    await api.setAutoLaunch(enabled);
+    ElMessage.success(enabled ? t('messages.autoLaunchEnabled') : t('messages.autoLaunchDisabled'));
+  } catch (error) {
+    console.error('Failed to set auto launch:', error);
+    ElMessage.error(t('messages.autoLaunchFailed'));
+    currentAutoLaunch.value = !enabled;
+  } finally {
+    autoLaunchLoading.value = false;
+  }
+}
+
 async function handleGlobalShortcutChange() {
   try {
     await uiStore.setGlobalShortcut(currentGlobalShortcut.value);
@@ -187,14 +213,14 @@ async function handleGlobalShortcutChange() {
   } catch (error) {
     console.error('Failed to set global shortcut:', error);
     ElMessage.error(t('messages.globalShortcutFailed'));
-    // 恢复原值
+    // 鎭㈠鍘熷€?
     currentGlobalShortcut.value = uiStore.globalShortcut;
   }
 }
 
 async function handleExport() {
   try {
-    // 先打开文件保存对话框获取用户选择的路径
+    // 鍏堟墦寮€鏂囦欢淇濆瓨瀵硅瘽妗嗚幏鍙栫敤鎴烽€夋嫨鐨勮矾寰?
     const filePath = await save({
       defaultPath: `rtodo-backup-${new Date().toISOString().split('T')[0]}.zip`,
       filters: [{
@@ -204,13 +230,13 @@ async function handleExport() {
     });
 
     if (!filePath) {
-      // 用户取消了文件选择
+      // 鐢ㄦ埛鍙栨秷浜嗘枃浠堕€夋嫨
       return;
     }
 
     exportLoading.value = true;
 
-    // 将文件路径传递给后端，后端直接写入文件
+    // 灏嗘枃浠惰矾寰勪紶閫掔粰鍚庣锛屽悗绔洿鎺ュ啓鍏ユ枃浠?
     await api.exportDataAsCsv(filePath);
     ElMessage.success(t('messages.dataExported'));
   } catch (error) {
@@ -233,7 +259,7 @@ async function handleImport() {
       }
     );
 
-    // 使用 Tauri 的 open API 选择文件
+    // 浣跨敤 Tauri 鐨?open API 閫夋嫨鏂囦欢
     const selectedPath = await open({
       multiple: false,
       filters: [{
@@ -243,13 +269,13 @@ async function handleImport() {
     });
 
     if (!selectedPath) {
-      // 用户取消了文件选择
+      // 鐢ㄦ埛鍙栨秷浜嗘枃浠堕€夋嫨
       return;
     }
 
     exportLoading.value = true;
 
-    // 将文件路径传给后端，后端负责读取和解析
+    // 灏嗘枃浠惰矾寰勪紶缁欏悗绔紝鍚庣璐熻矗璇诲彇鍜岃В鏋?
     await api.importDataFromCsv(selectedPath);
     ElMessage.success(t('messages.importSuccess'));
     setTimeout(() => window.location.reload(), 1500);
@@ -282,7 +308,7 @@ async function handleClear() {
   }
 }
 
-onMounted(() => {
+onMounted(async () => {
   currentTheme.value = uiStore.theme;
   currentLanguage.value = uiStore.language;
   currentThemeColor.value = uiStore.themeColor;
@@ -290,6 +316,23 @@ onMounted(() => {
   currentDensityMode.value = uiStore.densityMode;
   currentGlobalShortcut.value = uiStore.globalShortcut;
   currentCloseBehavior.value = uiStore.closeBehavior;
+
+  // Load auto-launch status
+  try {
+    currentAutoLaunch.value = await api.getAutoLaunch();
+  } catch (error) {
+    console.error('Failed to get auto launch status:', error);
+  }
+
+  // Listen for auto-launch state changes from tray menu
+  const unlisten = await listen<boolean>('autolaunch-changed', (event) => {
+    currentAutoLaunch.value = event.payload;
+  });
+
+  // Cleanup listener
+  onUnmounted(() => {
+    unlisten();
+  });
 });
 </script>
 
@@ -484,7 +527,7 @@ onMounted(() => {
   background: var(--el-fill-color-light);
 }
 
-/* 紧凑模式 */
+/* 绱у噾妯″紡 */
 [data-density='compact'] .settings-view {
   padding: 14px;
 }
@@ -517,3 +560,6 @@ onMounted(() => {
   gap: 12px;
 }
 </style>
+
+
+

@@ -4,7 +4,7 @@
 //! 应用程序级命令
 //! 处理全局快捷键、窗口显示/隐藏、托盘等功能
 
-use tauri::{AppHandle, State, Window};
+use tauri::{AppHandle, Emitter, Manager, State, Window};
 use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use std::sync::Mutex;
 
@@ -38,6 +38,7 @@ impl CloseBehavior {
 pub struct AppState {
     pub hide_hotkey: Mutex<Option<String>>,
     pub close_behavior: Mutex<CloseBehavior>,
+    pub auto_launch: Mutex<bool>,
 }
 
 impl AppState {
@@ -45,6 +46,7 @@ impl AppState {
         Self {
             hide_hotkey: Mutex::new(None),
             close_behavior: Mutex::new(CloseBehavior::Direct), // 默认直接关闭
+            auto_launch: Mutex::new(false), // 默认不开启开机启动
         }
     }
 }
@@ -149,4 +151,122 @@ pub async fn get_close_behavior(
 ) -> Result<String, String> {
     let behavior = state.close_behavior.lock().map_err(|e| format!("Lock error: {}", e))?;
     Ok(behavior.as_str().to_string())
+}
+
+/// 设置开机启动
+#[tauri::command]
+pub async fn set_auto_launch(
+    enabled: bool,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<(), String> {
+    use crate::config::AppConfig;
+
+    let mut current = state.auto_launch.lock().map_err(|e| format!("Lock error: {}", e))?;
+
+    // 获取应用名称和路径
+    let app_name = app.config().product_name.as_ref()
+        .ok_or_else(|| format!("Product name not configured"))?;
+    let app_path = std::env::current_exe()
+        .map_err(|e| format!("Failed to get exe path: {}", e))?;
+    let app_path_str = app_path.to_string_lossy().to_string();
+
+    // Windows: 直接操作注册表设置开机启动
+    #[cfg(target_os = "windows")]
+    {
+        use winreg::enums::*;
+        use winreg::RegKey;
+
+        let hklm = RegKey::predef(HKEY_CURRENT_USER);
+        let run_key = hklm.open_subkey_with_flags(
+            "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
+            KEY_WRITE
+        ).map_err(|e| format!("无法访问注册表，可能需要管理员权限: {}", e))?;
+
+        if enabled {
+            run_key.set_value(app_name, &app_path_str)
+                .map_err(|e| format!("设置开机启动失败: {}", e))?;
+        } else {
+            // 尝试删除值，如果不存在则忽略
+            let _ = run_key.delete_value(app_name);
+        }
+    }
+
+    // 非Windows平台使用auto_launch crate
+    #[cfg(not(target_os = "windows"))]
+    {
+        use auto_launch::AutoLaunchBuilder;
+
+        let auto_launch = AutoLaunchBuilder::new()
+            .set_app_name(app_name)
+            .set_app_path(&app_path_str)
+            .build()
+            .map_err(|e| format!("Failed to build auto launch: {}", e))?;
+
+        let result = if enabled {
+            auto_launch.enable()
+        } else {
+            auto_launch.disable()
+        };
+
+        result.map_err(|e| format!("Failed to set auto launch: {}", e))?;
+    }
+
+    *current = enabled;
+    tracing::info!("Auto-launch set to: {}", enabled);
+
+    // 保存到配置文件
+    if let Some(config_state) = app.try_state::<std::sync::Mutex<AppConfig>>() {
+        if let Ok(mut config) = config_state.lock() {
+            let _ = config.update_auto_launch(enabled, &app);
+            tracing::info!("Saved auto_launch config to file");
+        }
+    }
+
+    // 更新托盘菜单状态（在主线程中执行）
+    let app_for_menu = app.clone();
+    app.run_on_main_thread(move || {
+        update_tray_autolaunch_menu(&app_for_menu, enabled);
+    }).map_err(|e| format!("Failed to update tray menu: {}", e))?;
+
+    // 发送事件给前端
+    let _ = app.emit("autolaunch-changed", enabled);
+
+    Ok(())
+}
+
+/// 更新托盘菜单中的开机启动选项状态
+fn update_tray_autolaunch_menu(app: &AppHandle, enabled: bool) {
+    if let Some(menu) = app.menu() {
+        if let Some(item) = menu.get("autolaunch") {
+            if let Some(check_item) = item.as_check_menuitem() {
+                tracing::info!("Updating tray menu autolaunch to: {}", enabled);
+                let _ = check_item.set_checked(enabled);
+            }
+        }
+    }
+}
+
+/// 获取开机启动状态
+#[tauri::command]
+pub async fn get_auto_launch(state: State<'_, AppState>) -> Result<bool, String> {
+    let enabled = state.auto_launch.lock().map_err(|e| format!("Lock error: {}", e))?;
+    Ok(*enabled)
+}
+
+/// 切换开机启动
+#[tauri::command]
+pub async fn toggle_auto_launch(
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<bool, String> {
+    // 读取当前状态并立即释放锁
+    let new_state = {
+        let current_state = state.auto_launch.lock().map_err(|e| format!("Lock error: {}", e))?;
+        !*current_state
+    };
+
+    set_auto_launch(new_state, app, state).await?;
+
+    Ok(new_state)
 }

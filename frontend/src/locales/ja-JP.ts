@@ -323,6 +323,10 @@ export default {
     appName: 'RTodo',
     appVersion: 'バージョン 0.1.0',
     appDescription: 'Tauri + Vue 3 で構築されたクロスプラットフォーム ToDo アプリケーション',
+    closeBehavior: '閉じる動作',
+    closeDirect: '直接閉じる',
+    closeMinimizeToTray: 'トレイに最小化',
+    autoLaunch: '自動起動',
   },
 
   // メッセージ - その他
@@ -335,6 +339,11 @@ export default {
     dataCleared: 'データをクリアしました',
     themeChanged: 'テーマを変更しました',
     languageChanged: '言語を変更しました',
+    closeBehaviorDirect: '閉じる動作を直接閉じるに設定しました',
+    closeBehaviorMinimizeToTray: '閉じる動作をトレイに最小化に設定しました',
+    autoLaunchEnabled: '自動起動を有効にしました',
+    autoLaunchDisabled: '自動起動を無効にしました',
+    autoLaunchFailed: '自動起動の設定に失敗しました。管理者権限が必要な場合があります',
     themeColorChanged: 'テーマカラーを変更しました',
     developerModeEnabled: '開発者モードを有効にしました',
     developerModeDisabled: '開発者モードを無効にしました',

@@ -323,6 +323,10 @@ export default {
     appName: 'RTodo',
     appVersion: '版本 0.1.0',
     appDescription: '基於 Tauri + Vue 3 的跨平台待辦事項管理應用',
+    closeBehavior: '關閉行為',
+    closeDirect: '直接關閉',
+    closeMinimizeToTray: '最小化到系統托盤',
+    autoLaunch: '開機啟動',
   },
 
   // 消息提示 - 更多
@@ -341,6 +345,11 @@ export default {
     densityCompact: '已切換到緊湊模式',
     densityComfortable: '已切換到寬鬆模式',
     globalShortcutSet: '全局快捷鍵已設置',
+    closeBehaviorDirect: '關閉行為已設置為直接關閉',
+    closeBehaviorMinimizeToTray: '關閉行為已設置為最小化到系統托盤',
+    autoLaunchEnabled: '開機啟動已啟用',
+    autoLaunchDisabled: '開機啟動已關閉',
+    autoLaunchFailed: '設置開機啟動失敗，可能需要管理員權限',
     globalShortcutFailed: '設置全局快捷鍵失敗',
     exportFailed: '導出失敗',
     importConfirm: '導入將覆蓋現有數據，確定要繼續嗎？',

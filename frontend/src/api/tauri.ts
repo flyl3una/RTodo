@@ -377,3 +377,25 @@ export async function setCloseBehavior(behavior: 'direct' | 'minimize_to_tray'):
 export async function getCloseBehavior(): Promise<'direct' | 'minimize_to_tray'> {
   return safeInvoke<string>('get_close_behavior');
 }
+
+
+/**
+ * 设置开机启动
+ */
+export async function setAutoLaunch(enabled: boolean): Promise<void> {
+  return safeInvoke<void>('set_auto_launch', { enabled });
+}
+
+/**
+ * 获取开机启动状态
+ */
+export async function getAutoLaunch(): Promise<boolean> {
+  return safeInvoke<boolean>('get_auto_launch');
+}
+
+/**
+ * 切换开机启动状态
+ */
+export async function toggleAutoLaunch(): Promise<boolean> {
+  return safeInvoke<boolean>('toggle_auto_launch');
+}

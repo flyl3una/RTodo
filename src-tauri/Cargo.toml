@@ -30,6 +30,8 @@ tauri-plugin-global-shortcut.workspace = true
 dirs.workspace = true
 toml.workspace = true
 serde_derive.workspace = true
+auto-launch = "0.5"
+winreg = "0.52"
 csv.workspace = true
 zip.workspace = true
 
