@@ -1,0 +1,32 @@
+{
+  "name": "rtodo-build",
+  "version": "1.0.0",
+  "description": "Build scripts for RTodo cross-platform application",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-all.js",
+    "build:win": "node scripts/build-windows.js",
+    "build:linux": "node scripts/build-linux.js",
+    "build:mac": "node scripts/build-macos.js",
+    "build:all": "node scripts/build-all.js --all-platforms",
+    "clean": "node scripts/clean.js",
+    "validate": "node scripts/validate.js",
+    "bump:version": "node scripts/bump-version.js"
+  },
+  "keywords": [
+    "tauri",
+    "build",
+    "cross-platform"
+  ],
+  "author": "RTodo Team",
+  "license": "MIT",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "shelljs": "^0.8.5",
+    "yargs": "^17.7.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}

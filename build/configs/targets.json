@@ -1,0 +1,51 @@
+{
+  "windows": {
+    "x86_64": {
+      "target": "x86_64-pc-windows-msvc",
+      "packages": ["msi", "nsis"],
+      "enabled": true,
+      "rustup": "rustup target add x86_64-pc-windows-msvc"
+    },
+    "arm64": {
+      "target": "aarch64-pc-windows-msvc",
+      "packages": ["msi", "nsis"],
+      "enabled": false,
+      "note": "需要安装 ARM64 工具链",
+      "rustup": "rustup target add aarch64-pc-windows-msvc"
+    }
+  },
+  "linux": {
+    "x86_64": {
+      "target": "x86_64-unknown-linux-gnu",
+      "packages": ["deb", "appimage", "rpm"],
+      "enabled": true,
+      "rustup": "rustup target add x86_64-unknown-linux-gnu"
+    },
+    "arm64": {
+      "target": "aarch64-unknown-linux-gnu",
+      "packages": ["deb", "appimage"],
+      "enabled": false,
+      "note": "需要交叉编译工具链或 Docker",
+      "rustup": "rustup target add aarch64-unknown-linux-gnu"
+    }
+  },
+  "macos": {
+    "x86_64": {
+      "target": "x86_64-apple-darwin",
+      "packages": ["app", "dmg"],
+      "enabled": true,
+      "rustup": "rustup target add x86_64-apple-darwin"
+    },
+    "arm64": {
+      "target": "aarch64-apple-darwin",
+      "packages": ["app", "dmg"],
+      "enabled": true,
+      "rustup": "rustup target add aarch64-apple-darwin"
+    },
+    "universal": {
+      "packages": ["app", "dmg"],
+      "enabled": true,
+      "note": "通用二进制，包含 x86_64 和 arm64"
+    }
+  }
+}
