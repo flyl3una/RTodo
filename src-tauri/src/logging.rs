@@ -148,7 +148,7 @@ pub fn init_logging(config: &LogConfig) -> Result<LogWorkerGuards> {
     // 创建日志目录
     std::fs::create_dir_all(&log_dir)?;
 
-    println!("Log directory: {:?}", log_dir);
+    // println!("Log directory: {:?}", log_dir);
 
     // 根据配置选择日志格式
     let format_config = config.format;
@@ -251,7 +251,32 @@ pub fn init_logging(config: &LogConfig) -> Result<LogWorkerGuards> {
 }
 
 /// 从配置文件加载日志配置
+///
+/// 根据编译模式自动应用不同的日志策略：
+/// - **debug 模式**：日志级别为 debug，输出到控制台和文件
+/// - **release 模式**：日志级别为 error，仅输出到文件
+///
+/// 配置文件中的设置会被编译模式自动覆盖
 pub fn load_config() -> LogConfig {
+    // 确定编译模式并应用相应的默认配置
+    let mut config = if cfg!(debug_assertions) {
+        // Debug 模式：日志级别 debug，输出到控制台和文件
+        LogConfig {
+            level: LogLevel::Debug,
+            console: true,
+            file: true,
+            ..Default::default()
+        }
+    } else {
+        // Release 模式：日志级别 error，仅输出到文件
+        LogConfig {
+            level: LogLevel::Error,
+            console: false,
+            file: true,
+            ..Default::default()
+        }
+    };
+
     // 首先尝试从用户数据目录读取配置文件
     let config_path = if let Some(data_dir) = dirs::data_local_dir() {
         let mut path = data_dir;
@@ -259,13 +284,21 @@ pub fn load_config() -> LogConfig {
         path.push("log-config.toml");
         path
     } else {
-        return LogConfig::default();
+        return config;
     };
 
     // 如果配置文件存在，读取并解析
     if let Ok(content) = std::fs::read_to_string(&config_path) {
-        if let Ok(config) = toml::from_str::<LogConfig>(&content) {
-            tracing::info!("Loaded log config from: {:?}", config_path);
+        if let Ok(file_config) = toml::from_str::<LogConfig>(&content) {
+            // 合并配置：编译模式的设置优先级高于配置文件
+            // 这确保 debug 模式总是 debug 级别且输出到控制台
+            // release 模式总是 error 级别且不输出到控制台
+            config.log_dir = file_config.log_dir;
+            config.format = file_config.format;
+            config.rolling = file_config.rolling;
+            config.max_file_size_mb = file_config.max_file_size_mb;
+            // 注意：level、console、file 由编译模式决定，不从配置文件读取
+            // 不在这里记录日志，因为日志系统还未初始化
             return config;
         }
     }
@@ -275,19 +308,15 @@ pub fn load_config() -> LogConfig {
         let config_dir = data_dir.join("rtodo");
         std::fs::create_dir_all(&config_dir).ok();
 
-        let _default_config = LogConfig::default();
-
-        // 创建配置文件模板
+        // 创建配置文件模板（注释说明由编译模式控制）
         let config_template = r#"# RTodo 日志配置文件
-# 日志级别：trace, debug, info, warn, error
-level = "info"
-
-# 是否输出到控制台
-console = true
-
-# 是否输出到文件
-file = true
-
+#
+# 注意：以下配置由编译模式自动控制，配置文件中的设置不会生效：
+# - level: Debug 模式固定为 debug，Release 模式固定为 error
+# - console: Debug 模式固定为 true，Release 模式固定为 false
+# - file: 始终为 true
+#
+# 可配置项：
 # 日志目录（留空则使用默认路径）
 # log_dir = "C:\\path\\to\\logs"
 
@@ -304,5 +333,5 @@ max_file_size_mb = 100
         std::fs::write(&config_path, config_template).ok();
     }
 
-    LogConfig::default()
+    config
 }

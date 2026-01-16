@@ -173,8 +173,8 @@ MIT License
 - [x] Rust 数据模型定义
 - [x] Tauri Commands 框架
 - [x] 前端基础框架
-- [ ] Todo CRUD 实现
-- [ ] 前端状态管理
-- [ ] UI 组件开发
+- [x] Todo CRUD 实现
+- [x] 前端状态管理
+- [x] UI 组件开发
 - [ ] 统计功能
-- [ ] 导入导出
+- [x] 导入导出

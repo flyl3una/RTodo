@@ -1,6 +1,9 @@
 // Copyright 2025 RTodo Team. All rights reserved.
 // SPDX-License-Identifier: MIT
 
+// Release 模式下隐藏控制台窗口，Debug 模式保留控制台用于调试
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 use tauri::{
     menu::{Menu, MenuItem, CheckMenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
