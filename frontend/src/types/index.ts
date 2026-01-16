@@ -157,8 +157,8 @@ export interface CreateTodoRequest {
   title: string;
   description?: string;
   group_id?: number;
-  start_date?: number;
-  due_date?: number;
+  start_date?: number | null;
+  due_date?: number | null;
   priority?: number;
   tag_ids?: number[];
 }
@@ -174,8 +174,8 @@ export interface UpdateTodoRequest {
   priority?: number;
   group_id?: number;
   assignee?: string;
-  start_date?: number;
-  due_date?: number;
+  start_date?: number | null;
+  due_date?: number | null;
   tag_ids?: number[];
 }
 

@@ -1,6 +1,6 @@
 /* 全局样式 */
 :root {
-  --color-primary: #409eff;
+  /* --color-primary: #409eff; */
   --color-success: #67c23a;
   --color-warning: #e6a23c;
   --color-danger: #f56c6c;
@@ -62,7 +62,7 @@ html.dark ::-webkit-scrollbar-thumb:hover {
 
 /* 深色主题 */
 html.dark {
-  --el-color-primary: #409eff;
+  /* --el-color-primary: #409eff; */
   --el-color-success: #67c23a;
   --el-color-warning: #e6a23c;
   --el-color-danger: #f56c6c;
@@ -114,6 +114,42 @@ html.dark {
   --el-box-shadow-dark: 0 16px 48px 16px rgba(0, 0, 0, 0.72), 0 12px 32px rgba(0, 0, 0, 0.36), 0 8px 16px -8px rgba(0, 0, 0, 0.36);
 }
 
+/* Element Plus 按钮样式 - 浅色主题 */
+.el-button--primary:hover {
+  background-color: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary) !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
+.el-button--success:hover {
+  background-color: #67c23a !important;
+  border-color: #67c23a !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
+.el-button--danger:hover {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
+.el-button--warning:hover {
+  background-color: #e6a23c !important;
+  border-color: #e6a23c !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
+.el-button--info:hover {
+  background-color: #909399 !important;
+  border-color: #909399 !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
 /* Element Plus 深色主题直接样式覆盖 - 参考 Ant Design Pro */
 html.dark .el-button--default {
   background-color: transparent !important;
@@ -134,7 +170,10 @@ html.dark .el-button--primary {
 }
 
 html.dark .el-button--primary:hover {
-  opacity: 0.8 !important;
+  background-color: var(--el-color-primary) !important;
+  border-color: var(--el-color-primary) !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
 }
 
 html.dark .el-button--success {
@@ -143,10 +182,24 @@ html.dark .el-button--success {
   color: #ffffff !important;
 }
 
+html.dark .el-button--success:hover {
+  background-color: #67c23a !important;
+  border-color: #67c23a !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
 html.dark .el-button--danger {
   background-color: #f56c6c !important;
   border-color: #f56c6c !important;
   color: #ffffff !important;
+}
+
+html.dark .el-button--danger:hover {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
 }
 
 html.dark .el-button--warning {
@@ -155,10 +208,24 @@ html.dark .el-button--warning {
   color: #ffffff !important;
 }
 
+html.dark .el-button--warning:hover {
+  background-color: #e6a23c !important;
+  border-color: #e6a23c !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
 html.dark .el-button--info {
   background-color: #909399 !important;
   border-color: #909399 !important;
   color: #ffffff !important;
+}
+
+html.dark .el-button--info:hover {
+  background-color: #909399 !important;
+  border-color: #909399 !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
 }
 
 html.dark .el-button--text {
@@ -181,7 +248,15 @@ html.dark .el-button-group .el-button--default:hover {
   background-color: rgba(255, 255, 255, 0.08) !important;
 }
 
-/* 对话框内的按钮 */
+/* 对话框内的按钮 - 浅色主题 */
+.el-dialog .el-button--danger:hover {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
+/* 对话框内的按钮 - 深色主题 */
 html.dark .el-dialog .el-button--default {
   background-color: transparent !important;
   border-color: var(--el-border-color) !important;
@@ -204,6 +279,13 @@ html.dark .el-dialog .el-button--danger {
   background-color: #f56c6c !important;
   border-color: #f56c6c !important;
   color: #ffffff !important;
+}
+
+html.dark .el-dialog .el-button--danger:hover {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
 }
 
 /* 分隔符 */
@@ -485,6 +567,15 @@ html.dark .el-picker-panel__content {
   background-color: var(--el-bg-color-overlay) !important;
 }
 
+/* 日期选择器清空按钮使用主题色 */
+.el-picker-panel__icon-btn:hover {
+  color: var(--el-color-primary) !important;
+}
+
+html.dark .el-picker-panel__icon-btn:hover {
+  color: var(--el-color-primary) !important;
+}
+
 html.dark .el-date-table th {
   color: var(--el-text-color-secondary) !important;
 }
@@ -555,6 +646,41 @@ html.dark .el-message-box__content {
   color: var(--el-text-color-primary) !important;
 }
 
+/* MessageBox 按钮样式 - 浅色主题 */
+.el-message-box__btns .el-button--danger:hover {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
+/* MessageBox 按钮样式 - 深色主题 */
+html.dark .el-message-box__btns .el-button--default {
+  background-color: transparent !important;
+  border-color: var(--el-border-color) !important;
+  color: var(--el-text-color-primary) !important;
+}
+
+html.dark .el-message-box__btns .el-button--default:hover {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--el-text-color-secondary) !important;
+  color: var(--el-text-color-primary) !important;
+}
+
+/* MessageBox danger/error 按钮保持红色并提亮 */
+html.dark .el-message-box__btns .el-button--danger {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+}
+
+html.dark .el-message-box__btns .el-button--danger:hover {
+  background-color: #f56c6c !important;
+  border-color: #f56c6c !important;
+  color: #ffffff !important;
+  filter: brightness(1.1) !important;
+}
+
 html.dark .el-color-picker__panel {
   background-color: var(--el-bg-color-overlay) !important;
   border-color: var(--el-border-color) !important;
@@ -566,7 +692,7 @@ html.dark .el-radio-group {
 
 /* 深色主题 - 旧的 data-theme 方式保留用于自定义组件 */
 [data-theme='dark'] {
-  --color-primary: #409eff;
+  /* --color-primary: #409eff; */
   --color-success: #67c23a;
   --color-warning: #e6a23c;
   --color-danger: #f56c6c;

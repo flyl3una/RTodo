@@ -9,8 +9,6 @@ export default defineConfig(async () => ({
   server: {
     port: 1420,
     strictPort: true,
-    // Ensure Tauri can connect to the dev server
-    strictPort: true,
     host: true,
   },
   envPrefix: ['VITE_', 'TAURI_'],

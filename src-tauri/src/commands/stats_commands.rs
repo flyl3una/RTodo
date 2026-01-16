@@ -8,15 +8,17 @@ use crate::models::{TodoStats, StatsByDate, TodoStatsWithDetails};
 /// 获取总体统计
 #[tauri::command]
 pub async fn get_stats(
+    start_date: Option<i64>,
+    end_date: Option<i64>,
     db: tauri::State<'_, Database>,
 ) -> Result<TodoStats, String> {
-    tracing::info!("get_stats called");
+    tracing::info!("get_stats called: start_date={:?}, end_date={:?}", start_date, end_date);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    StatsRepository::get_stats(inner)
+    StatsRepository::get_stats(inner, start_date, end_date)
         .map_err(|e| format!("Failed to get stats: {}", e))
 }
 
@@ -24,15 +26,17 @@ pub async fn get_stats(
 #[tauri::command]
 pub async fn get_stats_by_date(
     range: String,
+    start_date: Option<i64>,
+    end_date: Option<i64>,
     db: tauri::State<'_, Database>,
 ) -> Result<Vec<StatsByDate>, String> {
-    tracing::info!("get_stats_by_date called: range={}", range);
+    tracing::info!("get_stats_by_date called: range={}, start_date={:?}, end_date={:?}", range, start_date, end_date);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    StatsRepository::get_stats_by_date(inner, &range)
+    StatsRepository::get_stats_by_date(inner, &range, start_date, end_date)
         .map_err(|e| format!("Failed to get stats by date: {}", e))
 }
 

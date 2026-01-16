@@ -2,9 +2,31 @@
   <div class="stats-view">
     <div class="stats-header">
       <h1 class="page-title">{{ t('stats.title') }}</h1>
-      <el-segmented v-model="dateRange" :options="dateRangeOptions" />
+      <div class="header-controls">
+        <el-segmented v-model="viewMode" :options="viewModeOptions" style="margin-right: 12px" />
+        <el-segmented v-model="dateRange" :options="dateRangeOptions" />
+        <div v-if="dateRange === 'custom'" class="custom-date-range">
+          <el-date-picker
+            v-model="customStartDate"
+            type="date"
+            :placeholder="t('stats.startDate')"
+            value-format="x"
+            style="width: 140px; margin-right: 8px"
+          />
+          <span>{{ t('common.to') }}</span>
+          <el-date-picker
+            v-model="customEndDate"
+            type="date"
+            :placeholder="t('stats.endDate')"
+            value-format="x"
+            style="width: 140px; margin-left: 8px"
+          />
+        </div>
+      </div>
     </div>
 
+    <!-- Dashboard Mode -->
+    <template v-if="viewMode === 'dashboard'">
     <!-- Overview Cards -->
     <div class="stats-cards">
       <div class="stat-card total">
@@ -189,12 +211,33 @@
         </span>
       </div>
     </div>
+    </template>
+
+    <!-- Report Mode -->
+    <div v-if="viewMode === 'report'" class="report-section">
+      <div class="report-actions">
+        <el-checkbox v-model="showTimeAndTags" style="margin-right: 12px">
+          {{ t('stats.showTimeAndTags') }}
+        </el-checkbox>
+        <el-button type="primary" @click="copyReportText">
+          {{ t('common.copy') }}
+        </el-button>
+      </div>
+      <textarea
+        v-if="reportText"
+        v-model="reportText"
+        class="report-textarea"
+        readonly
+      />
+      <el-empty v-else :description="t('stats.noTasks')" :image-size="60" />
+    </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { ElMessage } from 'element-plus';
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
@@ -208,16 +251,12 @@ const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
-const dateRange = ref<'day' | 'week' | 'month'>('week');
-const stats = ref<TodoStats>({
-  total: 0,
-  todo: 0,
-  in_progress: 0,
-  done: 0,
-  overdue: 0,
-  marked: 0,
-});
-const dateStats = ref<StatsByDate[]>([]);
+const viewMode = ref<'dashboard' | 'report'>('dashboard');
+const showTimeAndTags = ref(false);
+
+const dateRange = ref<'day' | 'week' | 'month' | 'custom'>('week');
+const customStartDate = ref<number | null>(null);
+const customEndDate = ref<number | null>(null);
 const statsWithDetails = ref<TodoStatsWithDetails>({
   total: 0,
   todo: 0,
@@ -227,20 +266,149 @@ const statsWithDetails = ref<TodoStatsWithDetails>({
   in_progress_tasks: [],
   done_tasks: [],
 });
+
+// 从详细数据计算统计卡片数据
+const stats = computed<TodoStats>(() => {
+  const allTodos = [
+    ...statsWithDetails.value.todos,
+    ...statsWithDetails.value.in_progress_tasks,
+    ...statsWithDetails.value.done_tasks,
+  ];
+  
+  const now = Date.now();
+  
+  return {
+    total: allTodos.length,
+    todo: statsWithDetails.value.todo,
+    in_progress: statsWithDetails.value.in_progress,
+    done: statsWithDetails.value.done,
+    marked: allTodos.filter(t => t.priority >= 1).length,
+    overdue: allTodos.filter(t => t.due_date && t.due_date < now && t.status !== TodoStatus.Done).length,
+  };
+});
+
+// 从详细数据计算完成趋势（按日期统计）
+const dateStats = computed<StatsByDate[]>(() => {
+  const allTodos = [
+    ...statsWithDetails.value.todos,
+    ...statsWithDetails.value.in_progress_tasks,
+    ...statsWithDetails.value.done_tasks,
+  ];
+  
+  // 根据选择的时间范围计算天数
+  const rangeValue = dateRange.value;
+  const startValue = customStartDate.value;
+  const endValue = customEndDate.value;
+  
+  const now = new Date();
+  let startDate: number;
+  let days: number;
+  
+  if (rangeValue === 'day') {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    startDate = today.getTime();
+    days = 1;
+  } else if (rangeValue === 'week') {
+    const weekAgo = new Date(now.getTime() - 6 * 86_400_000);
+    const start = new Date(weekAgo.getFullYear(), weekAgo.getMonth(), weekAgo.getDate(), 0, 0, 0, 0);
+    startDate = start.getTime();
+    days = 7;
+  } else if (rangeValue === 'month') {
+    const monthAgo = new Date(now.getTime() - 29 * 86_400_000);
+    const start = new Date(monthAgo.getFullYear(), monthAgo.getMonth(), monthAgo.getDate(), 0, 0, 0, 0);
+    startDate = start.getTime();
+    days = 30;
+  } else if (rangeValue === 'custom' && startValue && endValue) {
+    startDate = Math.floor(startValue / 86_400_000) * 86_400_000;
+    const duration = endValue - startValue;
+    days = Math.max(1, Math.floor(duration / 86_400_000));
+  } else {
+    return [];
+  }
+  
+  const stats: StatsByDate[] = [];
+  
+  // 按天统计
+  for (let dayOffset = 0; dayOffset < days; dayOffset++) {
+    const dayStart = startDate + (dayOffset * 86_400_000);
+    const dayEnd = dayStart + 86_400_000;
+    
+    // 转换为日期字符串
+    const date = new Date(dayStart).toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).replace(/\//g, '-');
+    
+    // 统计当天完成的任务数
+    const completed = allTodos.filter(t => 
+      t.completed_at && t.completed_at >= dayStart && t.completed_at < dayEnd
+    ).length;
+    
+    // 统计当天创建的任务数
+    const created = allTodos.filter(t => 
+      t.created_at >= dayStart && t.created_at < dayEnd
+    ).length;
+    
+    stats.push({ date, completed, created });
+  }
+  
+  return stats;
+});
 const activeCollapse = ref<string[]>(['todo', 'in_progress', 'done']);
+
+const viewModeOptions = computed(() => [
+  { label: t('stats.viewModeDashboard'), value: 'dashboard' },
+  { label: t('stats.viewModeReport'), value: 'report' },
+]);
 
 const dateRangeOptions = computed(() => [
   { label: t('stats.byDay'), value: 'day' },
   { label: t('stats.byWeek'), value: 'week' },
   { label: t('stats.byMonth'), value: 'month' },
+  { label: t('stats.customRange'), value: 'custom' },
 ]);
+
+// Computed date range for filtering
+const dateRangeFilter = computed(() => {
+  const now = new Date();
+  let startDate: number | undefined;
+  let endDate: number | undefined;
+
+  if (dateRange.value === 'day') {
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    startDate = today.getTime();
+    endDate = startDate + 86_400_000;
+  } else if (dateRange.value === 'week') {
+    const weekAgo = new Date(now.getTime() - 6 * 86_400_000);
+    const start = new Date(weekAgo.getFullYear(), weekAgo.getMonth(), weekAgo.getDate(), 0, 0, 0, 0);
+    startDate = start.getTime();
+    endDate = startDate + 7 * 86_400_000;
+  } else if (dateRange.value === 'month') {
+    const monthAgo = new Date(now.getTime() - 29 * 86_400_000);
+    const start = new Date(monthAgo.getFullYear(), monthAgo.getMonth(), monthAgo.getDate(), 0, 0, 0, 0);
+    startDate = start.getTime();
+    endDate = startDate + 30 * 86_400_000;
+  } else if (dateRange.value === 'custom' && customStartDate && customEndDate) {
+    startDate = customStartDate.value ?? undefined;
+    endDate = customEndDate.value ?? undefined;
+  }
+
+  return { startDate, endDate };
+});
+
 
 const groupStats = computed(() => {
   const groups = groupStore.groups;
-  const todos = todoStore.todos;
+  // Use filtered tasks from statsWithDetails (which is already filtered by date range)
+  const allFilteredTasks = [
+    ...statsWithDetails.value.todos,
+    ...statsWithDetails.value.in_progress_tasks,
+    ...statsWithDetails.value.done_tasks,
+  ];
 
   return groups.map(group => {
-    const groupTodos = todos.filter(t => t.group_id === group.id);
+    const groupTodos = allFilteredTasks.filter(t => t.group_id === group.id);
     return {
       id: group.id,
       name: group.name,
@@ -253,15 +421,217 @@ const groupStats = computed(() => {
 
 const tagStats = computed(() => {
   const tags = tagStore.tags;
-  const todos = todoStore.todos;
+  // Use filtered tasks from statsWithDetails (which is already filtered by date range)
+  const allFilteredTasks = [
+    ...statsWithDetails.value.todos,
+    ...statsWithDetails.value.in_progress_tasks,
+    ...statsWithDetails.value.done_tasks,
+  ];
 
-  return tags.map(tag => ({
-    id: tag.id,
-    name: tag.name,
-    color: tag.color,
-    count: todos.filter(t => t.tags?.some(tg => tg.id === tag.id)).length,
+  return tags.map(tagItem => ({
+    id: tagItem.id,
+    name: tagItem.name,
+    color: tagItem.color,
+    count: allFilteredTasks.filter(t => t.tags?.some(tg => tg.id === tagItem.id)).length,
   })).filter(t => t.count > 0).sort((a, b) => b.count - a.count);
 });
+// All tasks sorted for report (from statsWithDetails which is already filtered by date range)
+const allTasksSorted = computed(() => {
+  // Use filtered tasks from statsWithDetails (which is already filtered by date range)
+  const allFilteredTasks = [
+    ...statsWithDetails.value.todos,
+    ...statsWithDetails.value.in_progress_tasks,
+    ...statsWithDetails.value.done_tasks,
+  ];
+
+  return allFilteredTasks.sort((a, b) => {
+    if (a.status === TodoStatus.Done && b.status !== TodoStatus.Done) return 1;
+    if (a.status !== TodoStatus.Done && b.status === TodoStatus.Done) return -1;
+    return (b.created_at || 0) - (a.created_at || 0);
+  });
+});
+
+const completedTasksSorted = computed(() => {
+  return allTasksSorted.value.filter(t => t.status === TodoStatus.Done);
+});
+
+const incompleteTasksSorted = computed(() => {
+  return allTasksSorted.value.filter(t => t.status !== TodoStatus.Done);
+});
+
+function formatFullDateTime(timestamp: number): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  return year + '/' + month + '/' + day + ' ' + hours + ':' + minutes;
+}
+
+const reportText = computed(() => {
+  const lines: string[] = [];
+  const showDetails = showTimeAndTags.value;
+
+  // Helper function to add task metadata
+  function addTaskMeta(task: any, targetLines: string[]) {
+    if (!showDetails) return;
+    const meta: string[] = [];
+    if (task.group) {
+      meta.push((task.group.icon || '📁') + ' ' + task.group.name);
+    }
+    if (task.tags && task.tags.length > 0) {
+      meta.push(task.tags.map(tagItem => tagItem.name).join(', '));
+    }
+    if (task.start_date) {
+      meta.push(t('todo.start') + ': ' + formatFullDateTime(task.start_date));
+    }
+    if (task.due_date) {
+      meta.push(t('todo.due') + ': ' + formatFullDateTime(task.due_date));
+    }
+    if (task.completed_at) {
+      meta.push(t('stats.completedAt') + ' ' + formatFullDateTime(task.completed_at));
+    }
+    if (meta.length > 0) {
+      targetLines.push('   [' + meta.join(' | ') + ']');
+    }
+  }
+
+  // Collect all steps with their parent tasks
+  type StepWithParent = {
+    step: any;
+    task: any;
+  };
+
+  const completedSteps: StepWithParent[] = [];
+  const incompleteSteps: StepWithParent[] = [];
+  const tasksWithoutSteps: { completed: any[]; incomplete: any[] } = {
+    completed: [],
+    incomplete: [],
+  };
+
+  // Process all tasks and categorize
+  allTasksSorted.value.forEach(task => {
+    if (task.steps && task.steps.length > 0) {
+      // Task has steps, categorize each step
+      task.steps.forEach(step => {
+        if (step.is_completed) {
+          completedSteps.push({ step, task });
+        } else {
+          incompleteSteps.push({ step, task });
+        }
+      });
+    } else {
+      // Task has no steps, use task status
+      if (task.status === TodoStatus.Done) {
+        tasksWithoutSteps.completed.push(task);
+      } else {
+        tasksWithoutSteps.incomplete.push(task);
+      }
+    }
+  });
+
+  // All tasks section
+  lines.push('=== ' + t('stats.allTasks') + ' (' + allTasksSorted.value.length + ') ===');
+  allTasksSorted.value.forEach((task, index) => {
+    lines.push(String(index + 1) + '. ' + task.title);
+    if (task.description) {
+      lines.push('   ' + task.description);
+    }
+    if (task.steps && task.steps.length > 0) {
+      task.steps.forEach(step => {
+        const prefix = step.is_completed ? '[√]' : '[ ]';
+        lines.push('   ' + prefix + ' ' + step.title);
+      });
+    }
+    addTaskMeta(task, lines);
+  });
+
+  // Completed tasks section
+  lines.push('=== ' + t('stats.completedTasks') + ' ===');
+  let completedIndex = 0;
+  // First, tasks without steps
+  tasksWithoutSteps.completed.forEach(task => {
+    completedIndex++;
+    lines.push(String(completedIndex) + '. ' + task.title);
+    if (task.description) {
+      lines.push('   ' + task.description);
+    }
+    addTaskMeta(task, lines);
+  });
+  // Then, completed steps from tasks with steps
+  completedSteps.forEach(({ step, task }) => {
+    completedIndex++;
+    lines.push(String(completedIndex) + '. ' + task.title + ' - ' + step.title);
+    if (showDetails && task.completed_at) {
+      lines.push('   ' + t('stats.completedAt') + ' ' + formatFullDateTime(task.completed_at));
+    }
+  });
+
+  // Incomplete tasks section
+  lines.push('=== ' + t('stats.incompleteTasks') + ' ===');
+  let incompleteIndex = 0;
+  // First, tasks without steps
+  tasksWithoutSteps.incomplete.forEach(task => {
+    incompleteIndex++;
+    lines.push(String(incompleteIndex) + '. ' + task.title);
+    if (task.description) {
+      lines.push('   ' + task.description);
+    }
+    if (showDetails) {
+      const meta: string[] = [];
+      if (task.group) {
+        meta.push((task.group.icon || '📁') + ' ' + task.group.name);
+      }
+      if (task.tags && task.tags.length > 0) {
+        meta.push(task.tags.map(tagItem => tagItem.name).join(', '));
+      }
+      if (task.due_date && task.due_date < Date.now()) {
+        meta.push(t('todo.overdue') + ': ' + formatFullDateTime(task.due_date));
+      } else if (task.due_date) {
+        meta.push(t('todo.due') + ': ' + formatFullDateTime(task.due_date));
+      }
+      if (meta.length > 0) {
+        lines.push('   [' + meta.join(' | ') + ']');
+      }
+    }
+  });
+  // Then, incomplete steps from tasks with steps
+  incompleteSteps.forEach(({ step, task }) => {
+    incompleteIndex++;
+    lines.push(String(incompleteIndex) + '. ' + task.title + ' - ' + step.title);
+    if (showDetails) {
+      const meta: string[] = [];
+      if (task.group) {
+        meta.push((task.group.icon || '📁') + ' ' + task.group.name);
+      }
+      if (task.tags && task.tags.length > 0) {
+        meta.push(task.tags.map(tagItem => tagItem.name).join(', '));
+      }
+      if (task.due_date && task.due_date < Date.now()) {
+        meta.push(t('todo.overdue') + ': ' + formatFullDateTime(task.due_date));
+      } else if (task.due_date) {
+        meta.push(t('todo.due') + ': ' + formatFullDateTime(task.due_date));
+      }
+      if (meta.length > 0) {
+        lines.push('   [' + meta.join(' | ') + ']');
+      }
+    }
+  });
+
+  return lines.join('\n');
+});
+
+
+async function copyReportText() {
+  try {
+    await navigator.clipboard.writeText(reportText.value);
+    ElMessage.success(t('messages.success'));
+  } catch {
+    ElMessage.error(t('messages.error'));
+  }
+}
+
 
 function getBarHeight(value: number, allData: StatsByDate[]): string {
   const max = Math.max(...allData.map(d => Math.max(d.created, d.completed)));
@@ -302,44 +672,18 @@ function formatDateTime(timestamp: number): string {
 
 async function loadStats() {
   try {
-    // Calculate date range based on selection
-    const now = new Date();
-    let startDate: number | undefined;
-    let endDate: number | undefined;
-
-    if (dateRange.value === 'day') {
-      // Today: from 00:00 to 23:59
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      startDate = today.getTime();
-      endDate = startDate + 86_400_000; // Add one day
-    } else if (dateRange.value === 'week') {
-      // Last 7 days
-      const weekAgo = new Date(now.getTime() - 6 * 86_400_000);
-      const start = new Date(weekAgo.getFullYear(), weekAgo.getMonth(), weekAgo.getDate(), 0, 0, 0, 0);
-      startDate = start.getTime();
-      endDate = startDate + 7 * 86_400_000; // Add 7 days
-    } else if (dateRange.value === 'month') {
-      // Last 30 days
-      const monthAgo = new Date(now.getTime() - 29 * 86_400_000);
-      const start = new Date(monthAgo.getFullYear(), monthAgo.getMonth(), monthAgo.getDate(), 0, 0, 0, 0);
-      startDate = start.getTime();
-      endDate = startDate + 30 * 86_400_000; // Add 30 days
-    }
-
-    const [statsData, dateStatsData, statsWithDetailsData] = await Promise.all([
-      todoStore.getStats(),
-      todoStore.getStatsByDate(dateRange.value),
-      api.getStatsWithDetails(startDate, endDate),
-    ]);
-    stats.value = statsData;
-    dateStats.value = dateStatsData;
-    statsWithDetails.value = statsWithDetailsData;
+    const { startDate, endDate } = dateRangeFilter.value;
+    
+    // 只调用一个API获取所有详细数据，然后前端计算所有统计数据
+    statsWithDetails.value = await api.getStatsWithDetails(startDate, endDate);
   } catch (error) {
     console.error('Failed to load stats:', error);
   }
 }
 
-watch(dateRange, loadStats);
+watch([dateRange, customStartDate, customEndDate], () => {
+  loadStats();
+});
 
 onMounted(async () => {
   await Promise.all([
@@ -363,6 +707,12 @@ onMounted(async () => {
   align-items: center;
   justify-content: space-between;
   margin-bottom: 24px;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .page-title {
@@ -706,4 +1056,53 @@ onMounted(async () => {
 :global(html.dark) .task-item.completed .task-title {
   color: var(--el-text-color-secondary);
 }
+
+/* Report Mode Styles */
+.report-section {
+  background: var(--el-bg-color);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid var(--el-border-color-light);
+}
+
+.report-actions {
+  margin-bottom: 16px;
+}
+
+.report-textarea {
+  width: 100%;
+  min-height: 400px;
+  padding: 16px;
+  font-family: 'Microsoft YaHei', 'SimSun', 'SimHei', 'PingFang SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  line-height: 1.6;
+  border: 1px solid var(--el-border-color);
+  border-radius: 8px;
+  background: var(--el-fill-color-light);
+  color: var(--el-text-color-primary);
+  resize: vertical;
+}
+
+.report-textarea:focus {
+  outline: none;
+  border-color: var(--el-color-primary);
+}
+
+:global(html.dark) .report-section {
+  background: var(--el-fill-color-light);
+  border-color: var(--el-border-color);
+}
+
+:global(html.dark) .report-textarea {
+  background: var(--el-fill-color);
+  border-color: var(--el-border-color);
+}
+
+.custom-date-range {
+  display: flex;
+  align-items: center;
+  margin-left: 12px;
+  gap: 4px;
+}
+
 </style>

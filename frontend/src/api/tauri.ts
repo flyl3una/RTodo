@@ -263,22 +263,31 @@ export async function deleteAttachment(attachmentId: string): Promise<void> {
 /**
  * 获取统计数据
  */
-export async function getStats(): Promise<TodoStats> {
-  return safeInvoke<TodoStats>('get_stats');
+export async function getStats(startDate?: number, endDate?: number): Promise<TodoStats> {
+  const args: Record<string, unknown> = {};
+  if (startDate !== undefined) args.start_date = startDate;
+  if (endDate !== undefined) args.end_date = endDate;
+  return safeInvoke<TodoStats>('get_stats', args);
 }
 
 /**
  * 按日期获取统计
  */
-export async function getStatsByDate(range: string): Promise<StatsByDate[]> {
-  return safeInvoke<StatsByDate[]>('get_stats_by_date', { range });
+export async function getStatsByDate(range: string, startDate?: number, endDate?: number): Promise<StatsByDate[]> {
+  const args: Record<string, unknown> = { range };
+  if (startDate !== undefined) args.start_date = startDate;
+  if (endDate !== undefined) args.end_date = endDate;
+  return safeInvoke<StatsByDate[]>('get_stats_by_date', args);
 }
 
 /**
  * 获取带详情的统计
  */
-export async function getStatsWithDetails(): Promise<TodoStatsWithDetails> {
-  return safeInvoke<TodoStatsWithDetails>('get_stats_with_details');
+export async function getStatsWithDetails(startDate?: number, endDate?: number): Promise<TodoStatsWithDetails> {
+  const args: Record<string, unknown> = {};
+  if (startDate !== undefined) args.start_date = startDate;
+  if (endDate !== undefined) args.end_date = endDate;
+  return safeInvoke<TodoStatsWithDetails>('get_stats_with_details', args);
 }
 
 // ==================== Import/Export API ====================

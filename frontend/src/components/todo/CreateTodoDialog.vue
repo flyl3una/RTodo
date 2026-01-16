@@ -1,4 +1,4 @@
-<template>
+﻿<template>
   <el-dialog
     v-model="visible"
     :title="t('todo.createTodo')"
@@ -168,8 +168,9 @@ async function handleSubmit() {
       title: form.value.title,
       description: form.value.description || undefined,
       group_id: form.value.group_id,
-      start_date: form.value.start_date ?? undefined,
-      due_date: form.value.due_date ?? undefined,
+      // 鍙湁鍦ㄥ€间笉鏄?undefined 鏃舵墠浼犻€掞紝鍏佽 null 浼犻€掑埌鍚庣
+      ...(form.value.start_date !== undefined && { start_date: form.value.start_date }),
+      ...(form.value.due_date !== undefined && { due_date: form.value.due_date }),
       priority: form.value.priority,
       tag_ids: form.value.tag_ids?.length ? form.value.tag_ids : undefined,
     };

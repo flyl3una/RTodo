@@ -26,6 +26,7 @@ export default {
     close: '关闭',
     submit: '提交',
     back: '返回',
+    copy: '复制',
     more: '更多',
     actions: '操作',
     status: '状态',
@@ -40,6 +41,7 @@ export default {
     tags: '标签',
     createdAt: '创建时间',
     updatedAt: '更新时间',
+    to: '至',
   },
 
   // 导航和布局
@@ -109,6 +111,7 @@ export default {
   // 标签相关
   tag: {
     title: '标签',
+    tags: '标签',
     createTag: '新建标签',
     editTag: '编辑标签',
     deleteTag: '删除标签',
@@ -240,6 +243,18 @@ export default {
     byWeek: '按周',
     byMonth: '按月',
     week: '周',
+    day: '日',
+    month: '月',
+    viewModeDashboard: '仪表盘',
+    viewModeReport: '汇报模式',
+    customRange: '自定义',
+    startDate: '开始日期',
+    endDate: '结束日期',
+    apply: '应用',
+    allTasks: '所有任务',
+    incompleteTasks: '未完成任务',
+    noTasks: '暂无任务',
+    showTimeAndTags: '显示时间和标签',
   },
 
   // 附件相关

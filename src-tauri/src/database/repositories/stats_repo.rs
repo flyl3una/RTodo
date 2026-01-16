@@ -12,36 +12,50 @@ pub struct StatsRepository;
 
 impl StatsRepository {
     /// 获取总体统计
-    pub fn get_stats(conn: &Connection) -> Result<TodoStats> {
+    pub fn get_stats(conn: &Connection, start_date: Option<i64>, end_date: Option<i64>) -> Result<TodoStats> {
+        // Build date filter clause
+        let date_filter: String = match (start_date, end_date) {
+            (Some(start), Some(end)) => {
+                format!(" AND created_at >= {} AND created_at <= {}", start, end)
+            }
+            (Some(start), None) => {
+                format!(" AND created_at >= {}", start)
+            }
+            (None, Some(end)) => {
+                format!(" AND created_at <= {}", end)
+            }
+            (None, None) => String::new(),
+        };
+
         // 获取任务总数
         let total: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos",
+            &format!("SELECT COUNT(*) FROM todos WHERE 1=1{}", date_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get total count")?;
 
         // 获取各状态任务数
         let todo: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE status = 0",
+            &format!("SELECT COUNT(*) FROM todos WHERE status = 0{}", date_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get todo count")?;
 
         let in_progress: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE status = 1",
+            &format!("SELECT COUNT(*) FROM todos WHERE status = 1{}", date_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get in_progress count")?;
 
         let done: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE status = 2",
+            &format!("SELECT COUNT(*) FROM todos WHERE status = 2{}", date_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get done count")?;
 
         // 获取重要任务数（优先级 >= 1 的任务）
         let marked: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE priority >= 1",
+            &format!("SELECT COUNT(*) FROM todos WHERE priority >= 1{}", date_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get marked count")?;
@@ -49,8 +63,8 @@ impl StatsRepository {
         // 获取逾期任务数（截止日期小于当前时间且状态不是已完成）
         let now = Utc::now().timestamp_millis();
         let overdue: i32 = conn.query_row(
-            "SELECT COUNT(*) FROM todos WHERE due_date < ? AND status != 2",
-            params![now],
+            &format!("SELECT COUNT(*) FROM todos WHERE due_date < {} AND status != 2{}", now, date_filter),
+            [],
             |row| row.get(0)
         ).context("Failed to get overdue count")?;
 
@@ -65,46 +79,55 @@ impl StatsRepository {
     }
 
     /// 按日期获取统计
-    pub fn get_stats_by_date(conn: &Connection, range: &str) -> Result<Vec<StatsByDate>> {
-        let now = Utc::now();
-        let (start_date, days) = match range {
-            "day" => {
-                // 今天
-                let start = now.date_naive()
-                    .and_hms_opt(0, 0, 0)
-                    .expect("0:0:0 is always a valid time")
-                    .and_utc()
-                    .timestamp_millis();
-                (start, 1)
+    pub fn get_stats_by_date(conn: &Connection, range: &str, start_date_param: Option<i64>, end_date_param: Option<i64>) -> Result<Vec<StatsByDate>> {
+        let (start_date, days) = if let (Some(start), Some(end)) = (start_date_param, end_date_param) {
+            // Use custom date range
+            let start = start / 86_400_000 * 86_400_000; // Round down to start of day
+            let duration_ms = end - start;
+            let days_count = (duration_ms / 86_400_000).max(1) as i32;
+            (start, days_count)
+        } else {
+            // Use predefined range
+            let now = Utc::now();
+            match range {
+                "day" => {
+                    // 今天
+                    let start = now.date_naive()
+                        .and_hms_opt(0, 0, 0)
+                        .expect("0:0:0 is always a valid time")
+                        .and_utc()
+                        .timestamp_millis();
+                    (start, 1)
+                }
+                "week" => {
+                    // 最近7天
+                    let start = (now - chrono::Duration::days(6))
+                        .date_naive()
+                        .and_hms_opt(0, 0, 0)
+                        .expect("0:0:0 is always a valid time")
+                        .and_utc()
+                        .timestamp_millis();
+                    (start, 7)
+                }
+                "month" => {
+                    // 最近30天
+                    let start = (now - chrono::Duration::days(29))
+                        .date_naive()
+                        .and_hms_opt(0, 0, 0)
+                        .expect("0:0:0 is always a valid time")
+                        .and_utc()
+                        .timestamp_millis();
+                    (start, 30)
+                }
+                _ => return Ok(vec![]),
             }
-            "week" => {
-                // 最近7天
-                let start = (now - chrono::Duration::days(6))
-                    .date_naive()
-                    .and_hms_opt(0, 0, 0)
-                    .expect("0:0:0 is always a valid time")
-                    .and_utc()
-                    .timestamp_millis();
-                (start, 7)
-            }
-            "month" => {
-                // 最近30天
-                let start = (now - chrono::Duration::days(29))
-                    .date_naive()
-                    .and_hms_opt(0, 0, 0)
-                    .expect("0:0:0 is always a valid time")
-                    .and_utc()
-                    .timestamp_millis();
-                (start, 30)
-            }
-            _ => return Ok(vec![]),
         };
 
         let mut stats = Vec::new();
 
         // 按天统计
         for day_offset in 0..days {
-            let day_start = start_date + (day_offset * 86_400_000); // 加上天数 * 毫秒数
+            let day_start = start_date + ((day_offset as i64) * 86_400_000); // 加上天数 * 毫秒数
             let day_end = day_start + 86_400_000; // 加一天
 
             // 转换为日期字符串
