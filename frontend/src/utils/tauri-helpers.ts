@@ -84,7 +84,7 @@ export async function safeInvoke<T>(
 export async function testIPCConnection(): Promise<boolean> {
   try {
     console.log('[IPC] 测试连接...');
-    const result = await invoke<any>('get_todos', {});
+    const result = await invoke<any>('get_todos', {payload: {}});
     console.log('[IPC] 测试成功，返回:', result);
     return true;
   } catch (error) {
