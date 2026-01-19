@@ -41,9 +41,8 @@ export const useGroupStore = defineStore('group', () => {
     }
   }
 
-  async function updateGroup(id: string, params: {
+  async function updateGroup(id: number, params: {
     name?: string;
-    parent_id?: string;
     icon?: string;
     color?: string;
   }) {

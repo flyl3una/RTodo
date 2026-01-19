@@ -159,9 +159,8 @@ export async function createTaskGroup(params: {
 /**
  * 更新任务组
  */
-export async function updateTaskGroup(id: string, params: {
+export async function updateTaskGroup(id: number, params: {
   name?: string;
-  parent_id?: string;
   icon?: string;
   color?: string;
 }): Promise<TaskGroup> {
@@ -171,7 +170,7 @@ export async function updateTaskGroup(id: string, params: {
 /**
  * 删除任务组
  */
-export async function deleteTaskGroup(id: string): Promise<void> {
+export async function deleteTaskGroup(id: number): Promise<void> {
   return safeInvoke<void>('delete_task_group', { id });
 }
 
@@ -194,8 +193,14 @@ export async function createTag(name: string, color: string): Promise<Tag> {
 /**
  * 更新标签
  */
-export async function updateTag(id: string, name: string, color: string): Promise<Tag> {
-  return safeInvoke<Tag>('update_tag', { id, name, color });
+export async function updateTag(id: string, params: {
+  name?: string;
+  color?: string;
+}): Promise<Tag> {
+  const payload: Record<string, unknown> = { id };
+  if (params.name !== undefined) payload.name = params.name;
+  if (params.color !== undefined) payload.color = params.color;
+  return safeInvoke<Tag>('update_tag', payload);
 }
 
 /**

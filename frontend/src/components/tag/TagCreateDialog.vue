@@ -25,11 +25,11 @@
     </el-form>
 
     <template #footer>
+      
+      <el-button @click="handleClose">取消</el-button>
       <el-button v-if="isEdit" type="danger" @click="handleDelete" :loading="deleteLoading">
         删除
       </el-button>
-      <div style="flex: 1"></div>
-      <el-button @click="handleClose">取消</el-button>
       <el-button type="primary" @click="handleSubmit" :loading="loading">
         {{ isEdit ? '保存' : '创建' }}
       </el-button>
