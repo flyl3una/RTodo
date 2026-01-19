@@ -39,10 +39,12 @@ export default {
     tags: '標籤',
     createdAt: '創建時間',
     updatedAt: '更新時間',
+    to: '至',
   },
 
   nav: {
     allTodos: '所有任務',
+    todo: '待辦',
     today: '今天',
     upcoming: '即將到來',
     completed: '已完成',
@@ -50,6 +52,7 @@ export default {
     quickAccess: '快速訪問',
     important: '重要',
     urgent: '緊急',
+    overdue: '滯後',
   },
 
   todo: {

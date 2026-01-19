@@ -39,10 +39,12 @@ export default {
     tags: 'Tags',
     createdAt: 'Created At',
     updatedAt: 'Updated At',
+    to: 'To',
   },
 
   nav: {
     allTodos: 'All Tasks',
+    todo: 'To Do',
     today: 'Today',
     upcoming: 'Upcoming',
     completed: 'Completed',
@@ -50,6 +52,7 @@ export default {
     quickAccess: 'Quick Access',
     important: 'Important',
     urgent: 'Urgent',
+    overdue: 'Overdue',
   },
 
   todo: {

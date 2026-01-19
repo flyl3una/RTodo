@@ -31,9 +31,14 @@
                 {{ todo.description }}
               </div>
               <div class="todo-meta">
-                <span class="meta-item">
+                <span v-if="todo.start_date" class="meta-item">
+                  <el-icon><Clock /></el-icon>
+                  {{ t('todo.start') }}: {{ formatSimpleDate(todo.start_date) }}
+                </span>
+                <span v-if="todo.due_date" class="meta-item" :class="{ 'overdue': isTodoOverdue(todo) }">
                   <el-icon><Calendar /></el-icon>
-                  {{ formatDate(todo.due_date, todo.status) }}
+                  {{ t('todo.due') }}: {{ formatSimpleDate(todo.due_date) }}
+                  <el-tag v-if="isTodoOverdue(todo)" size="small" type="danger" effect="plain">{{ t('nav.overdue') }}</el-tag>
                 </span>
                 <el-tag
                   v-for="tag in todo.tags"
@@ -135,6 +140,13 @@
             @click.stop="toggleMark(todo)"
           />
           <el-button
+            :icon="Edit"
+            circle
+            text
+            size="small"
+            @click.stop="editTodo(todo)"
+          />
+          <el-button
             :icon="Delete"
             circle
             text
@@ -164,9 +176,14 @@
         </div>
         <div class="card-footer">
           <div class="card-meta">
-            <span v-if="todo.due_date" class="meta-item">
+            <span v-if="todo.start_date" class="meta-item">
+              <el-icon><Clock /></el-icon>
+              {{ t('todo.start') }}: {{ formatSimpleDate(todo.start_date) }}
+            </span>
+            <span v-if="todo.due_date" class="meta-item" :class="{ 'overdue': isTodoOverdue(todo) }">
               <el-icon><Calendar /></el-icon>
-              {{ formatDate(todo.due_date, todo.status) }}
+              {{ t('todo.due') }}: {{ formatSimpleDate(todo.due_date) }}
+              <el-tag v-if="isTodoOverdue(todo)" size="small" type="danger" effect="plain">{{ t('nav.overdue') }}</el-tag>
             </span>
             <div class="card-tags">
               <el-tag
@@ -200,14 +217,16 @@
     <!-- Detail Panel (when a todo is selected) -->
     <el-drawer
       v-model="detailVisible"
-      :title="t('todo.todoDetail')"
+      :title="editMode ? t('todo.editTodo') : t('todo.todoDetail')"
       size="40%"
       direction="rtl"
+      @close="handleDrawerClose"
     >
       <TodoDetailPanel
         v-if="selectedTodo"
-        :key="selectedTodo.id + '-' + selectedTodo.updated_at"
+        :key="selectedTodo.id + '-' + selectedTodo.updated_at + '-' + editMode"
         :todo="selectedTodo"
+        :edit-mode="editMode"
         @updated="handleTodoUpdated"
         @deleted="handleTodoDeleted"
       />
@@ -217,13 +236,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, toRef } from 'vue';
-import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete, Edit } from '@element-plus/icons-vue';
+import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete, Edit, Clock } from '@element-plus/icons-vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import { useTodoStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import type { Todo, TodoStep } from '@/types';
-import { TodoStatus, getPriorityLabel, getPriorityType } from '@/types';
+import { TodoStatus, getPriorityLabel, getPriorityType, isTodoOverdue } from '@/types';
 import TodoDetailPanel from '../components/todo/TodoDetailPanel.vue';
 import * as api from '@/api/tauri';
 
@@ -253,6 +272,7 @@ watch(viewMode, (newVal) => {
 const selectedTodo = ref<Todo | null>(null);
 const detailVisible = ref(false);
 const expandedTodos = ref<Set<number>>(new Set());
+const editMode = ref(false);
 
 // Watch for store changes and update selectedTodo if it's the same todo
 watch(() => todoStore.todos, (newTodos) => {
@@ -303,6 +323,7 @@ async function toggleMark(todo: Todo) {
 
 function selectTodo(todo: Todo) {
   selectedTodo.value = todo;
+  editMode.value = false;
   detailVisible.value = true;
 }
 
@@ -349,11 +370,17 @@ async function handleTodoUpdated(todo: Todo) {
 function handleTodoDeleted() {
   detailVisible.value = false;
   selectedTodo.value = null;
+  editMode.value = false;
   todoStore.fetchTodos();
+}
+
+function handleDrawerClose() {
+  editMode.value = false;
 }
 
 function editTodo(todo: Todo) {
   selectedTodo.value = todo;
+  editMode.value = true;
   detailVisible.value = true;
 }
 
@@ -401,6 +428,19 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
 
   const formatted = date.toLocaleDateString('zh-CN', options);
   return isOverdue ? `${formatted} (${t('todo.overdue')})` : formatted;
+}
+
+// 格式化日期不显示逾期状态
+function formatSimpleDate(timestamp?: number): string {
+  if (!timestamp) return '-';
+  const date = new Date(timestamp);
+  const options: Intl.DateTimeFormatOptions = {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  };
+  return date.toLocaleDateString('zh-CN', options);
 }
 </script>
 
@@ -521,6 +561,11 @@ function formatDate(timestamp?: number, todoStatus?: TodoStatus): string {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.meta-item.overdue {
+  color: var(--el-color-danger);
+  font-weight: 500;
 }
 
 .todo-cards {

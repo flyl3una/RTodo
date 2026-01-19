@@ -1,7 +1,7 @@
 <template>
   <div class="sidebar" :class="{ collapsed }">
     <!-- Header - Fixed -->
-    <div class="sidebar-header">
+    <div class="sidebar-header" @click="emit('toggle')">
       <div class="logo" v-if="!collapsed">
         <span class="logo-icon">
           <Logo />
@@ -17,16 +17,26 @@
     <!-- Scrollable Content Area -->
     <div class="sidebar-content">
       <!-- Quick Access -->
-      <div class="sidebar-section" v-if="!collapsed">
-        <div class="section-title">{{ t('nav.quickAccess') }}</div>
-        <div class="quick-links">
+      <div class="sidebar-section">
+        <div class="section-title" v-if="!collapsed">{{ t('nav.quickAccess') }}</div>
+        <!-- Expanded: Show quick links with text -->
+        <div class="quick-links" v-if="!collapsed">
+          <a
+            href="#"
+            class="quick-link"
+            :class="{ active: currentView === 'todo' && route.path === '/' }"
+            @click.prevent="setFilter('todo')"
+          >
+            <el-icon><Tickets /></el-icon>
+            <span>{{ t('nav.todo') }}</span>
+          </a>
           <a
             href="#"
             class="quick-link"
             :class="{ active: currentView === 'all' && route.path === '/' }"
             @click.prevent="setFilter('all')"
           >
-            <el-icon><List /></el-icon>
+            <el-icon><Grid /></el-icon>
             <span>{{ t('nav.allTodos') }}</span>
           </a>
           <!-- <a
@@ -53,7 +63,7 @@
             :class="{ active: currentView === 'urgent' && route.path === '/' }"
             @click.prevent="setFilter('urgent')"
           >
-            <el-icon><Warning /></el-icon>
+            <el-icon><BellFilled /></el-icon>
             <span>{{ t('nav.urgent') }}</span>
           </a>
           <a
@@ -64,6 +74,72 @@
           >
             <el-icon><CircleCheck /></el-icon>
             <span>{{ t('nav.completed') }}</span>
+          </a>
+          <a
+            href="#"
+            class="quick-link"
+            :class="{ active: currentView === 'overdue' && route.path === '/' }"
+            @click.prevent="setFilter('overdue')"
+          >
+            <el-icon><Clock /></el-icon>
+            <span>{{ t('nav.overdue') }}</span>
+          </a>
+        </div>
+        <!-- Collapsed: Show quick access icons only -->
+        <div class="quick-links-collapsed" v-else>
+          <a
+            href="#"
+            class="quick-link-icon"
+            :class="{ active: currentView === 'todo' && route.path === '/' }"
+            @click.prevent="setFilter('todo')"
+            :title="t('nav.todo')"
+          >
+            <el-icon><Tickets /></el-icon>
+          </a>
+          <a
+            href="#"
+            class="quick-link-icon"
+            :class="{ active: currentView === 'all' && route.path === '/' }"
+            @click.prevent="setFilter('all')"
+            :title="t('nav.allTodos')"
+          >
+            <el-icon><Grid /></el-icon>
+          </a>
+          <a
+            href="#"
+            class="quick-link-icon"
+            :class="{ active: currentView === 'important' && route.path === '/' }"
+            @click.prevent="setFilter('important')"
+            :title="t('nav.important')"
+          >
+            <el-icon><Star /></el-icon>
+          </a>
+          <a
+            href="#"
+            class="quick-link-icon"
+            :class="{ active: currentView === 'urgent' && route.path === '/' }"
+            @click.prevent="setFilter('urgent')"
+            :title="t('nav.urgent')"
+          >
+            <el-icon><BellFilled /></el-icon>
+          </a>
+          <a
+            href="#"
+            class="quick-link-icon"
+            :class="{ active: currentView === 'completed' && route.path === '/' }"
+            @click.prevent="setFilter('completed')"
+            :title="t('nav.completed')"
+          >
+            <el-icon><CircleCheck /></el-icon>
+          </a>
+          <a
+            href="#"
+            class="quick-link-icon"
+            :class="{ active: currentView === 'overdue' && route.path === '/' }"
+            @click.prevent="setFilter('overdue')"
+            :title="t('nav.overdue')"
+          >
+            <el-icon><Clock /></el-icon>
           </a>
         </div>
       </div>
@@ -150,11 +226,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
-  List, Calendar, Star, Plus, TrendCharts, Setting, Warning, CircleCheck,
+  List, Calendar, Star, Plus, TrendCharts, Setting, Warning, CircleCheck, WarningFilled,
+  Tickets, Grid, BellFilled, Clock, Memo,
 } from '@element-plus/icons-vue';
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
@@ -182,7 +259,7 @@ const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
-const currentView = ref<'all' | 'today' | 'important' | 'urgent' | 'completed' | 'group' | 'tag'>('all');
+const currentView = ref<'all' | 'todo' | 'today' | 'important' | 'urgent' | 'completed' | 'overdue' | 'group' | 'tag'>('todo');
 const filterGroupId = ref<string | undefined>();
 const filterTagId = ref<string | undefined>();
 const groupDialogVisible = ref(false);
@@ -193,16 +270,16 @@ const editingTag = ref<Tag | undefined>();
 const groups = computed(() => groupStore.groups);
 const tags = computed(() => tagStore.tags);
 
-// Reset to 'all' view (can be called from parent)
+// Reset to 'todo' view (can be called from parent)
 function resetToAllView() {
   console.log('[Sidebar] resetToAllView called');
-  currentView.value = 'all';
+  currentView.value = 'todo';
   filterGroupId.value = undefined;
   filterTagId.value = undefined;
   todoStore.setFilter({});
 }
 
-function setFilter(view: 'all' | 'today' | 'important' | 'urgent' | 'completed') {
+function setFilter(view: 'all' | 'todo' | 'today' | 'important' | 'urgent' | 'completed' | 'overdue') {
   console.log('[Sidebar] setFilter called with view:', view);
   currentView.value = view;
   filterGroupId.value = undefined;
@@ -212,6 +289,14 @@ function setFilter(view: 'all' | 'today' | 'important' | 'urgent' | 'completed')
   switch (view) {
     case 'all':
       console.log('[Sidebar] Applying "all" filter (no params)');
+      todoStore.setTodoView(false);
+      todoStore.setOverdueView(false);
+      todoStore.setFilter({});
+      break;
+    case 'todo':
+      console.log('[Sidebar] Applying "todo" filter (not done)');
+      todoStore.setTodoView(true);
+      todoStore.setOverdueView(false);
       todoStore.setFilter({});
       break;
     case 'today':
@@ -223,6 +308,8 @@ function setFilter(view: 'all' | 'today' | 'important' | 'urgent' | 'completed')
       tomorrow.setDate(tomorrow.getDate() + 1);
       const tomorrowStart = tomorrow.getTime();
       console.log('[Sidebar] Applying "today" filter:', { start_date: todayStart, end_date: tomorrowStart });
+      todoStore.setTodoView(false);
+      todoStore.setOverdueView(false);
       // Filter by due_date in range [today, tomorrow)
       todoStore.setFilter({
         start_date: todayStart,
@@ -232,17 +319,31 @@ function setFilter(view: 'all' | 'today' | 'important' | 'urgent' | 'completed')
     case 'important':
       // Filter by priority = 1 (important)
       console.log('[Sidebar] Applying "important" filter:', { priority: 1 });
+      todoStore.setTodoView(false);
+      todoStore.setOverdueView(false);
       todoStore.setFilter({ priority: 1 });
       break;
     case 'urgent':
       // Filter by priority = 3 (urgent)
       console.log('[Sidebar] Applying "urgent" filter:', { priority: 3 });
+      todoStore.setTodoView(false);
+      todoStore.setOverdueView(false);
       todoStore.setFilter({ priority: 3 });
       break;
     case 'completed':
       // Filter by status = Done (2)
       console.log('[Sidebar] Applying "completed" filter:', { status: TodoStatus.Done });
+      todoStore.setTodoView(false);
+      todoStore.setOverdueView(false);
       todoStore.setFilter({ status: TodoStatus.Done });
+      break;
+    case 'overdue':
+      // Filter by overdue: not done and due_date < now
+      console.log('[Sidebar] Applying "overdue" filter');
+      todoStore.setTodoView(false);
+      todoStore.setOverdueView(true);
+      // Fetch all non-completed todos and filter client-side
+      todoStore.setFilter({});
       break;
   }
 
@@ -308,6 +409,12 @@ function editTag(tag: Tag) {
   tagDialogVisible.value = true;
 }
 
+// Initialize with todo view on mount
+onMounted(() => {
+  console.log('[Sidebar] onMounted, initializing with todo view');
+  setFilter('todo');
+});
+
 // Expose methods to parent components
 defineExpose({
   resetToAllView,
@@ -331,11 +438,18 @@ defineExpose({
 
 .sidebar-header {
   flex-shrink: 0;
-  padding: 16px;
+  height: 56px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--el-border-color-light);
   display: flex;
   align-items: center;
   justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.sidebar-header:hover {
+  opacity: 0.8;
 }
 
 .logo {
@@ -414,6 +528,34 @@ defineExpose({
   flex-direction: column;
   gap: 4px;
   padding: 0 8px;
+}
+
+.quick-links-collapsed {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.quick-link-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 6px;
+  color: var(--el-text-color-regular);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.quick-link-icon:hover {
+  background: var(--el-fill-color-light);
+  color: var(--el-color-primary);
+}
+
+.quick-link-icon.active {
+  background: var(--el-color-primary);
+  color: white;
 }
 
 .tags {
@@ -562,7 +704,8 @@ defineExpose({
 }
 
 [data-density='compact'] .sidebar-header {
-  padding: 12px;
+  height: 48px;
+  padding: 0 12px;
 }
 
 [data-density='compact'] .sidebar-section {

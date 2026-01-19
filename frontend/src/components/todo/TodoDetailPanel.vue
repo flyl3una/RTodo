@@ -238,6 +238,7 @@ const { t } = useI18n();
 
 const props = defineProps<{
   todo: Todo;
+  editMode?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -543,6 +544,13 @@ onMounted(async () => {
   await tagStore.fetchTags();
   await loadSteps();
 });
+
+// Watch for editMode prop changes
+watch(() => props.editMode, (newEditMode) => {
+  if (newEditMode && !isEditing.value) {
+    startEdit();
+  }
+}, { immediate: true });
 </script>
 
 <style scoped>

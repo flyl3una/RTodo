@@ -19,12 +19,26 @@ export const useTodoStore = defineStore('todo', () => {
   const searchQuery = ref<string>('');
   const filterStartDate = ref<number | undefined>();
   const filterEndDate = ref<number | undefined>();
+  const isOverdueView = ref<boolean>(false);
+  const isTodoView = ref<boolean>(false);
 
   // Computed
   // filteredTodos 直接返回 todos.value，因为筛选已经在 fetchTodos 中通过 API 完成
+  // 如果是滞后视图或待办视图，则在客户端进行过滤
   const filteredTodos = computed(() => {
     console.log('[TodoStore] filteredTodos computed, todos.length:', todos.value.length);
     console.log('[TodoStore] filteredTodos data:', todos.value);
+    if (isOverdueView.value) {
+      return todos.value.filter(t => {
+        if (!t.due_date || t.status === TodoStatus.Done) {
+          return false;
+        }
+        return Date.now() > t.due_date;
+      });
+    }
+    if (isTodoView.value) {
+      return todos.value.filter(t => t.status !== TodoStatus.Done);
+    }
     return todos.value;
   });
 
@@ -263,6 +277,8 @@ export const useTodoStore = defineStore('todo', () => {
     currentTodo,
     loading,
     error,
+    isOverdueView,
+    isTodoView,
     // Computed
     filteredTodos,
     todoStats,
@@ -275,6 +291,8 @@ export const useTodoStore = defineStore('todo', () => {
     updateTodoStatus,
     setFilter,
     clearError,
+    setOverdueView,
+    setTodoView,
     // Step methods
     fetchSteps,
     createStep,
@@ -284,4 +302,12 @@ export const useTodoStore = defineStore('todo', () => {
     getStats,
     getStatsByDate,
   };
+
+  function setOverdueView(value: boolean) {
+    isOverdueView.value = value;
+  }
+
+  function setTodoView(value: boolean) {
+    isTodoView.value = value;
+  }
 });

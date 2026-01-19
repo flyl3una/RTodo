@@ -79,6 +79,17 @@ export function getPriorityType(priority: number): 'info' | 'warning' | 'danger'
 }
 
 /**
+ * 判断任务是否滞后
+ * 滞后定义：当前时间已超过截止时间且任务状态不是已完成
+ */
+export function isTodoOverdue(todo: Todo): boolean {
+  if (!todo.due_date || todo.status === TodoStatus.Done) {
+    return false;
+  }
+  return Date.now() > todo.due_date;
+}
+
+/**
  * 任务实体
  */
 export interface Todo {

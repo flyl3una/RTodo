@@ -39,10 +39,12 @@ export default {
     tags: 'タグ',
     createdAt: '作成日時',
     updatedAt: '更新日時',
+    to: 'から',
   },
 
   nav: {
     allTodos: 'すべてのタスク',
+    todo: '未着手',
     today: '今日',
     upcoming: '今後の予定',
     completed: '完了',
@@ -50,6 +52,7 @@ export default {
     quickAccess: 'クイックアクセス',
     important: '重要',
     urgent: '緊急',
+    overdue: '遅延',
   },
 
   todo: {

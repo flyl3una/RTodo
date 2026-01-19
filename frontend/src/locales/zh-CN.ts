@@ -47,6 +47,7 @@ export default {
   // 导航和布局
   nav: {
     allTodos: '所有任务',
+    todo: '待办',
     today: '今天',
     upcoming: '即将到来',
     completed: '已完成',
@@ -54,6 +55,7 @@ export default {
     quickAccess: '快速访问',
     important: '重要',
     urgent: '紧急',
+    overdue: '滞后',
   },
 
   // 任务相关
