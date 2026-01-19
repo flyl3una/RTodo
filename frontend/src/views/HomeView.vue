@@ -44,7 +44,7 @@
                   v-for="tag in todo.tags"
                   :key="tag.id"
                   size="small"
-                  :style="{ backgroundColor: tag.color }"
+                  :style="{ backgroundColor: tag.color, color: 'white' }"
                 >
                   {{ tag.name }}
                 </el-tag>
@@ -190,7 +190,7 @@
                 v-for="tag in todo.tags?.slice(0, 3)"
                 :key="tag.id"
                 size="small"
-                :style="{ backgroundColor: tag.color }"
+                :style="{ backgroundColor: tag.color, color: 'white' }"
               >
                 {{ tag.name }}
               </el-tag>
