@@ -106,6 +106,17 @@ const visible = computed({
 
 const isEdit = computed(() => !!props.group);
 
+// 当对话框打开时，确保加载最新的 groups 数据
+watch(visible, async (isOpen) => {
+  if (isOpen) {
+    try {
+      await groupStore.fetchGroups();
+    } catch (error) {
+      console.error('[GroupManageDialog] Failed to fetch groups:', error);
+    }
+  }
+});
+
 watch(() => props.group, (group) => {
   if (group) {
     form.value = {

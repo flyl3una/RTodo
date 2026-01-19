@@ -1,39 +1,57 @@
 # RTodo 构建脚本
 
-RTodo 应用的跨平台构建脚本，支持 Windows、Linux、macOS 多个平台和多种架构。
+RTodo 应用的跨平台构建脚本，使用 Python 实现，支持 Windows、Linux、macOS 多个平台和多种架构。
 
 ---
 
 ## 快速开始
 
-### 1. 安装依赖
+### 环境要求
+
+**通用依赖**:
+- Python 3.7+
+- Node.js 16+
+- Rust 1.70+
+- Cargo
+
+**Windows 附加依赖**:
+```powershell
+# WiX Toolset (用于 MSI)
+choco install wixtoolset
+
+# NSIS (可选，用于 NSIS 安装包)
+choco install nsis
+```
+
+**Linux 附加依赖**:
+```bash
+# Ubuntu/Debian
+sudo apt install build-essential libwebkit2gtk-4.1-dev
+```
+
+**macOS 附加依赖**:
+```bash
+# 安装 Command Line Tools
+xcode-select --install
+```
+
+### 构建应用
 
 ```bash
 cd build
-npm install
-```
 
-### 2. 验证环境
-
-```bash
-npm run validate
-```
-
-### 3. 构建应用
-
-```bash
 # 构建当前平台
 npm run build
 
-# 或使用构建脚本
-node scripts/build-all.js
+# 或直接使用 Python
+python build/build.py
 ```
 
 ---
 
 ## 可用脚本
 
-### 主要构建命令
+### NPM 脚本命令
 
 | 命令 | 说明 |
 |------|------|
@@ -41,64 +59,54 @@ node scripts/build-all.js
 | `npm run build:win` | 构建 Windows 平台 |
 | `npm run build:linux` | 构建 Linux 平台 |
 | `npm run build:mac` | 构建 macOS 平台 |
-| `npm run build:all` | 构建所有平台（当前可用） |
+| `npm run build:win-arm64` | 构建 Windows ARM64 |
+| `npm run build:mac-arm64` | 构建 macOS ARM64 |
+| `npm run build:mac-universal` | 构建 macOS Universal Binary |
 
-### 辅助命令
+### Python 命令
 
-| 命令 | 说明 |
-|------|------|
-| `npm run clean` | 清理构建产物 |
-| `npm run validate` | 验证构建环境 |
-| `npm run bump:version` | 更新版本号 |
+```bash
+# 构建当前平台
+python build/build.py
+
+# 指定平台
+python build/build.py -p windows
+python build/build.py -p linux
+python build/build.py -p macos
+
+# 指定架构
+python build/build.py -p windows -a arm64
+python build/build.py -p macos -a arm64
+python build/build.py -p macos -a universal
+
+# 详细输出
+python build/build.py -v
+
+# 忽略错误继续构建
+python build/build.py --ignore-errors
+```
 
 ---
 
-## 构建选项
+## 命令行参数
 
-### 指定平台
-
-```bash
-# Windows
-node scripts/build-all.js --platform windows
-
-# Linux
-node scripts/build-all.js --platform linux
-
-# macOS
-node scripts/build-all.js --platform macos
 ```
+usage: build.py [-h] [-p {windows,linux,macos,win,mac,osx}]
+                [-a {x86_64,arm64,universal}] [--all-platforms]
+                [--ignore-errors] [-v]
 
-### 指定架构
+RTodo 跨平台构建脚本
 
-```bash
-# x86_64
-node scripts/build-all.js --arch x86_64
-
-# arm64
-node scripts/build-all.js --arch arm64
-
-# macOS Universal Binary
-node scripts/build-all.js --arch universal
-```
-
-### 组合选项
-
-```bash
-# Windows ARM64
-node scripts/build-all.js --platform windows --arch arm64
-
-# Linux x86_64
-node scripts/build-all.js --platform linux --arch x86_64
-```
-
-### 其他选项
-
-```bash
-# 详细输出
-node scripts/build-all.js --verbose
-
-# 忽略错误继续构建
-node scripts/build-all.js --ignore-errors
+optional arguments:
+  -h, --help            显示帮助信息
+  -p {windows,linux,macos,win,mac,osx}, --platform {windows,linux,macos,win,mac,osx}
+                        目标平台
+  -a {x86_64,arm64,universal}, --arch {x86_64,arm64,universal}
+                        目标架构
+  --all-platforms        构建所有平台（仅在当前平台上可用）
+  --ignore-errors        忽略错误继续构建
+  -v, --verbose          详细输出
+  --version             显示版本号
 ```
 
 ---
@@ -180,101 +188,26 @@ src-tauri/target/x86_64-apple-darwin/release/bundle/
 
 ---
 
-## 版本管理
+## 项目结构
 
-### 更新版本号
-
-```bash
-# 补丁版本 (0.1.0 -> 0.1.1)
-node scripts/bump-version.js patch
-
-# 次版本 (0.1.0 -> 0.2.0)
-node scripts/bump-version.js minor
-
-# 主版本 (0.1.0 -> 1.0.0)
-node scripts/bump-version.js major
-
-# 自动确认
-node scripts/bump-version.js patch --yes
 ```
-
-### 版本配置文件
-
-版本信息存储在 `configs/version.json`:
-
-```json
-{
-  "current": "0.1.0",
-  "buildNumber": 1,
-  "releaseDate": "2025-01-16",
-  "changelog": [...]
-}
+build/
+├── README.md                  # 本文档
+├── package.json               # NPM 脚本配置
+├── build.py                   # 主构建脚本 (Python)
+├── platforms/                 # 平台构建模块
+│   ├── __init__.py
+│   ├── windows.py             # Windows 平台构建
+│   ├── linux.py               # Linux 平台构建
+│   └── macos.py               # macOS 平台构建
+├── utils/                     # 工具模块
+│   ├── __init__.py
+│   ├── logger.py              # 日志工具
+│   └── executor.py            # 命令执行工具
+└── configs/                   # 配置文件
+    ├── targets.json           # 平台配置
+    └── version.json           # 版本配置
 ```
-
----
-
-## 清理构建产物
-
-### 基本清理
-
-```bash
-npm run clean
-```
-
-清理以下目录:
-- `src-tauri/target/` - Cargo 构建缓存
-- `build/node_modules/` - 构建脚本依赖
-- `build/output/` - 构建输出
-
-### 深度清理
-
-```bash
-node scripts/clean.js --all
-```
-
-额外清理:
-- `frontend/node_modules/` - 前端依赖
-- `frontend/dist/` - 前端构建产物
-
----
-
-## 环境验证
-
-### 验证脚本
-
-```bash
-npm run validate
-```
-
-检查项:
-- ✅ Node.js 版本
-- ✅ npm 版本
-- ✅ Rust 工具链
-- ✅ Tauri CLI
-- ✅ 平台特定工具
-- ✅ 项目配置
-
-### 环境要求
-
-**通用要求**:
-- Node.js >= 16.0.0
-- Rust >= 1.70.0
-- Tauri CLI >= 2.0.0
-
-**Windows 额外要求**:
-- Visual Studio Build Tools 2022
-- WiX Toolset v3.11+ (可选，用于 MSI)
-- NSIS 3.08+ (可选，用于 NSIS)
-
-**Linux 额外要求**:
-- GCC 编译器
-- libwebkit2gtk-4.1-dev
-- linuxdeploy (可选，用于 AppImage)
-- rpmbuild (可选，用于 RPM)
-
-**macOS 额外要求**:
-- Xcode 14.0+
-- Command Line Tools
 
 ---
 
@@ -284,30 +217,9 @@ npm run validate
 
 目标平台配置，定义了每个平台支持的架构和包格式。
 
-```json
-{
-  "windows": {
-    "x86_64": {
-      "target": "x86_64-pc-windows-msvc",
-      "packages": ["msi", "nsis"],
-      "enabled": true
-    }
-  }
-}
-```
-
 ### version.json
 
 版本信息配置，包含当前版本、构建号和变更日志。
-
-```json
-{
-  "current": "0.1.0",
-  "buildNumber": 1,
-  "releaseDate": "2025-01-16",
-  "changelog": [...]
-}
-```
 
 ---
 
@@ -340,38 +252,12 @@ A: 跨平台交叉编译有限制：
 
 ---
 
-## 目录结构
-
-```
-build/
-├── README.md                  # 本文档
-├── SETUP.md                   # 环境搭建指南
-├── package.json               # 脚本配置
-├── scripts/
-│   ├── build-all.js          # 主构建脚本
-│   ├── build-windows.js      # Windows 构建
-│   ├── build-linux.js        # Linux 构建
-│   ├── build-macos.js        # macOS 构建
-│   ├── clean.js              # 清理脚本
-│   ├── validate.js           # 环境验证
-│   ├── bump-version.js       # 版本管理
-│   └── utils/
-│       ├── logger.js         # 日志工具
-│       └── executor.js       # 命令执行
-└── configs/
-    ├── targets.json          # 平台配置
-    └── version.json          # 版本配置
-```
-
----
-
 ## 相关文档
 
-- [SETUP.md](./SETUP.md) - 详细的构建环境搭建指南
 - [Tauri 官方文档](https://v2.tauri.app/start/build/) - 官方构建指南
 
 ---
 
 ## 许可证
 
-MIT
+MIT License - Copyright 2025 RTodo Team

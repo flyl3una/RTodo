@@ -1,32 +1,23 @@
 {
   "name": "rtodo-build",
   "version": "1.0.0",
-  "description": "Build scripts for RTodo cross-platform application",
-  "type": "module",
+  "description": "Build scripts for RTodo cross-platform application (Python-based)",
   "scripts": {
-    "build": "node scripts/build-all.js",
-    "build:win": "node scripts/build-windows.js",
-    "build:linux": "node scripts/build-linux.js",
-    "build:mac": "node scripts/build-macos.js",
-    "build:all": "node scripts/build-all.js --all-platforms",
-    "clean": "node scripts/clean.js",
-    "validate": "node scripts/validate.js",
-    "bump:version": "node scripts/bump-version.js"
+    "build": "python build/build.py",
+    "build:win": "python build/build.py -p windows",
+    "build:linux": "python build/build.py -p linux",
+    "build:mac": "python build/build.py -p macos",
+    "build:all": "python build/build.py --all-platforms",
+    "build:win-arm64": "python build/build.py -p windows -a arm64",
+    "build:mac-arm64": "python build/build.py -p macos -a arm64",
+    "build:mac-universal": "python build/build.py -p macos -a universal"
   },
   "keywords": [
     "tauri",
     "build",
-    "cross-platform"
+    "cross-platform",
+    "python"
   ],
   "author": "RTodo Team",
-  "license": "MIT",
-  "dependencies": {
-    "chalk": "^5.3.0",
-    "ora": "^8.0.1",
-    "shelljs": "^0.8.5",
-    "yargs": "^17.7.2"
-  },
-  "engines": {
-    "node": ">=16.0.0"
-  }
+  "license": "MIT"
 }

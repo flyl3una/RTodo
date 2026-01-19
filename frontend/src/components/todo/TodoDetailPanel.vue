@@ -341,9 +341,9 @@ function formatDate(timestamp?: number): string {
 
 function startEdit() {
   console.log('[TodoDetailPanel] startEdit called');
-  console.log('[TodoDetailPanel] props.todo.start_date:', props.todo.start_date);
-  console.log('[TodoDetailPanel] props.todo.due_date:', props.todo.due_date);
+  console.log('[TodoDetailPanel] props.todo:', props.todo);
 
+  // 使用现有的 props 数据初始化表单，因为详情面板已经显示了完整的数据
   form.value = {
     title: props.todo.title,
     description: props.todo.description || '',
@@ -355,11 +355,15 @@ function startEdit() {
     tag_ids: props.todo.tags?.map(t => t.id) || [],
   };
 
-  console.log('[TodoDetailPanel] form.value after init:', {
+  console.log('[TodoDetailPanel] Form initialized:', {
+    title: form.value.title,
+    group_id: form.value.group_id,
     start_date: form.value.start_date,
-    due_date: form.value.due_date
+    due_date: form.value.due_date,
+    tag_ids: form.value.tag_ids,
   });
 
+  // 进入编辑模式
   isEditing.value = true;
 }
 

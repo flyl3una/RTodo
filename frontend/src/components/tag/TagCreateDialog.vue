@@ -72,9 +72,11 @@ const rules: FormRules = {
   ],
 };
 
-// Get used colors for deduplication
+// Get used colors for deduplication (exclude current editing tag)
 const usedColors = computed(() => {
-  return tagStore.tags.map(t => t.color);
+  return tagStore.tags
+    .filter(t => t.id !== props.tag?.id)
+    .map(t => t.color);
 });
 
 const visible = computed({
@@ -83,6 +85,17 @@ const visible = computed({
 });
 
 const isEdit = computed(() => !!props.tag);
+
+// 当对话框打开时，确保加载最新的 tags 数据
+watch(visible, async (isOpen) => {
+  if (isOpen) {
+    try {
+      await tagStore.fetchTags();
+    } catch (error) {
+      console.error('[TagCreateDialog] Failed to fetch tags:', error);
+    }
+  }
+});
 
 watch(() => props.tag, (tag) => {
   if (tag) {

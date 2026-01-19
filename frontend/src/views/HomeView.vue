@@ -18,12 +18,12 @@
             <div class="todo-content">
               <div class="todo-title">
                 <el-tag
-                  v-if="todo.priority >= 1"
-                  :type="todo.priority === 3 ? 'danger' : 'warning'"
+                  v-if="todo.priority > 0"
+                  :type="getPriorityType(todo.priority)"
                   size="small"
                   effect="plain"
                 >
-                  {{ todo.priority === 3 ? t('priority.urgent') : t('priority.important') }}
+                  {{ getPriorityLabel(todo.priority) }}
                 </el-tag>
                 <span class="title-text">{{ todo.title }}</span>
               </div>
@@ -59,6 +59,12 @@
               circle
               text
               @click.stop="toggleMark(todo)"
+            />
+            <el-button
+              :icon="Edit"
+              circle
+              text
+              @click.stop="editTodo(todo)"
             />
             <el-button
               :icon="Delete"
@@ -104,11 +110,11 @@
             <div class="card-title">
               <el-tag
                 v-if="todo.priority >= 1"
-                :type="todo.priority === 3 ? 'danger' : 'warning'"
+                :type="getPriorityType(todo.priority)"
                 size="small"
                 effect="plain"
               >
-                {{ todo.priority === 3 ? t('priority.urgent') : t('priority.important') }}
+                {{ getPriorityLabel(todo.priority) }}
               </el-tag>
               <span class="title-text">{{ todo.title }}</span>
             </div>
@@ -211,13 +217,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, toRef } from 'vue';
-import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete } from '@element-plus/icons-vue';
+import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete, Edit } from '@element-plus/icons-vue';
 import { ElMessageBox, ElMessage } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import { useTodoStore } from '@/stores';
 import { useUIStore } from '@/stores';
 import type { Todo, TodoStep } from '@/types';
-import { TodoStatus } from '@/types';
+import { TodoStatus, getPriorityLabel, getPriorityType } from '@/types';
 import TodoDetailPanel from '../components/todo/TodoDetailPanel.vue';
 import * as api from '@/api/tauri';
 
@@ -344,6 +350,11 @@ function handleTodoDeleted() {
   detailVisible.value = false;
   selectedTodo.value = null;
   todoStore.fetchTodos();
+}
+
+function editTodo(todo: Todo) {
+  selectedTodo.value = todo;
+  detailVisible.value = true;
 }
 
 async function handleDeleteTodo(todo: Todo) {

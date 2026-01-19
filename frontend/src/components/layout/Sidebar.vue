@@ -182,8 +182,9 @@ const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
-const currentView = ref<'all' | 'today' | 'important' | 'urgent' | 'completed'>('all');
+const currentView = ref<'all' | 'today' | 'important' | 'urgent' | 'completed' | 'group' | 'tag'>('all');
 const filterGroupId = ref<string | undefined>();
+const filterTagId = ref<string | undefined>();
 const groupDialogVisible = ref(false);
 const editingGroup = ref<TaskGroup | undefined>();
 const tagDialogVisible = ref(false);
@@ -194,8 +195,10 @@ const tags = computed(() => tagStore.tags);
 
 // Reset to 'all' view (can be called from parent)
 function resetToAllView() {
+  console.log('[Sidebar] resetToAllView called');
   currentView.value = 'all';
   filterGroupId.value = undefined;
+  filterTagId.value = undefined;
   todoStore.setFilter({});
 }
 
@@ -203,6 +206,7 @@ function setFilter(view: 'all' | 'today' | 'important' | 'urgent' | 'completed')
   console.log('[Sidebar] setFilter called with view:', view);
   currentView.value = view;
   filterGroupId.value = undefined;
+  filterTagId.value = undefined;
 
   // Apply filter
   switch (view) {
@@ -250,8 +254,10 @@ function setFilter(view: 'all' | 'today' | 'important' | 'urgent' | 'completed')
 
 function selectGroup(groupId: string) {
   console.log('[Sidebar] selectGroup called with groupId:', groupId);
-  currentView.value = 'all';
-  filterGroupId.value = groupId; // Keep local state in sync for UI display
+  // 设置视图为 group 类型，而不是 'all'
+  currentView.value = 'group';
+  filterGroupId.value = groupId;
+  filterTagId.value = undefined;
   todoStore.setFilter({ group_id: groupId });
   if (route.path !== '/') {
     router.push('/');
@@ -260,8 +266,10 @@ function selectGroup(groupId: string) {
 
 function selectTag(tagId: string) {
   console.log('[Sidebar] selectTag called with tagId:', tagId);
-  currentView.value = 'all';
-  filterGroupId.value = undefined; // Tags don't use group_id filter
+  // 设置视图为 tag 类型，而不是 'all'
+  currentView.value = 'tag';
+  filterGroupId.value = undefined;
+  filterTagId.value = tagId;
   todoStore.setFilter({ tag_id: tagId });
   if (route.path !== '/') {
     router.push('/');
