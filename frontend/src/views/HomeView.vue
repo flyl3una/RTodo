@@ -299,7 +299,7 @@ async function toggleStatus(todo: Todo) {
     const updated = await todoStore.updateTodoStatus(todo.id, newStatus);
 
     console.log('toggleStatus result:', updated);
-    console.log('Current filteredTodos:', filteredTodos.map(t => ({ id: t.id, status: t.status })));
+    console.log('Current filteredTodos:', filteredTodos.value.map(t => ({ id: t.id, status: t.status })));
   } catch (error: any) {
     console.error('Failed to toggle status:', error);
     const errorMsg = error?.toString() || JSON.stringify(error) || 'Unknown error';

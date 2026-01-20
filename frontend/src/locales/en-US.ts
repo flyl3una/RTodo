@@ -231,6 +231,11 @@ export default {
     byWeek: 'By Week',
     byMonth: 'By Month',
     week: 'Week',
+    day: 'Day',
+    month: 'Month',
+    dashboard: 'Dashboard',
+    report: 'Report',
+    custom: 'Custom',
   },
 
   attachment: {

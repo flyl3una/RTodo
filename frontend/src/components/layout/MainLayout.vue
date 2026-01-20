@@ -1,26 +1,37 @@
 <template>
-  <div class="main-layout">
-    <!-- Sidebar -->
+  <div class="main-layout" :class="{ 'is-mobile': uiStore.isMobile }">
+    <!-- Desktop Sidebar -->
     <Sidebar
+      v-if="!uiStore.isMobile"
       ref="sidebarRef"
       :collapsed="uiStore.sidebarCollapsed"
       @toggle="uiStore.toggleSidebar"
     />
 
     <!-- Main Content -->
-    <div class="main-content" :class="{ collapsed: uiStore.sidebarCollapsed }">
-      <!-- Header -->
+    <div class="main-content" :class="{ collapsed: !uiStore.isMobile && uiStore.sidebarCollapsed }">
+      <!-- Desktop Header -->
       <Header
+        v-if="!uiStore.isMobile"
         :collapsed="uiStore.sidebarCollapsed"
         @toggle-sidebar="uiStore.toggleSidebar"
         @show-create="uiStore.showCreateTodoDialog"
       />
 
+      <!-- Mobile Top Bar -->
+      <MobileTopBar v-if="uiStore.isMobile" />
+
       <!-- Router View -->
-      <div class="content-area">
+      <div class="content-area" :class="{ 'mobile': uiStore.isMobile }">
         <router-view />
       </div>
     </div>
+
+    <!-- Mobile Bottom Navigation -->
+    <MobileNav v-if="uiStore.isMobile" />
+
+    <!-- Mobile Drawer -->
+    <MobileDrawer v-if="uiStore.isMobile" />
 
     <!-- Create Todo Dialog -->
     <CreateTodoDialog
@@ -41,6 +52,9 @@ import { getEnvironmentInfo, isTauriAvailable, testIPCConnection } from '@/utils
 import Sidebar from './Sidebar.vue';
 import Header from './Header.vue';
 import CreateTodoDialog from '../todo/CreateTodoDialog.vue';
+import MobileTopBar from '../mobile/app/MobileTopBar.vue';
+import MobileDrawer from '../mobile/app/MobileDrawer.vue';
+import MobileNav from './MobileNav.vue';
 
 const { t } = useI18n();
 
@@ -160,5 +174,20 @@ function handleTodoCreated() {
 
 :global(html.dark) .content-area::-webkit-scrollbar-thumb:hover {
   background: var(--el-border-color-darker);
+}
+
+/* Mobile styles */
+.main-layout.is-mobile {
+  flex-direction: column;
+}
+
+.main-layout.is-mobile .content-area {
+  padding: 12px;
+  padding-bottom: 72px; /* Space for bottom nav */
+}
+
+.main-layout.is-mobile .main-content {
+  height: auto;
+  flex: 1;
 }
 </style>

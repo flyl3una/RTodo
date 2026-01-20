@@ -247,6 +247,8 @@ import * as api from '@/api/tauri';
 
 const { t } = useI18n();
 
+const isMobile = ref(window.innerWidth <= 768);
+
 const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
@@ -358,15 +360,15 @@ const dateStats = computed<StatsByDate[]>(() => {
 const activeCollapse = ref<string[]>(['todo', 'in_progress', 'done']);
 
 const viewModeOptions = computed(() => [
-  { label: t('stats.viewModeDashboard'), value: 'dashboard' },
-  { label: t('stats.viewModeReport'), value: 'report' },
+  { label: t('stats.dashboard'), value: 'dashboard' },
+  { label: t('stats.report'), value: 'report' },
 ]);
 
 const dateRangeOptions = computed(() => [
-  { label: t('stats.byDay'), value: 'day' },
-  { label: t('stats.byWeek'), value: 'week' },
-  { label: t('stats.byMonth'), value: 'month' },
-  { label: t('stats.customRange'), value: 'custom' },
+  { label: t('stats.day'), value: 'day' },
+  { label: t('stats.week'), value: 'week' },
+  { label: t('stats.month'), value: 'month' },
+  { label: t('stats.custom'), value: 'custom' },
 ]);
 
 // Computed date range for filtering
@@ -1105,4 +1107,173 @@ onMounted(async () => {
   gap: 4px;
 }
 
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .stats-view {
+    padding: 12px;
+  }
+
+  .stats-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .page-title {
+    display: none; /* 隐藏标题 */
+  }
+
+  .header-controls {
+    display: flex; /* 保持控制器显示 */
+    flex-wrap: wrap;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .header-controls :deep(.el-segmented) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* 缩小移动端按钮组 */
+  .header-controls :deep(.el-segmented__item) {
+    padding: 4px 8px;
+    font-size: 12px;
+    height: 28px;
+    line-height: 20px;
+  }
+
+  .header-controls :deep(.el-segmented) {
+    height: 28px;
+  }
+
+  .custom-date-range {
+    flex-direction: column;
+    width: 100%;
+    margin-left: 0;
+    margin-top: 8px;
+    align-items: stretch;
+  }
+
+  .custom-date-range :deep(.el-date-picker) {
+    width: 100% !important;
+    margin: 4px 0;
+  }
+
+  .stats-cards {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .stat-card {
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .stat-icon {
+    display: none; /* 移动端隐藏图标 */
+  }
+
+  .stat-label {
+    font-size: 11px;
+  }
+
+  .stat-value {
+    font-size: 20px;
+  }
+
+  .stats-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+
+  .bar-chart {
+    height: 160px;
+    padding: 10px 0;
+    gap: 4px;
+  }
+
+  .bar-wrapper {
+    height: 120px;
+  }
+
+  .bar {
+    width: 16px;
+  }
+
+  .bar-label {
+    font-size: 10px;
+  }
+
+  .chart-legend {
+    gap: 16px;
+    margin-top: 12px;
+  }
+
+  .legend-item {
+    font-size: 12px;
+  }
+
+  .group-stat-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .group-info {
+    min-width: auto;
+  }
+
+  .group-progress {
+    width: 100%;
+  }
+
+  .group-count {
+    min-width: auto;
+    text-align: left;
+  }
+
+  .task-item {
+    padding: 10px 12px;
+  }
+
+  .task-title {
+    font-size: 13px;
+  }
+
+  .task-meta {
+    font-size: 11px;
+  }
+
+  .tag-stat-item {
+    font-size: 12px;
+    padding: 4px 10px;
+  }
+
+  .report-textarea {
+    min-height: 300px;
+    font-size: 12px;
+  }
+
+  .report-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .report-actions :deep(.el-button) {
+    width: 100%;
+  }
+
+  .report-actions :deep(.el-checkbox) {
+    margin: 0;
+  }
+}
 </style>

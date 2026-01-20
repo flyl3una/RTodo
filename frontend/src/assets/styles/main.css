@@ -115,7 +115,66 @@ html.dark {
 }
 
 /* Element Plus 按钮样式 - 浅色主题 */
-.el-button--primary:hover {
+
+/* 禁用状态按钮使用主题色的浅色版本 */
+.el-button--primary:disabled,
+.el-button--primary.is-disabled {
+  background-color: color-mix(in srgb, var(--el-color-primary) 60%, white) !important;
+  border-color: color-mix(in srgb, var(--el-color-primary) 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+.el-button--success:disabled,
+.el-button--success.is-disabled {
+  background-color: color-mix(in srgb, #67c23a 60%, white) !important;
+  border-color: color-mix(in srgb, #67c23a 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+.el-button--danger:disabled,
+.el-button--danger.is-disabled {
+  background-color: color-mix(in srgb, #f56c6c 60%, white) !important;
+  border-color: color-mix(in srgb, #f56c6c 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+.el-button--warning:disabled,
+.el-button--warning.is-disabled {
+  background-color: color-mix(in srgb, #e6a23c 60%, white) !important;
+  border-color: color-mix(in srgb, #e6a23c 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+.el-button--info:disabled,
+.el-button--info.is-disabled {
+  background-color: color-mix(in srgb, #909399 60%, white) !important;
+  border-color: color-mix(in srgb, #909399 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+/* 默认按钮禁用状态 */
+.el-button--default:disabled,
+.el-button--default.is-disabled {
+  background-color: #ffffff !important;
+  border-color: var(--el-border-color-light) !important;
+  color: var(--el-disabled-text-color) !important;
+}
+
+/* 文本按钮禁用状态 */
+.el-button--text:disabled,
+.el-button--text.is-disabled {
+  color: var(--el-disabled-text-color) !important;
+  background-color: transparent !important;
+  border-color: transparent !important;
+}
+
+/* 正常状态 hover */
+.el-button--primary:hover:not(:disabled):not(.is-disabled) {
   background-color: var(--el-color-primary) !important;
   border-color: var(--el-color-primary) !important;
   color: #ffffff !important;
@@ -167,6 +226,60 @@ html.dark .el-button--primary {
   background-color: var(--el-color-primary) !important;
   border-color: var(--el-color-primary) !important;
   color: #ffffff !important;
+}
+
+/* 深色主题禁用状态按钮 */
+html.dark .el-button--primary:disabled,
+html.dark .el-button--primary.is-disabled {
+  background-color: color-mix(in srgb, var(--el-color-primary) 40%, transparent) !important;
+  border-color: color-mix(in srgb, var(--el-color-primary) 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-button--success:disabled,
+html.dark .el-button--success.is-disabled {
+  background-color: color-mix(in srgb, #67c23a 40%, transparent) !important;
+  border-color: color-mix(in srgb, #67c23a 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-button--danger:disabled,
+html.dark .el-button--danger.is-disabled {
+  background-color: color-mix(in srgb, #f56c6c 40%, transparent) !important;
+  border-color: color-mix(in srgb, #f56c6c 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-button--warning:disabled,
+html.dark .el-button--warning.is-disabled {
+  background-color: color-mix(in srgb, #e6a23c 40%, transparent) !important;
+  border-color: color-mix(in srgb, #e6a23c 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-button--info:disabled,
+html.dark .el-button--info.is-disabled {
+  background-color: color-mix(in srgb, #909399 40%, transparent) !important;
+  border-color: color-mix(in srgb, #909399 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-button--default:disabled,
+html.dark .el-button--default.is-disabled {
+  background-color: transparent !important;
+  border-color: var(--el-disabled-border-color) !important;
+  color: var(--el-disabled-text-color) !important;
+}
+
+html.dark .el-button--text:disabled,
+html.dark .el-button--text.is-disabled {
+  color: var(--el-disabled-text-color) !important;
+  background-color: transparent !important;
 }
 
 html.dark .el-button--primary:hover {
@@ -249,7 +362,25 @@ html.dark .el-button-group .el-button--default:hover {
 }
 
 /* 对话框内的按钮 - 浅色主题 */
-.el-dialog .el-button--danger:hover {
+
+/* 对话框内禁用按钮 - 浅色主题 */
+.el-dialog .el-button--primary:disabled,
+.el-dialog .el-button--primary.is-disabled {
+  background-color: color-mix(in srgb, var(--el-color-primary) 60%, white) !important;
+  border-color: color-mix(in srgb, var(--el-color-primary) 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+.el-dialog .el-button--danger:disabled,
+.el-dialog .el-button--danger.is-disabled {
+  background-color: color-mix(in srgb, #f56c6c 60%, white) !important;
+  border-color: color-mix(in srgb, #f56c6c 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+.el-dialog .el-button--danger:hover:not(:disabled):not(.is-disabled) {
   background-color: #f56c6c !important;
   border-color: #f56c6c !important;
   color: #ffffff !important;
@@ -273,6 +404,30 @@ html.dark .el-dialog .el-button--primary {
   background-color: var(--el-color-primary) !important;
   border-color: var(--el-color-primary) !important;
   color: #ffffff !important;
+}
+
+/* 对话框内禁用按钮 - 深色主题 */
+html.dark .el-dialog .el-button--primary:disabled,
+html.dark .el-dialog .el-button--primary.is-disabled {
+  background-color: color-mix(in srgb, var(--el-color-primary) 40%, transparent) !important;
+  border-color: color-mix(in srgb, var(--el-color-primary) 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-dialog .el-button--danger:disabled,
+html.dark .el-dialog .el-button--danger.is-disabled {
+  background-color: color-mix(in srgb, #f56c6c 40%, transparent) !important;
+  border-color: color-mix(in srgb, #f56c6c 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-dialog .el-button--default:disabled,
+html.dark .el-dialog .el-button--default.is-disabled {
+  background-color: transparent !important;
+  border-color: var(--el-disabled-border-color) !important;
+  color: var(--el-disabled-text-color) !important;
 }
 
 html.dark .el-dialog .el-button--danger {
@@ -647,7 +802,25 @@ html.dark .el-message-box__content {
 }
 
 /* MessageBox 按钮样式 - 浅色主题 */
-.el-message-box__btns .el-button--danger:hover {
+
+/* MessageBox 禁用按钮 - 浅色主题 */
+.el-message-box__btns .el-button--primary:disabled,
+.el-message-box__btns .el-button--primary.is-disabled {
+  background-color: color-mix(in srgb, var(--el-color-primary) 60%, white) !important;
+  border-color: color-mix(in srgb, var(--el-color-primary) 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+.el-message-box__btns .el-button--danger:disabled,
+.el-message-box__btns .el-button--danger.is-disabled {
+  background-color: color-mix(in srgb, #f56c6c 60%, white) !important;
+  border-color: color-mix(in srgb, #f56c6c 60%, white) !important;
+  color: #ffffff !important;
+  opacity: 0.6 !important;
+}
+
+.el-message-box__btns .el-button--danger:hover:not(:disabled):not(.is-disabled) {
   background-color: #f56c6c !important;
   border-color: #f56c6c !important;
   color: #ffffff !important;
@@ -672,6 +845,30 @@ html.dark .el-message-box__btns .el-button--danger {
   background-color: #f56c6c !important;
   border-color: #f56c6c !important;
   color: #ffffff !important;
+}
+
+/* MessageBox 禁用按钮 - 深色主题 */
+html.dark .el-message-box__btns .el-button--primary:disabled,
+html.dark .el-message-box__btns .el-button--primary.is-disabled {
+  background-color: color-mix(in srgb, var(--el-color-primary) 40%, transparent) !important;
+  border-color: color-mix(in srgb, var(--el-color-primary) 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-message-box__btns .el-button--danger:disabled,
+html.dark .el-message-box__btns .el-button--danger.is-disabled {
+  background-color: color-mix(in srgb, #f56c6c 40%, transparent) !important;
+  border-color: color-mix(in srgb, #f56c6c 40%, transparent) !important;
+  color: color-mix(in srgb, #ffffff 50%, transparent) !important;
+  opacity: 0.5 !important;
+}
+
+html.dark .el-message-box__btns .el-button--default:disabled,
+html.dark .el-message-box__btns .el-button--default.is-disabled {
+  background-color: transparent !important;
+  border-color: var(--el-disabled-border-color) !important;
+  color: var(--el-disabled-text-color) !important;
 }
 
 html.dark .el-message-box__btns .el-button--danger:hover {

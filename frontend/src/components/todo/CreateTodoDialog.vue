@@ -3,6 +3,8 @@
     v-model="visible"
     :title="t('todo.createTodo')"
     width="600px"
+    :close-on-click-modal="false"
+    :close-on-press-escape="false"
     @close="handleClose"
   >
     <el-form
@@ -75,7 +77,7 @@
         <el-radio-group v-model="form.priority">
           <el-radio :label="0">{{ t('priority.normal') }}</el-radio>
           <el-radio :label="1">{{ t('priority.important') }}</el-radio>
-          <el-radio :label="2">{{ t('priority.urgent') }}</el-radio>
+          <el-radio :label="3">{{ t('priority.urgent') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -220,5 +222,46 @@ watch(visible, async (isOpen) => {
 <style scoped>
 :deep(.el-dialog__body) {
   padding-top: 20px;
+}
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  :deep(.el-dialog) {
+    width: 85% !important;
+    max-width: 360px !important;
+    margin: 5vh auto !important;
+  }
+
+  :deep(.el-dialog__header) {
+    padding: 16px;
+  }
+
+  :deep(.el-dialog__title) {
+    font-size: 16px;
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 16px;
+  }
+
+  :deep(.el-form-item__label) {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  :deep(.el-dialog__footer) {
+    padding: 12px 16px;
+  }
+
+  :deep(.el-dialog__footer .el-button) {
+    flex: 1;
+    margin: 0 4px;
+    padding: 12px;
+  }
+
+  :deep(.el-input__inner),
+  :deep(.el-textarea__inner) {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
 }
 </style>

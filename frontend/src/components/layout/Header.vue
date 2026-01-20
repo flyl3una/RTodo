@@ -410,4 +410,30 @@ function setViewMode(mode: 'list' | 'card') {
 [data-density='compact'] .filter-item {
   gap: 6px;
 }
+
+/* Mobile responsive styles */
+@media (max-width: 767px) {
+  .header {
+    height: 52px;
+    padding: 0 12px;
+  }
+
+  .header-left,
+  .header-right {
+    gap: 8px;
+  }
+
+  .app-title {
+    font-size: 16px;
+  }
+
+  .header-right .el-button {
+    padding: 8px;
+  }
+
+  /* Hide less important elements on small screens */
+  .header-right .el-divider {
+    display: none;
+  }
+}
 </style>

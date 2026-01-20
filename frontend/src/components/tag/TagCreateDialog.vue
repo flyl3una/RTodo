@@ -179,4 +179,48 @@ function handleClose() {
 
 <style scoped>
 /* ColorPicker component handles its own styling */
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  :deep(.el-dialog) {
+    width: 85% !important;
+    max-width: 360px !important;
+    margin: 5vh auto !important;
+  }
+
+  :deep(.el-dialog__header) {
+    padding: 16px;
+  }
+
+  :deep(.el-dialog__title) {
+    font-size: 16px;
+  }
+
+  :deep(.el-dialog__body) {
+    padding: 16px;
+  }
+
+  :deep(.el-form-item) {
+    margin-bottom: 16px;
+  }
+
+  :deep(.el-form-item__label) {
+    font-size: 14px;
+    margin-bottom: 8px;
+  }
+
+  :deep(.el-dialog__footer) {
+    padding: 12px 16px;
+  }
+
+  :deep(.el-dialog__footer .el-button) {
+    flex: 1;
+    margin: 0 4px;
+    padding: 12px;
+  }
+
+  :deep(.el-input__inner) {
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+}
 </style>

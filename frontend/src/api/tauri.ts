@@ -124,14 +124,14 @@ export async function updateTodo(request: UpdateTodoRequest): Promise<Todo> {
 /**
  * 删除任务
  */
-export async function deleteTodo(id: string): Promise<void> {
+export async function deleteTodo(id: number): Promise<void> {
   return safeInvoke<void>('delete_todo', { id });
 }
 
 /**
  * 更新任务状态
  */
-export async function updateTodoStatus(id: string, status: TodoStatus): Promise<Todo> {
+export async function updateTodoStatus(id: number, status: TodoStatus): Promise<Todo> {
   return safeInvoke<Todo>('update_todo_status', { id, status });
 }
 
@@ -193,7 +193,7 @@ export async function createTag(name: string, color: string): Promise<Tag> {
 /**
  * 更新标签
  */
-export async function updateTag(id: string, params: {
+export async function updateTag(id: number, params: {
   name?: string;
   color?: string;
 }): Promise<Tag> {
@@ -206,7 +206,7 @@ export async function updateTag(id: string, params: {
 /**
  * 删除标签
  */
-export async function deleteTag(id: string): Promise<void> {
+export async function deleteTag(id: number): Promise<void> {
   return safeInvoke<void>('delete_tag', { id });
 }
 
@@ -215,28 +215,28 @@ export async function deleteTag(id: string): Promise<void> {
 /**
  * 获取任务的执行步骤
  */
-export async function getTodoSteps(todoId: string): Promise<TodoStep[]> {
+export async function getTodoSteps(todoId: number): Promise<TodoStep[]> {
   return safeInvoke<TodoStep[]>('get_todo_steps', { todoId });
 }
 
 /**
  * 创建执行步骤
  */
-export async function createStep(todoId: string, title: string): Promise<TodoStep> {
+export async function createStep(todoId: number, title: string): Promise<TodoStep> {
   return safeInvoke<TodoStep>('create_step', { todoId, title });
 }
 
 /**
  * 切换步骤完成状态
  */
-export async function toggleStep(stepId: string): Promise<TodoStep> {
+export async function toggleStep(stepId: number): Promise<TodoStep> {
   return safeInvoke<TodoStep>('toggle_step', { id: stepId });
 }
 
 /**
  * 删除步骤
  */
-export async function deleteStep(stepId: string): Promise<void> {
+export async function deleteStep(stepId: number): Promise<void> {
   return safeInvoke<void>('delete_step', { id: stepId });
 }
 
@@ -245,21 +245,21 @@ export async function deleteStep(stepId: string): Promise<void> {
 /**
  * 获取任务的附件列表
  */
-export async function getAttachments(todoId: string): Promise<Attachment[]> {
+export async function getAttachments(todoId: number): Promise<Attachment[]> {
   return safeInvoke<Attachment[]>('get_attachments', { todoId });
 }
 
 /**
  * 上传附件
  */
-export async function uploadAttachment(todoId: string, filePath: string): Promise<Attachment> {
+export async function uploadAttachment(todoId: number, filePath: string): Promise<Attachment> {
   return safeInvoke<Attachment>('upload_attachment', { todoId, filePath });
 }
 
 /**
  * 删除附件
  */
-export async function deleteAttachment(attachmentId: string): Promise<void> {
+export async function deleteAttachment(attachmentId: number): Promise<void> {
   return safeInvoke<void>('delete_attachment', { id: attachmentId });
 }
 
@@ -379,7 +379,7 @@ export async function setCloseBehavior(behavior: 'direct' | 'minimize_to_tray'):
 /**
  * 获取关闭行为
  */
-export async function getCloseBehavior(): Promise<'direct' | 'minimize_to_tray'> {
+export async function getCloseBehavior(): Promise<string> {
   return safeInvoke<string>('get_close_behavior');
 }
 

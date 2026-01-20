@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { isMobile as checkIsMobile } from '@/utils/device';
 
 export type ViewMode = 'list' | 'card';
 export type Theme = 'light' | 'dark' | 'auto';
@@ -13,6 +14,10 @@ export const useUIStore = defineStore('ui', () => {
 
   // Sidebar
   const sidebarCollapsed = ref(false);
+
+  // Mobile
+  const isMobile = ref(false);
+  const mobileDrawerVisible = ref(false);
 
   // View mode
   const viewMode = ref<ViewMode>('list');
@@ -133,6 +138,18 @@ export const useUIStore = defineStore('ui', () => {
     sidebarCollapsed.value = collapsed;
   }
 
+  function updateMobileStatus() {
+    isMobile.value = checkIsMobile();
+  }
+
+  function toggleMobileDrawer() {
+    mobileDrawerVisible.value = !mobileDrawerVisible.value;
+  }
+
+  function setMobileDrawerVisible(visible: boolean) {
+    mobileDrawerVisible.value = visible;
+  }
+
   function setViewMode(mode: ViewMode) {
     viewMode.value = mode;
   }
@@ -229,9 +246,21 @@ export const useUIStore = defineStore('ui', () => {
     tagManagerVisible.value = false;
   }
 
+  // Mobile detection lifecycle
+  onMounted(() => {
+    updateMobileStatus();
+    window.addEventListener('resize', updateMobileStatus);
+  });
+
+  onUnmounted(() => {
+    window.removeEventListener('resize', updateMobileStatus);
+  });
+
   return {
     // State
     sidebarCollapsed,
+    isMobile,
+    mobileDrawerVisible,
     viewMode,
     theme,
     language,
@@ -247,6 +276,9 @@ export const useUIStore = defineStore('ui', () => {
     // Actions
     toggleSidebar,
     setSidebarCollapsed,
+    updateMobileStatus,
+    toggleMobileDrawer,
+    setMobileDrawerVisible,
     setViewMode,
     setTheme,
     setLanguage,
