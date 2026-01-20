@@ -409,7 +409,7 @@ async function handleSubmit() {
       title: form.value.title,
       description: form.value.description || undefined,
       group_id: form.value.group_id,
-      // 鍙湁鍦ㄥ€间笉鏄?undefined 鏃舵墠浼犻€掞紝鍏佽 null 浼犻€掑埌鍚庣
+      // Only pass when value is not undefined, allow null to be passed to backend
       ...(form.value.start_date !== undefined && { start_date: form.value.start_date }),
       ...(form.value.due_date !== undefined && { due_date: form.value.due_date }),
       priority: form.value.priority,
@@ -440,7 +440,7 @@ async function handleSubmit() {
         } catch (uploadError) {
           console.error('Failed to upload attachment:', file.name, uploadError);
           uploadFailed = true;
-          // 显示具体的错误信息（包括文件大小限制）
+          // Show specific error message (including file size limit)
           const errorMsg = uploadError?.toString() || t('attachment.uploadFailed');
           ElMessage.error(`${file.name}: ${errorMsg}`);
         }
@@ -487,7 +487,7 @@ watch(visible, async (isOpen) => {
       await groupStore.fetchGroups();
       await tagStore.fetchTags();
 
-      // 根据当前视图设置默认值（需要将 string 转换为 number）
+      // Set default values based on current view (convert string to number)
       if (props.currentView === 'group' && props.filterGroupId) {
         const groupId = parseInt(props.filterGroupId, 10);
         if (!isNaN(groupId)) {

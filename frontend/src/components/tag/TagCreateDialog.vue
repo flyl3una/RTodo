@@ -3,7 +3,7 @@
   <el-dialog
     v-if="!isMobile()"
     v-model="visible"
-    :title="isEdit ? '编辑标签' : '新建标签'"
+    :title="isEdit ? t('tag.editTag') : t('tag.createTag')"
     width="450px"
     @close="handleClose"
   >
@@ -14,27 +14,27 @@
       label-width="60px"
       class="desktop-form"
     >
-      <el-form-item label="名称" prop="name">
+      <el-form-item :label="t('common.name')" prop="name">
         <el-input
           v-model="form.name"
-          placeholder="请输入标签名称"
+          :placeholder="t('tag.tagNamePlaceholder')"
           @keyup.enter="handleSubmit"
         />
       </el-form-item>
 
-      <el-form-item label="颜色">
+      <el-form-item :label="t('common.color')">
         <ColorPicker v-model="form.color" :used-colors="usedColors" />
       </el-form-item>
     </el-form>
 
     <template #footer>
       <div class="dialog-footer">
-        <el-button @click="handleClose">取消</el-button>
+        <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
         <el-button v-if="isEdit" type="danger" @click="handleDelete" :loading="deleteLoading">
-          删除
+          {{ t('common.delete') }}
         </el-button>
         <el-button type="primary" @click="handleSubmit" :loading="loading">
-          {{ isEdit ? '保存' : '创建' }}
+          {{ isEdit ? t('common.save') : t('common.create') }}
         </el-button>
       </div>
     </template>
@@ -48,7 +48,7 @@
           <el-button class="back-btn" @click="handleClose" text>
             <el-icon><ArrowDown /></el-icon>
           </el-button>
-          <span class="mobile-page-title">{{ isEdit ? '编辑标签' : '新建标签' }}</span>
+          <span class="mobile-page-title">{{ isEdit ? t('tag.editTag') : t('tag.createTag') }}</span>
           <div class="spacer"></div>
         </div>
 
@@ -61,27 +61,27 @@
             label-position="top"
             class="mobile-form"
           >
-            <el-form-item label="名称" prop="name">
+            <el-form-item :label="t('common.name')" prop="name">
               <el-input
                 v-model="form.name"
-                placeholder="请输入标签名称"
+                :placeholder="t('tag.tagNamePlaceholder')"
                 @keyup.enter="handleSubmit"
               />
             </el-form-item>
 
-            <el-form-item label="颜色">
+            <el-form-item :label="t('common.color')">
               <ColorPicker v-model="form.color" :used-colors="usedColors" />
             </el-form-item>
           </el-form>
         </div>
 
         <div class="mobile-page-footer">
-          <el-button @click="handleClose" class="mobile-btn">取消</el-button>
+          <el-button @click="handleClose" class="mobile-btn">{{ t('common.cancel') }}</el-button>
           <el-button v-if="isEdit" type="danger" @click="handleDelete" :loading="deleteLoading" class="mobile-btn">
-            删除
+            {{ t('common.delete') }}
           </el-button>
           <el-button type="primary" @click="handleSubmit" :loading="loading" class="mobile-btn">
-            {{ isEdit ? '保存' : '创建' }}
+            {{ isEdit ? t('common.save') : t('common.create') }}
           </el-button>
         </div>
       </div>
@@ -91,12 +91,15 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { ArrowDown } from '@element-plus/icons-vue';
 import { useTagStore } from '@/stores';
 import ColorPicker from '@/components/common/ColorPicker.vue';
 import type { Tag } from '@/types';
 import { isMobile } from '@/utils/device';
+
+const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: boolean;
@@ -121,8 +124,8 @@ const form = ref({
 
 const rules: FormRules = {
   name: [
-    { required: true, message: '请输入标签名称', trigger: 'blur' },
-    { min: 1, max: 15, message: '长度在 1 到 15 个字符', trigger: 'blur' },
+    { required: true, message: t('tag.tagNameRequired'), trigger: 'blur' },
+    { min: 1, max: 15, message: t('tag.tagNameLengthRule'), trigger: 'blur' },
   ],
 };
 
@@ -140,7 +143,7 @@ const visible = computed({
 
 const isEdit = computed(() => !!props.tag);
 
-// 当对话框打开时，确保加载最新的 tags 数据
+// When dialog opens, ensure loading latest tags data
 watch(visible, async (isOpen) => {
   if (isOpen) {
     try {
@@ -179,10 +182,10 @@ async function handleSubmit() {
 
     if (isEdit.value && props.tag) {
       await tagStore.updateTag(props.tag.id, form.value);
-      ElMessage.success('标签更新成功');
+      ElMessage.success(t('tag.tagUpdated'));
     } else {
       await tagStore.createTag(form.value.name, form.value.color);
-      ElMessage.success('标签创建成功');
+      ElMessage.success(t('tag.tagCreated'));
     }
 
     emit('updated');
@@ -191,7 +194,7 @@ async function handleSubmit() {
     if (error?.errors) {
       return;
     }
-    ElMessage.error(`操作失败: ${error}`);
+    ElMessage.error(`${t('tag.operationFailed')}: ${error}`);
   } finally {
     loading.value = false;
   }
@@ -202,23 +205,23 @@ async function handleDelete() {
 
   try {
     await ElMessageBox.confirm(
-      `确定要删除标签 "${props.tag.name}" 吗？`,
-      '删除标签',
+      t('tag.deleteConfirm', { name: props.tag.name }),
+      t('tag.deleteTagTitle'),
       {
         type: 'warning',
-        confirmButtonText: '删除',
-        cancelButtonText: '取消',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel'),
       }
     );
 
     deleteLoading.value = true;
     await tagStore.deleteTag(props.tag.id);
-    ElMessage.success('删除成功');
+    ElMessage.success(t('tag.deleteSuccess'));
     emit('updated');
     handleClose();
   } catch (error) {
     if (error !== 'cancel') {
-      ElMessage.error('删除失败');
+      ElMessage.error(t('tag.deleteFailed'));
     }
   } finally {
     deleteLoading.value = false;
