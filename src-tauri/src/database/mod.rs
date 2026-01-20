@@ -7,7 +7,7 @@ pub mod repositories;
 pub mod migrations;
 
 use anyhow::Result;
-use connection::DbConnection;
+pub use connection::DbConnection;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 

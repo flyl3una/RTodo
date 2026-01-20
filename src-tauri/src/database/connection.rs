@@ -40,7 +40,7 @@ impl DbConnection {
     }
 
     /// 获取应用数据目录
-    fn get_data_dir() -> Result<PathBuf> {
+    pub fn get_data_dir() -> Result<PathBuf> {
         let data_dir = if cfg!(target_os = "windows") {
             // Windows: %APPDATA%\rtodo
             dirs::config_dir()
@@ -59,6 +59,11 @@ impl DbConnection {
         };
 
         Ok(data_dir)
+    }
+
+    /// 获取附件存储目录
+    pub fn get_attachments_dir() -> Result<PathBuf> {
+        Ok(Self::get_data_dir()?.join("attachments"))
     }
 
     /// 获取内部连接（用于直接 SQL 操作）

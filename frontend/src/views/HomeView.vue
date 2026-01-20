@@ -41,6 +41,14 @@
                   <el-tag v-if="isTodoOverdue(todo)" size="small" type="danger" effect="plain">{{ t('nav.overdue') }}</el-tag>
                 </span>
                 <el-tag
+                  v-if="todo.group_id"
+                  size="small"
+                  effect="plain"
+                  class="group-tag"
+                >
+                  {{ getGroupName(todo.group_id) }}
+                </el-tag>
+                <el-tag
                   v-for="tag in todo.tags"
                   :key="tag.id"
                   size="small"
@@ -187,6 +195,14 @@
             </span>
             <div class="card-tags">
               <el-tag
+                v-if="todo.group_id"
+                size="small"
+                effect="plain"
+                class="group-tag"
+              >
+                {{ getGroupName(todo.group_id) }}
+              </el-tag>
+              <el-tag
                 v-for="tag in todo.tags?.slice(0, 3)"
                 :key="tag.id"
                 size="small"
@@ -242,6 +258,7 @@ import { ElMessageBox, ElMessage } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import { useTodoStore } from '@/stores';
 import { useUIStore } from '@/stores';
+import { useGroupStore } from '@/stores';
 import type { Todo, TodoStep } from '@/types';
 import { TodoStatus, getPriorityLabel, getPriorityType, isTodoOverdue } from '@/types';
 import TodoDetailPanel from '../components/todo/TodoDetailPanel.vue';
@@ -252,6 +269,7 @@ const { t } = useI18n();
 
 const todoStore = useTodoStore();
 const uiStore = useUIStore();
+const groupStore = useGroupStore();
 
 const loading = computed(() => todoStore.loading);
 const filteredTodos = computed(() => todoStore.filteredTodos);
@@ -357,8 +375,9 @@ async function toggleStep(step: TodoStep) {
 
 async function handleTodoUpdated(todo: Todo) {
   console.log('[HomeView] handleTodoUpdated called');
+  // Refresh the todo list to ensure updates are reflected
+  await todoStore.fetchTodos();
   // Wait for store to update, then sync selectedTodo
-  // Give the store time to update first
   await new Promise(resolve => setTimeout(resolve, 100));
 
   // Then update selectedTodo from the store
@@ -443,6 +462,12 @@ function formatSimpleDate(timestamp?: number): string {
     minute: '2-digit',
   };
   return date.toLocaleDateString('zh-CN', options);
+}
+
+// 获取任务组名称
+function getGroupName(groupId: number): string {
+  const group = groupStore.groups.find(g => g.id === groupId);
+  return group ? group.name : '';
 }
 </script>
 
@@ -568,6 +593,13 @@ function formatSimpleDate(timestamp?: number): string {
 .meta-item.overdue {
   color: var(--el-color-danger);
   font-weight: 500;
+}
+
+.group-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-color: var(--el-border-color);
 }
 
 .todo-cards {

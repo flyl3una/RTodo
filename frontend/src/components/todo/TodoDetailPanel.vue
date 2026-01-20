@@ -94,6 +94,69 @@
         </el-select>
       </el-form-item>
 
+      <!-- 子步骤编辑区域 -->
+      <el-divider />
+      <div class="edit-section">
+        <div class="section-header">
+          <h4>{{ t('step.title') }}</h4>
+          <el-button :icon="Plus" size="small" text @click="showAddStep = true">
+            {{ t('common.add') }}
+          </el-button>
+        </div>
+        <div v-if="steps.length > 0" class="edit-steps-list">
+          <div v-for="step in steps" :key="step.id" class="edit-step-item">
+            <el-checkbox :model-value="step.is_completed" @change="toggleStep(step)" />
+            <span class="step-title" :class="{ completed: step.is_completed }">
+              {{ step.title }}
+            </span>
+            <el-button
+              :icon="Edit"
+              size="small"
+              text
+              @click="editStep(step)"
+            />
+            <el-button
+              :icon="Delete"
+              size="small"
+              text
+              type="danger"
+              @click="deleteStep(step.id)"
+            />
+          </div>
+        </div>
+        <div v-else class="empty-text">{{ t('step.noSteps') }}</div>
+      </div>
+
+      <!-- 附件编辑区域 -->
+      <el-divider />
+      <div class="edit-section">
+        <div class="section-header">
+          <h4>{{ t('attachment.attachments') }}</h4>
+          <el-button :icon="Plus" size="small" text @click="handleAddAttachment">
+            {{ t('common.add') }}
+          </el-button>
+        </div>
+        <div v-if="attachments.length > 0" class="edit-attachments-list">
+          <div
+            v-for="attachment in attachments"
+            :key="attachment.id"
+            class="edit-attachment-item"
+          >
+            <el-icon class="attachment-icon"><Document /></el-icon>
+            <span class="attachment-name">{{ attachment.name }}</span>
+            <span class="attachment-size">{{ formatFileSize(attachment.file_size) }}</span>
+            <el-button
+              :icon="Delete"
+              size="small"
+              text
+              type="danger"
+              @click="handleDeleteAttachment(attachment)"
+            />
+          </div>
+        </div>
+        <div v-else class="empty-text">{{ t('attachment.noAttachments') }}</div>
+      </div>
+
       <el-form-item>
         <el-button type="primary" @click="handleSave" :loading="loading">
           {{ t('common.save') }}
@@ -164,14 +227,6 @@
       <div class="detail-section">
         <div class="section-header">
           <h4 class="section-title">{{ t('step.title') }}</h4>
-          <el-button
-            :icon="Plus"
-            size="small"
-            text
-            @click="showAddStep = true"
-          >
-            {{ t('common.add') }}
-          </el-button>
         </div>
         <div v-if="steps.length > 0" class="steps-list">
           <div
@@ -189,34 +244,51 @@
             >
               {{ step.title }}
             </span>
-            <el-button
-              :icon="Delete"
-              size="small"
-              text
-              type="danger"
-              @click="deleteStep(step.id)"
-            />
           </div>
         </div>
         <el-empty v-else :description="t('step.noSteps')" :image-size="60" />
       </div>
+
+      <!-- 附件区域 -->
+      <div class="detail-section">
+        <div class="section-header">
+          <h4 class="section-title">{{ t('attachment.attachments') }}</h4>
+        </div>
+        <div v-if="attachments.length > 0" class="attachments-list">
+          <div
+            v-for="attachment in attachments"
+            :key="attachment.id"
+            class="attachment-item"
+          >
+            <el-icon class="attachment-icon"><Document /></el-icon>
+            <span
+              class="attachment-name"
+              @click="handleOpenAttachment(attachment)"
+            >
+              {{ attachment.name }}
+            </span>
+            <span class="attachment-size">{{ formatFileSize(attachment.file_size) }}</span>
+          </div>
+        </div>
+        <el-empty v-else :description="t('attachment.noAttachments')" :image-size="60" />
+      </div>
     </div>
 
-    <!-- Add Step Dialog -->
+    <!-- Add/Edit Step Dialog -->
     <el-dialog
       v-model="showAddStep"
-      :title="t('step.addStep')"
+      :title="editingStep ? t('step.editStep') : t('step.addStep')"
       width="500px"
     >
       <el-input
         v-model="newStepTitle"
         :placeholder="t('step.stepPlaceholder')"
-        @keyup.enter="addStep"
+        @keyup.enter="saveStep"
       />
       <template #footer>
         <el-button @click="showAddStep = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="addStep" :disabled="!newStepTitle.trim()">
-          {{ t('common.add') }}
+        <el-button type="primary" @click="saveStep" :disabled="!newStepTitle.trim()">
+          {{ editingStep ? t('common.save') : t('common.add') }}
         </el-button>
       </template>
     </el-dialog>
@@ -225,13 +297,13 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
-import { Edit, Delete, Star, StarFilled, Plus } from '@element-plus/icons-vue';
+import { Edit, Delete, Star, StarFilled, Plus, Document, Download } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import { useTodoStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import { useGroupStore } from '@/stores';
-import type { Todo, UpdateTodoRequest, TodoStep } from '@/types';
+import type { Todo, UpdateTodoRequest, TodoStep, Attachment } from '@/types';
 import { TodoStatus, getStatusLabel, getStatusType } from '@/types';
 
 const { t } = useI18n();
@@ -255,7 +327,9 @@ const loading = ref(false);
 const formRef = ref<FormInstance>();
 const showAddStep = ref(false);
 const newStepTitle = ref('');
+const editingStep = ref<TodoStep | null>(null);
 const steps = ref<TodoStep[]>([]);
+const attachments = ref<Attachment[]>([]);
 
 const form = ref<UpdateTodoRequest>({
   title: '',
@@ -492,18 +566,37 @@ async function toggleStep(step: TodoStep) {
   }
 }
 
-async function addStep() {
+async function saveStep() {
   if (!newStepTitle.value.trim()) return;
 
   try {
-    await todoStore.createStep(props.todo.id, newStepTitle.value);
-    ElMessage.success(t('step.stepCreated'));
+    if (editingStep.value) {
+      // 编辑模式 - 使用更新 API
+      const updated = await todoStore.updateStep(editingStep.value.id.toString(), newStepTitle.value);
+      // 更新本地状态
+      const index = steps.value.findIndex(s => s.id === editingStep.value!.id);
+      if (index !== -1) {
+        steps.value[index] = updated;
+      }
+      ElMessage.success(t('step.stepUpdated'));
+    } else {
+      // 新增模式
+      await todoStore.createStep(props.todo.id, newStepTitle.value);
+      ElMessage.success(t('step.stepCreated'));
+      await loadSteps();
+    }
     newStepTitle.value = '';
+    editingStep.value = null;
     showAddStep.value = false;
-    await loadSteps();
   } catch (error) {
-    ElMessage.error(t('step.addStepFailed'));
+    ElMessage.error(editingStep.value ? t('step.updateStepFailed') : t('step.addStepFailed'));
   }
+}
+
+function editStep(step: TodoStep) {
+  editingStep.value = step;
+  newStepTitle.value = step.title;
+  showAddStep.value = true;
 }
 
 async function deleteStep(stepId: string) {
@@ -539,16 +632,118 @@ async function loadSteps() {
   }
 }
 
+async function loadAttachments() {
+  if (!props.todo?.id) {
+    console.warn('No todo id available for loading attachments, skipping API call');
+    return;
+  }
+  try {
+    attachments.value = await todoStore.fetchAttachments(props.todo.id);
+    console.log('Attachments loaded successfully:', attachments.value.length);
+  } catch (error) {
+    console.error('Failed to load attachments:', error);
+  }
+}
+
+async function handleAddAttachment() {
+  try {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const selected = await open({
+      multiple: false,
+      title: t('attachment.selectFiles'),
+    });
+
+    if (!selected || typeof selected !== 'string') {
+      return;
+    }
+
+    const fileName = selected.split(/[/\\]/).pop() || 'unknown';
+    const newAttachment = await todoStore.uploadAttachment(props.todo.id, selected, fileName);
+    attachments.value.push(newAttachment);
+    ElMessage.success(t('attachment.uploadSuccess'));
+  } catch (error) {
+    console.error('Failed to add attachment:', error);
+    // 显示具体的错误信息
+    const errorMsg = error?.toString() || t('attachment.uploadFailed');
+    ElMessage.error(errorMsg);
+  }
+}
+
+async function handleDeleteAttachment(attachment: Attachment) {
+  try {
+    await ElMessageBox.confirm(
+      t('attachment.deleteConfirm', { name: attachment.name }),
+      t('attachment.deleteAttachment'),
+      {
+        type: 'warning',
+        confirmButtonText: t('common.delete'),
+        cancelButtonText: t('common.cancel'),
+      }
+    );
+
+    await todoStore.deleteAttachment(attachment.id);
+    attachments.value = attachments.value.filter(a => a.id !== attachment.id);
+    ElMessage.success(t('attachment.deleteSuccess'));
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Failed to delete attachment:', error);
+      ElMessage.error(t('attachment.deleteFailed'));
+    }
+  }
+}
+
+async function handleOpenAttachment(attachment: Attachment) {
+  try {
+    await todoStore.openAttachment(attachment.id);
+  } catch (error) {
+    console.error('Failed to open attachment:', error);
+    ElMessage.error(t('attachment.openFailed'));
+  }
+}
+
+async function handleDownloadAttachment(attachment: Attachment) {
+  try {
+    const { save } = await import('@tauri-apps/plugin-dialog');
+    const filePath = await save({
+      defaultPath: attachment.name,
+      title: t('attachment.saveAs'),
+    });
+
+    if (!filePath || typeof filePath !== 'string') {
+      return;
+    }
+
+    // 复制文件到用户选择的位置
+    await todoStore.downloadAttachment(attachment.id, filePath);
+    ElMessage.success(t('attachment.downloadSuccess'));
+  } catch (error) {
+    console.error('Failed to download attachment:', error);
+    ElMessage.error(t('attachment.downloadFailed'));
+  }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 onMounted(async () => {
   await groupStore.fetchGroups();
   await tagStore.fetchTags();
   await loadSteps();
+  await loadAttachments();
 });
 
 // Watch for editMode prop changes
 watch(() => props.editMode, (newEditMode) => {
   if (newEditMode && !isEditing.value) {
-    startEdit();
+    // 确保todo数据存在后再初始化表单
+    if (props.todo?.id) {
+      startEdit();
+    }
+  } else if (!newEditMode && isEditing.value) {
+    isEditing.value = false;
   }
 }, { immediate: true });
 </script>
@@ -684,5 +879,118 @@ watch(() => props.editMode, (newEditMode) => {
 
 :global(html.dark) .step-title.completed {
   color: var(--el-text-color-secondary);
+}
+
+.attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.attachment-item:hover {
+  background: var(--el-fill-color);
+}
+
+.attachment-icon {
+  font-size: 18px;
+  color: var(--el-color-primary);
+}
+
+.attachment-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-style: dotted;
+}
+
+.attachment-name:hover {
+  color: var(--el-color-primary);
+}
+
+.attachment-size {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+/* 编辑模式样式 */
+.edit-section {
+  margin-bottom: 16px;
+}
+
+.edit-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.edit-section h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+.edit-steps-list,
+.edit-attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-step-item,
+.edit-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+}
+
+.edit-step-item .step-title {
+  flex: 1;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+.edit-step-item .step-title.completed {
+  text-decoration: line-through;
+  color: var(--el-text-color-secondary);
+}
+
+.edit-attachment-item .attachment-icon {
+  font-size: 16px;
+  color: var(--el-color-primary);
+}
+
+.edit-attachment-item .attachment-name {
+  flex: 1;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+.edit-attachment-item .attachment-size {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.empty-text {
+  text-align: center;
+  padding: 20px;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
 }
 </style>

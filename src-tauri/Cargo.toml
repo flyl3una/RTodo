@@ -34,6 +34,7 @@ auto-launch = "0.5"
 winreg = "0.52"
 csv.workspace = true
 zip.workspace = true
+mime_guess = "2"
 
 [features]
 default = ["custom-protocol"]

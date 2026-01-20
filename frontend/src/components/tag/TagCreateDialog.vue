@@ -1,25 +1,18 @@
 <template>
+  <!-- Desktop: Dialog -->
   <el-dialog
+    v-if="!isMobile()"
     v-model="visible"
-    :title="isMobile() ? '' : (isEdit ? '编辑标签' : '新建标签')"
-    :width="isMobile() ? '100%' : '450px'"
-    :class="{ 'mobile-dialog': isMobile() }"
+    :title="isEdit ? '编辑标签' : '新建标签'"
+    width="450px"
     @close="handleClose"
   >
-    <!-- Mobile Header -->
-    <template #header="{ close, titleId, titleClass }">
-      <div v-if="isMobile()" class="mobile-header">
-        <span class="mobile-header-title">{{ isEdit ? '编辑标签' : '新建标签' }}</span>
-      </div>
-    </template>
-
     <el-form
       ref="formRef"
       :model="form"
       :rules="rules"
-      :label-width="isMobile() ? 'auto' : '60px'"
-      :label-position="isMobile() ? 'top' : undefined"
-      :class="{ 'mobile-form': isMobile(), 'desktop-form': !isMobile() }"
+      label-width="60px"
+      class="desktop-form"
     >
       <el-form-item label="名称" prop="name">
         <el-input
@@ -35,22 +28,71 @@
     </el-form>
 
     <template #footer>
-      <div class="dialog-footer" :class="{ 'mobile-footer': isMobile() }">
-        <el-button @click="handleClose" :class="{ 'mobile-btn': isMobile() }">取消</el-button>
-        <el-button v-if="isEdit" type="danger" @click="handleDelete" :loading="deleteLoading" :class="{ 'mobile-btn': isMobile() }">
+      <div class="dialog-footer">
+        <el-button @click="handleClose">取消</el-button>
+        <el-button v-if="isEdit" type="danger" @click="handleDelete" :loading="deleteLoading">
           删除
         </el-button>
-        <el-button type="primary" @click="handleSubmit" :loading="loading" :class="{ 'mobile-btn': isMobile() }">
+        <el-button type="primary" @click="handleSubmit" :loading="loading">
           {{ isEdit ? '保存' : '创建' }}
         </el-button>
       </div>
     </template>
   </el-dialog>
+
+  <!-- Mobile: Full Screen Page -->
+  <teleport v-else to="body">
+    <transition name="slide-up">
+      <div v-if="visible" class="mobile-page">
+        <div class="mobile-page-header">
+          <el-button class="back-btn" @click="handleClose" text>
+            <el-icon><ArrowDown /></el-icon>
+          </el-button>
+          <span class="mobile-page-title">{{ isEdit ? '编辑标签' : '新建标签' }}</span>
+          <div class="spacer"></div>
+        </div>
+
+        <div class="mobile-page-content">
+          <el-form
+            ref="formRef"
+            :model="form"
+            :rules="rules"
+            label-width="auto"
+            label-position="top"
+            class="mobile-form"
+          >
+            <el-form-item label="名称" prop="name">
+              <el-input
+                v-model="form.name"
+                placeholder="请输入标签名称"
+                @keyup.enter="handleSubmit"
+              />
+            </el-form-item>
+
+            <el-form-item label="颜色">
+              <ColorPicker v-model="form.color" :used-colors="usedColors" />
+            </el-form-item>
+          </el-form>
+        </div>
+
+        <div class="mobile-page-footer">
+          <el-button @click="handleClose" class="mobile-btn">取消</el-button>
+          <el-button v-if="isEdit" type="danger" @click="handleDelete" :loading="deleteLoading" class="mobile-btn">
+            删除
+          </el-button>
+          <el-button type="primary" @click="handleSubmit" :loading="loading" class="mobile-btn">
+            {{ isEdit ? '保存' : '创建' }}
+          </el-button>
+        </div>
+      </div>
+    </transition>
+  </teleport>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
+import { ArrowDown } from '@element-plus/icons-vue';
 import { useTagStore } from '@/stores';
 import ColorPicker from '@/components/common/ColorPicker.vue';
 import type { Tag } from '@/types';
@@ -198,63 +240,6 @@ function handleClose() {
   gap: 12px;
 }
 
-/* Mobile dialog styles */
-.mobile-dialog :deep(.el-dialog) {
-  width: 100% !important;
-  max-width: none !important;
-  margin: 0 !important;
-  height: 100%;
-  border-radius: 0;
-}
-
-.mobile-dialog :deep(.el-dialog__header) {
-  padding: 0;
-  margin: 0;
-}
-
-.mobile-dialog :deep(.el-dialog__body) {
-  padding: 10px 12px;
-  padding-bottom: 80px;
-  max-height: calc(100vh - 120px);
-  overflow-y: auto;
-}
-
-.mobile-dialog :deep(.el-dialog__footer) {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  padding: 10px 12px;
-  background: var(--el-bg-color);
-  border-top: 1px solid var(--el-border-color);
-  z-index: 1000;
-}
-
-.mobile-header {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px;
-  border-bottom: 1px solid var(--el-border-color);
-  background: var(--el-bg-color);
-}
-
-.mobile-header-title {
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.mobile-footer {
-  display: flex;
-  gap: 8px;
-}
-
-.mobile-btn {
-  flex: 1;
-  height: 38px;
-  font-size: 14px;
-}
-
 /* Desktop form styles */
 .desktop-form :deep(.el-form-item) {
   margin-bottom: 18px;
@@ -268,6 +253,55 @@ function handleClose() {
 
 .desktop-form :deep(.el-input__wrapper) {
   font-size: 14px;
+}
+
+/* ========== Mobile Full Screen Page ========== */
+
+/* Mobile page container */
+.mobile-page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 9999;
+  background: var(--el-bg-color);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Mobile page header */
+.mobile-page-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--el-border-color);
+  background: var(--el-bg-color);
+  gap: 12px;
+}
+
+.back-btn {
+  padding: 8px;
+  font-size: 20px;
+}
+
+.mobile-page-title {
+  font-size: 16px;
+  font-weight: 500;
+  flex: 1;
+  text-align: center;
+}
+
+.spacer {
+  width: 36px;
+}
+
+/* Mobile page content */
+.mobile-page-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 80px;
 }
 
 /* Mobile form styles */
@@ -287,43 +321,51 @@ function handleClose() {
   min-height: 32px;
 }
 
+/* Mobile page footer */
+.mobile-page-footer {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px 16px;
+  background: var(--el-bg-color);
+  border-top: 1px solid var(--el-border-color);
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+.mobile-btn {
+  flex: 1;
+  height: 38px;
+  font-size: 14px;
+}
+
+/* Transition for slide up animation */
+.slide-up-enter-active,
+.slide-up-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-up-enter-from {
+  transform: translateY(100%);
+}
+
+.slide-up-leave-to {
+  transform: translateY(100%);
+}
+
+.slide-up-enter-to,
+.slide-up-leave-from {
+  transform: translateY(0);
+}
+
 /* Mobile responsive styles for non-mobile dialogs */
 @media (max-width: 768px) {
-  :deep(.el-dialog:not(.mobile-dialog .el-dialog)) {
+  :deep(.el-dialog) {
     width: 90% !important;
     max-width: 400px !important;
     margin: 5vh auto !important;
-  }
-
-  :deep(.el-dialog__header) {
-    padding: 16px;
-  }
-
-  :deep(.el-dialog__title) {
-    font-size: 16px;
-  }
-
-  :deep(.el-dialog__body) {
-    padding: 16px;
-  }
-
-  :deep(.el-form-item) {
-    margin-bottom: 16px;
-  }
-
-  :deep(.el-form-item__label) {
-    font-size: 14px;
-    margin-bottom: 8px;
-  }
-
-  :deep(.el-dialog__footer) {
-    padding: 12px 16px;
-  }
-
-  :deep(.el-dialog__footer .el-button) {
-    flex: 1;
-    margin: 0 4px;
-    padding: 12px;
   }
 }
 </style>

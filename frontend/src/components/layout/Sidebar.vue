@@ -415,9 +415,27 @@ onMounted(() => {
   setFilter('todo');
 });
 
+// Get current view state (for passing to CreateTodoDialog)
+function getCurrentView() {
+  return {
+    currentView: currentView.value,
+    filterGroupId: filterGroupId.value,
+    filterTagId: filterTagId.value,
+  };
+}
+
+// Refresh current view without resetting (for after creating todo)
+async function refreshCurrentView() {
+  console.log('[Sidebar] refreshCurrentView called');
+  // Don't reset, just refresh todos with current filter
+  await todoStore.fetchTodos();
+}
+
 // Expose methods to parent components
 defineExpose({
   resetToAllView,
+  getCurrentView,
+  refreshCurrentView,
 });
 </script>
 

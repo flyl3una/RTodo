@@ -22,6 +22,9 @@ pub struct AppConfig {
     /// 全局快捷键
     #[serde(default)]
     pub global_shortcut: Option<String>,
+    /// 自定义数据路径（可选，为空时使用默认路径）
+    #[serde(default)]
+    pub data_path: Option<String>,
 }
 
 impl Default for AppConfig {
@@ -30,6 +33,7 @@ impl Default for AppConfig {
             auto_launch: false,
             close_behavior: "direct".to_string(),
             global_shortcut: None,
+            data_path: None,
         }
     }
 }

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import type { Todo, CreateTodoRequest, UpdateTodoRequest, TodoStep } from '@/types';
+import type { Todo, CreateTodoRequest, UpdateTodoRequest, TodoStep, Attachment } from '@/types';
 import { TodoStatus } from '@/types';
 import * as api from '@/api/tauri';
 
@@ -246,7 +246,63 @@ export const useTodoStore = defineStore('todo', () => {
 
   async function deleteStep(stepId: string): Promise<void> {
     try {
-      await api.deleteStep(stepId);
+      await api.deleteStep(parseInt(stepId));
+    } catch (e) {
+      error.value = String(e);
+      throw e;
+    }
+  }
+
+  async function updateStep(stepId: string, title: string): Promise<TodoStep> {
+    try {
+      return await api.updateStep(parseInt(stepId), title);
+    } catch (e) {
+      error.value = String(e);
+      throw e;
+    }
+  }
+
+  // Attachment methods
+  async function fetchAttachments(todoId: string): Promise<Attachment[]> {
+    try {
+      return await api.getAttachments(parseInt(todoId));
+    } catch (e) {
+      error.value = String(e);
+      throw e;
+    }
+  }
+
+  async function uploadAttachment(todoId: string, filePath: string, fileName: string): Promise<Attachment> {
+    try {
+      return await api.uploadAttachment(parseInt(todoId), filePath, fileName);
+    } catch (e) {
+      error.value = String(e);
+      throw e;
+    }
+  }
+
+  async function deleteAttachment(attachmentId: number): Promise<void> {
+    try {
+      await api.deleteAttachment(attachmentId);
+    } catch (e) {
+      error.value = String(e);
+      throw e;
+    }
+  }
+
+  async function openAttachment(attachmentId: number): Promise<void> {
+    try {
+      // 后端直接打开文件，无需返回路径
+      await api.openAttachment(attachmentId);
+    } catch (e) {
+      error.value = String(e);
+      throw e;
+    }
+  }
+
+  async function downloadAttachment(attachmentId: number, targetPath: string): Promise<void> {
+    try {
+      await api.downloadAttachment(attachmentId, targetPath);
     } catch (e) {
       error.value = String(e);
       throw e;
@@ -298,6 +354,13 @@ export const useTodoStore = defineStore('todo', () => {
     createStep,
     toggleStep,
     deleteStep,
+    updateStep,
+    // Attachment methods
+    fetchAttachments,
+    uploadAttachment,
+    deleteAttachment,
+    openAttachment,
+    downloadAttachment,
     // Stats methods
     getStats,
     getStatsByDate,

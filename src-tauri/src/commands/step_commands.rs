@@ -54,6 +54,23 @@ pub async fn toggle_step(
         .map_err(|e| format!("Failed to toggle step: {}", e))
 }
 
+/// 更新步骤标题
+#[tauri::command]
+pub async fn update_step(
+    id: i64,
+    title: String,
+    db: tauri::State<'_, Database>,
+) -> Result<TodoStep, String> {
+    tracing::info!("update_step called: id={}, title={}", id, title);
+
+    let conn = db.get_connection().await;
+    let conn_guard = conn.lock().await;
+    let inner = conn_guard.inner();
+
+    StepRepository::update(inner, id, &title)
+        .map_err(|e| format!("Failed to update step: {}", e))
+}
+
 /// 删除步骤
 #[tauri::command]
 pub async fn delete_step(

@@ -117,6 +117,17 @@ impl StepRepository {
         Self::get(conn, id)?.context("Step not found after toggle")
     }
 
+    /// 更新步骤标题
+    pub fn update(conn: &Connection, id: i64, title: &str) -> Result<TodoStep> {
+        conn.execute(
+            "UPDATE todo_steps SET title = ?1 WHERE id = ?2",
+            params![title, id],
+        )
+        .context("Failed to update step title")?;
+
+        Self::get(conn, id)?.context("Step not found after update")
+    }
+
     /// 删除步骤
     pub fn delete(conn: &Connection, id: i64) -> Result<()> {
         let rows_affected = conn.execute(

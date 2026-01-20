@@ -240,6 +240,13 @@ export async function deleteStep(stepId: number): Promise<void> {
   return safeInvoke<void>('delete_step', { id: stepId });
 }
 
+/**
+ * 更新步骤标题
+ */
+export async function updateStep(stepId: number, title: string): Promise<TodoStep> {
+  return safeInvoke<TodoStep>('update_step', { id: stepId, title });
+}
+
 // ==================== Attachment API ====================
 
 /**
@@ -252,8 +259,8 @@ export async function getAttachments(todoId: number): Promise<Attachment[]> {
 /**
  * 上传附件
  */
-export async function uploadAttachment(todoId: number, filePath: string): Promise<Attachment> {
-  return safeInvoke<Attachment>('upload_attachment', { todoId, filePath });
+export async function uploadAttachment(todoId: number, filePath: string, fileName: string): Promise<Attachment> {
+  return safeInvoke<Attachment>('upload_attachment', { todoId, filePath, fileName });
 }
 
 /**
@@ -261,6 +268,50 @@ export async function uploadAttachment(todoId: number, filePath: string): Promis
  */
 export async function deleteAttachment(attachmentId: number): Promise<void> {
   return safeInvoke<void>('delete_attachment', { id: attachmentId });
+}
+
+/**
+ * 打开附件
+ */
+export async function openAttachment(attachmentId: number): Promise<void> {
+  return safeInvoke<void>('open_attachment', { attachmentId });
+}
+
+/**
+ * 下载附件到指定位置
+ */
+export async function downloadAttachment(attachmentId: number, targetPath: string): Promise<void> {
+  return safeInvoke<void>('download_attachment', { attachmentId, targetPath });
+}
+
+// ==================== Data Path API ====================
+
+/**
+ * 获取当前数据路径
+ */
+export async function getDataPath(): Promise<string> {
+  return safeInvoke<string>('get_data_path');
+}
+
+/**
+ * 设置数据路径
+ */
+export async function setDataPath(newPath: string): Promise<void> {
+  return safeInvoke<void>('set_data_path', { new_path: newPath });
+}
+
+/**
+ * 重置数据路径为默认值
+ */
+export async function resetDataPath(): Promise<void> {
+  return safeInvoke<void>('reset_data_path');
+}
+
+/**
+ * 迁移数据到新路径
+ */
+export async function migrateData(newPath: string): Promise<void> {
+  return safeInvoke<void>('migrate_data', { new_path: newPath });
 }
 
 // ==================== Stats API ====================

@@ -88,6 +88,15 @@
       <section class="settings-section">
         <h2 class="section-title">{{ t('settings.dataManagement') }}</h2>
         <div class="setting-item">
+          <span class="setting-label">{{ t('settings.dataPath') }}</span>
+          <el-input :value="currentDataPath" readonly style="width: 400px">
+            <template #append>
+              <el-button @click="handleChangeDataPath">{{ t('common.change') }}</el-button>
+              <el-button @click="handleResetDataPath" type="warning">{{ t('common.reset') }}</el-button>
+            </template>
+          </el-input>
+        </div>
+        <div class="setting-item">
           <span class="setting-label">{{ t('settings.exportData') }}</span>
           <el-button @click="handleExport" :loading="exportLoading">
             {{ t('settings.exportAllData') }}
@@ -130,6 +139,37 @@
         </div>
       </section>
     </div>
+
+    <!-- Data Path Change Dialog -->
+    <el-dialog v-model="showDataPathDialog" :title="t('settings.changeDataPath')" width="500px">
+      <el-form :model="dataPathForm" label-width="100px">
+        <el-form-item :label="t('settings.newPath')">
+          <el-input v-model="dataPathForm.newPath" readonly>
+            <template #append>
+              <el-button @click="selectDataPathFolder">{{ t('common.browse') }}</el-button>
+            </template>
+          </el-input>
+        </el-form-item>
+        <el-form-item>
+          <el-checkbox v-model="dataPathForm.migrateData">
+            {{ t('settings.migrateDataConfirm') }}
+          </el-checkbox>
+        </el-form-item>
+      </el-form>
+
+      <!-- Migration progress -->
+      <div v-if="migrating" class="migrate-progress">
+        <el-progress :percentage="migrateProgress" :status="migrateStatus" />
+        <p class="progress-text">{{ migrateMessage }}</p>
+      </div>
+
+      <template #footer>
+        <el-button @click="showDataPathDialog = false">{{ t('common.cancel') }}</el-button>
+        <el-button type="primary" @click="confirmDataPathChange" :loading="migrating" :disabled="!dataPathForm.newPath">
+          {{ t('common.confirm') }}
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -143,6 +183,7 @@ import * as api from '@/api/tauri';
 import Logo from '@/components/icon/logo.vue';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
+import { Refresh } from '@element-plus/icons-vue';
 
 const { t } = useI18n();
 
@@ -158,6 +199,19 @@ const currentCloseBehavior = ref<CloseBehavior>(uiStore.closeBehavior);
 const exportLoading = ref(false);
 const currentAutoLaunch = ref(false);
 const autoLaunchLoading = ref(false);
+
+// Data path management
+const currentDataPath = ref('');
+const showDataPathDialog = ref(false);
+const dataPathForm = ref({
+  newPath: '',
+  migrateData: true,
+});
+const migrating = ref(false);
+const migrateProgress = ref(0);
+const migrateStatus = ref<'success' | 'exception' | ''>('');
+const migrateMessage = ref('');
+let unlistenMigrate: (() => void) | null = null;
 
 function handleThemeChange(value: 'light' | 'dark' | 'auto') {
   uiStore.setTheme(value);
@@ -308,6 +362,137 @@ async function handleClear() {
   }
 }
 
+// Data path management functions
+async function handleChangeDataPath() {
+  dataPathForm.value.newPath = '';
+  dataPathForm.value.migrateData = true;
+  showDataPathDialog.value = true;
+}
+
+async function selectDataPathFolder() {
+  try {
+    const selectedPath = await open({
+      multiple: false,
+      directory: true,
+    });
+
+    if (selectedPath && typeof selectedPath === 'string') {
+      dataPathForm.value.newPath = selectedPath;
+    }
+  } catch (error) {
+    console.error('Failed to select folder:', error);
+    ElMessage.error(t('messages.folderSelectFailed'));
+  }
+}
+
+async function confirmDataPathChange() {
+  if (!dataPathForm.value.newPath) return;
+
+  try {
+    // Warn about migration if selected
+    if (dataPathForm.value.migrateData) {
+      await ElMessageBox.confirm(
+        t('messages.migrateDataWarning'),
+        t('settings.changeDataPath'),
+        {
+          type: 'warning',
+          confirmButtonText: t('common.confirm'),
+          cancelButtonText: t('common.cancel'),
+        }
+      );
+    }
+
+    migrating.value = true;
+    migrateProgress.value = 0;
+    migrateStatus.value = '';
+    migrateMessage.value = t('messages.migrationStarting');
+
+    if (dataPathForm.value.migrateData) {
+      // Perform migration
+      await api.migrateData(dataPathForm.value.newPath);
+    } else {
+      // Just set the new path
+      await api.setDataPath(dataPathForm.value.newPath);
+    }
+
+    // Ask about restart
+    try {
+      await ElMessageBox.confirm(
+        t('messages.restartRequired'),
+        t('settings.changeDataPath'),
+        {
+          type: 'info',
+          confirmButtonText: t('messages.restartNow'),
+          cancelButtonText: t('messages.restartLater'),
+        }
+      );
+      // Restart the app
+      window.location.reload();
+    } catch {
+      // User chose to restart later
+    }
+
+    ElMessage.success(t('messages.dataMigrated'));
+    showDataPathDialog.value = false;
+    await loadDataPath();
+  } catch (error) {
+    console.error('Failed to change data path:', error);
+    ElMessage.error(`${t('messages.operationFailed')}: ${error}`);
+    migrateStatus.value = 'exception';
+    migrateMessage.value = t('messages.migrationFailed');
+  } finally {
+    migrating.value = false;
+  }
+}
+
+async function handleResetDataPath() {
+  try {
+    await ElMessageBox.confirm(
+      t('messages.resetDataPathWarning'),
+      t('settings.resetDataPath'),
+      {
+        type: 'warning',
+        confirmButtonText: t('common.confirm'),
+        cancelButtonText: t('common.cancel'),
+      }
+    );
+
+    await api.resetDataPath();
+
+    // Ask about restart
+    try {
+      await ElMessageBox.confirm(
+        t('messages.restartRequired'),
+        t('settings.resetDataPath'),
+        {
+          type: 'info',
+          confirmButtonText: t('messages.restartNow'),
+          cancelButtonText: t('messages.restartLater'),
+        }
+      );
+      window.location.reload();
+    } catch {
+      // User chose to restart later
+    }
+
+    ElMessage.success(t('messages.dataPathReset'));
+    await loadDataPath();
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Failed to reset data path:', error);
+      ElMessage.error(`${t('messages.operationFailed')}: ${error}`);
+    }
+  }
+}
+
+async function loadDataPath() {
+  try {
+    currentDataPath.value = await api.getDataPath();
+  } catch (error) {
+    console.error('Failed to load data path:', error);
+  }
+}
+
 onMounted(async () => {
   currentTheme.value = uiStore.theme;
   currentLanguage.value = uiStore.language;
@@ -324,14 +509,53 @@ onMounted(async () => {
     console.error('Failed to get auto launch status:', error);
   }
 
+  // Load data path
+  await loadDataPath();
+
   // Listen for auto-launch state changes from tray menu
   const unlisten = await listen<boolean>('autolaunch-changed', (event) => {
     currentAutoLaunch.value = event.payload;
   });
 
-  // Cleanup listener
+  // Listen for migration progress events
+  unlistenMigrate = await await listen<{
+    status: string;
+    message: string;
+    progress?: number;
+  }>('migrate-progress', (event) => {
+    const payload = event.payload;
+    migrateMessage.value = payload.message;
+
+    switch (payload.status) {
+      case 'started':
+        migrateProgress.value = 5;
+        break;
+      case 'copying_db':
+        migrateProgress.value = 30;
+        break;
+      case 'copying_attachments':
+        migrateProgress.value = 60;
+        break;
+      case 'validating':
+        migrateProgress.value = 80;
+        break;
+      case 'finalizing':
+        migrateProgress.value = 95;
+        break;
+      case 'completed':
+        migrateProgress.value = 100;
+        migrateStatus.value = 'success';
+        break;
+      case 'error':
+        migrateStatus.value = 'exception';
+        break;
+    }
+  });
+
+  // Cleanup listeners
   onUnmounted(() => {
     unlisten();
+    unlistenMigrate?.();
   });
 });
 </script>
@@ -558,6 +782,21 @@ onMounted(async () => {
 
 [data-density='compact'] .app-info {
   gap: 12px;
+}
+
+/* Migration progress styles */
+.migrate-progress {
+  margin-top: 20px;
+  padding: 16px;
+  background: var(--el-fill-color-light);
+  border-radius: 8px;
+}
+
+.progress-text {
+  margin: 12px 0 0;
+  font-size: 14px;
+  color: var(--el-text-color-regular);
+  text-align: center;
 }
 </style>
 

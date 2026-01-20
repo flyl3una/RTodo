@@ -36,13 +36,16 @@
     <!-- Create Todo Dialog -->
     <CreateTodoDialog
       v-model="uiStore.createTodoDialogVisible"
+      :current-view="currentViewState.currentView"
+      :filter-group-id="currentViewState.filterGroupId"
+      :filter-tag-id="currentViewState.filterTagId"
       @created="handleTodoCreated"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { onMounted, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useUIStore } from '@/stores';
 import { useTodoStore } from '@/stores';
@@ -64,6 +67,15 @@ const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
 const sidebarRef = ref<InstanceType<typeof Sidebar> | null>(null);
+
+// Get current view state from sidebar for passing to CreateTodoDialog
+const currentViewState = computed(() => {
+  return sidebarRef.value?.getCurrentView() || {
+    currentView: 'todo',
+    filterGroupId: undefined,
+    filterTagId: undefined,
+  };
+});
 
 onMounted(async () => {
   // ==================== 环境检测 ====================
@@ -118,9 +130,9 @@ onMounted(async () => {
   }
 });
 
-function handleTodoCreated() {
-  // Reset sidebar to 'all' view so the newly created todo is visible
-  sidebarRef.value?.resetToAllView();
+async function handleTodoCreated() {
+  // Refresh current view instead of resetting to 'all'
+  sidebarRef.value?.refreshCurrentView();
 }
 </script>
 

@@ -6,7 +6,7 @@
         <component :is="currentViewIcon" />
       </el-icon>
       <span class="view-name">{{ currentViewName }}</span>
-      <el-icon class="menu-icon" :size="16"><Menu /></el-icon>
+      <el-icon class="menu-icon" :size="16"><ArrowDown /></el-icon>
     </div>
 
     <!-- Right: Actions -->
@@ -30,7 +30,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { Menu, List, Grid, Plus, Tickets, Star, BellFilled, CircleCheck, Clock } from '@element-plus/icons-vue';
+import { ArrowDown, List, Grid, Plus, Tickets, Star, BellFilled, CircleCheck, Clock, Folder, PriceTag } from '@element-plus/icons-vue';
 import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
@@ -46,6 +46,16 @@ const viewMode = computed(() => uiStore.viewMode);
 
 // 当前视图图标和名称
 const currentViewIcon = computed(() => {
+  // 优先检查分组筛选
+  if (todoStore.filterGroupId) {
+    return Folder;
+  }
+
+  // 检查标签筛选
+  if (todoStore.filterTagId) {
+    return PriceTag;
+  }
+
   // 检查特殊视图
   if (todoStore.isTodoView) {
     return Tickets;
@@ -55,50 +65,20 @@ const currentViewIcon = computed(() => {
   }
 
   // 检查优先级筛选
-  if (todoStore.filterPriority !== undefined) {
-    if (todoStore.filterPriority === 2) {
-      return BellFilled;
-    }
-    if (todoStore.filterPriority === 1) {
-      return Star;
-    }
+  if (todoStore.filterPriority === 2) {
+    return BellFilled;
   }
-
-  // 检查分组筛选
-  if (todoStore.filterGroupId) {
-    return Tickets;
-  }
-
-  // 检查标签筛选
-  if (todoStore.filterTagId) {
-    return Tickets;
+  if (todoStore.filterPriority === 1) {
+    return Star;
   }
 
   // 默认视图 - 所有任务
-  return Grid;
+  return Tickets;
 });
 
 // 当前视图名称
 const currentViewName = computed(() => {
-  // 检查特殊视图
-  if (todoStore.isTodoView) {
-    return t('nav.todo');
-  }
-  if (todoStore.isOverdueView) {
-    return t('nav.overdue');
-  }
-
-  // 检查优先级筛选
-  if (todoStore.filterPriority !== undefined) {
-    if (todoStore.filterPriority === 2) {
-      return t('nav.urgent');
-    }
-    if (todoStore.filterPriority === 1) {
-      return t('nav.important');
-    }
-  }
-
-  // 检查分组筛选
+  // 优先检查分组筛选
   if (todoStore.filterGroupId) {
     const group = groupStore.groups.find(g => g.id === todoStore.filterGroupId);
     if (group) {
@@ -114,7 +94,23 @@ const currentViewName = computed(() => {
     }
   }
 
-  // 默认视图
+  // 检查特殊视图
+  if (todoStore.isTodoView) {
+    return t('nav.todo');
+  }
+  if (todoStore.isOverdueView) {
+    return t('nav.overdue');
+  }
+
+  // 检查优先级筛选
+  if (todoStore.filterPriority === 2) {
+    return t('nav.urgent');
+  }
+  if (todoStore.filterPriority === 1) {
+    return t('nav.important');
+  }
+
+  // 默认视图 - 所有任务
   return t('nav.allTodos');
 });
 
