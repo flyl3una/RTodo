@@ -1,17 +1,28 @@
 ﻿<template>
   <el-dialog
     v-model="visible"
-    :title="t('todo.createTodo')"
-    width="600px"
+    :title="isMobile() ? '' : t('todo.createTodo')"
+    :width="isMobile() ? '100%' : '550px'"
+    :class="{ 'mobile-dialog': isMobile() }"
     :close-on-click-modal="false"
     :close-on-press-escape="false"
     @close="handleClose"
   >
+    <!-- Mobile Header -->
+    <template #header="{ close, titleId, titleClass }">
+      <div v-if="isMobile()" class="mobile-header">
+        <span class="mobile-header-title">{{ t('todo.createTodo') }}</span>
+      </div>
+    </template>
+
     <el-form
       ref="formRef"
       :model="form"
       :rules="rules"
-      label-width="80px"
+      :label-width="isMobile() ? 'auto' : '80px'"
+      :label-position="isMobile() ? 'top' : undefined"
+      class="todo-form"
+      :class="{ 'mobile-form': isMobile(), 'desktop-form': !isMobile() }"
       @submit.prevent="handleSubmit"
     >
       <el-form-item :label="t('common.title')" prop="title">
@@ -74,7 +85,7 @@
       </el-form-item>
 
       <el-form-item :label="t('common.priority')">
-        <el-radio-group v-model="form.priority">
+        <el-radio-group v-model="form.priority" :class="{ 'mobile-priority': isMobile(), 'desktop-priority': !isMobile() }">
           <el-radio :label="0">{{ t('priority.normal') }}</el-radio>
           <el-radio :label="1">{{ t('priority.important') }}</el-radio>
           <el-radio :label="3">{{ t('priority.urgent') }}</el-radio>
@@ -99,10 +110,14 @@
     </el-form>
 
     <template #footer>
-      <el-button @click="handleClose">{{ t('common.cancel') }}</el-button>
-      <el-button type="primary" @click="handleSubmit" :loading="loading">
-        {{ t('common.create') }}
-      </el-button>
+      <div class="dialog-footer" :class="{ 'mobile-footer': isMobile() }">
+        <el-button @click="handleClose" :class="{ 'mobile-btn': isMobile() }">
+          {{ t('common.cancel') }}
+        </el-button>
+        <el-button type="primary" @click="handleSubmit" :loading="loading" :class="{ 'mobile-btn': isMobile() }">
+          {{ t('common.create') }}
+        </el-button>
+      </div>
     </template>
   </el-dialog>
 </template>
@@ -116,6 +131,7 @@ import { useTodoStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import type { CreateTodoRequest } from '@/types';
+import { isMobile } from '@/utils/device';
 
 const { t } = useI18n();
 
@@ -224,11 +240,189 @@ watch(visible, async (isOpen) => {
   padding-top: 20px;
 }
 
-/* Mobile responsive styles */
+.todo-form {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* Mobile dialog styles */
+.mobile-dialog :deep(.el-dialog) {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  height: 100%;
+  border-radius: 0;
+}
+
+.mobile-dialog :deep(.el-dialog__header) {
+  padding: 0;
+  margin: 0;
+}
+
+.mobile-dialog :deep(.el-dialog__body) {
+  padding: 10px 12px;
+  padding-bottom: 80px;
+  max-height: calc(100vh - 120px);
+  overflow-y: auto;
+}
+
+.mobile-dialog :deep(.el-dialog__footer) {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 12px;
+  background: var(--el-bg-color);
+  border-top: 1px solid var(--el-border-color);
+  z-index: 1000;
+}
+
+.mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  border-bottom: 1px solid var(--el-border-color);
+  background: var(--el-bg-color);
+}
+
+.mobile-header-title {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.mobile-footer {
+  display: flex;
+  gap: 12px;
+}
+
+.mobile-btn {
+  flex: 1;
+  height: 38px;
+  font-size: 14px;
+}
+
+/* Desktop form styles */
+.desktop-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+
+.desktop-form :deep(.el-form-item__label) {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.desktop-form :deep(.el-input__wrapper),
+.desktop-form :deep(.el-textarea__inner) {
+  font-size: 14px;
+}
+
+.desktop-form :deep(.el-textarea__inner) {
+  padding: 8px 12px;
+}
+
+.desktop-form :deep(.el-select) {
+  width: 100%;
+}
+
+.desktop-form :deep(.el-date-editor) {
+  width: 100%;
+}
+
+/* Desktop priority buttons */
+.desktop-priority {
+  display: flex;
+  gap: 12px;
+}
+
+.desktop-priority :deep(.el-radio) {
+  margin-right: 0;
+}
+
+.mobile-form {
+  /* padding: 0 8px; */
+}
+
+/* Mobile form styles */
+.mobile-form :deep(.el-form-item) {
+  margin-bottom: 14px;
+}
+
+.mobile-form :deep(.el-form-item__label) {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.mobile-form :deep(.el-input__wrapper),
+.mobile-form :deep(.el-textarea__inner) {
+  font-size: 14px;
+  min-height: 32px;
+}
+
+.mobile-form :deep(.el-textarea__inner) {
+  min-height: 60px;
+  padding: 6px 8px;
+}
+
+.mobile-form :deep(.el-select) {
+  width: 100%;
+}
+
+.mobile-form :deep(.el-select .el-input__wrapper) {
+  min-height: 32px;
+}
+
+.mobile-form :deep(.el-date-editor) {
+  width: 100%;
+}
+
+.mobile-form :deep(.el-date-editor .el-input__wrapper) {
+  min-height: 32px;
+}
+
+/* Mobile priority buttons */
+.mobile-priority {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.mobile-priority :deep(.el-radio) {
+  margin-right: 0;
+  flex: 1;
+  height: 36px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* border: 1px solid var(--el-border-color); */
+  border-radius: 6px;
+  /* transition: all 0.2s; */
+}
+
+.mobile-priority :deep(.el-radio.is-checked) {
+  border-color: var(--el-color-primary);
+  /* background: var(--el-color-primary-light-9); */
+}
+
+.mobile-priority :deep(.el-radio__label) {
+  font-size: 13px;
+}
+
+/* Mobile responsive styles for non-mobile dialogs */
 @media (max-width: 768px) {
-  :deep(.el-dialog) {
-    width: 85% !important;
-    max-width: 360px !important;
+  :deep(.el-dialog:not(.mobile-dialog .el-dialog)) {
+    width: 90% !important;
+    max-width: 400px !important;
     margin: 5vh auto !important;
   }
 
@@ -244,11 +438,6 @@ watch(visible, async (isOpen) => {
     padding: 16px;
   }
 
-  :deep(.el-form-item__label) {
-    font-size: 14px;
-    margin-bottom: 8px;
-  }
-
   :deep(.el-dialog__footer) {
     padding: 12px 16px;
   }
@@ -257,11 +446,6 @@ watch(visible, async (isOpen) => {
     flex: 1;
     margin: 0 4px;
     padding: 12px;
-  }
-
-  :deep(.el-input__inner),
-  :deep(.el-textarea__inner) {
-    font-size: 16px; /* Prevent zoom on iOS */
   }
 }
 </style>

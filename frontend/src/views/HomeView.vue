@@ -218,8 +218,9 @@
     <el-drawer
       v-model="detailVisible"
       :title="editMode ? t('todo.editTodo') : t('todo.todoDetail')"
-      size="40%"
+      :size="isMobile() ? '100%' : '40%'"
       direction="rtl"
+      :class="{ 'mobile-drawer': isMobile() }"
       @close="handleDrawerClose"
     >
       <TodoDetailPanel
@@ -245,6 +246,7 @@ import type { Todo, TodoStep } from '@/types';
 import { TodoStatus, getPriorityLabel, getPriorityType, isTodoOverdue } from '@/types';
 import TodoDetailPanel from '../components/todo/TodoDetailPanel.vue';
 import * as api from '@/api/tauri';
+import { isMobile } from '@/utils/device';
 
 const { t } = useI18n();
 
@@ -789,5 +791,25 @@ function formatSimpleDate(timestamp?: number): string {
 
 [data-density='compact'] .card-steps {
   padding: 10px 0 10px 20px;
+}
+
+/* Mobile drawer styles */
+.mobile-drawer :deep(.el-drawer) {
+  width: 100% !important;
+}
+
+.mobile-drawer :deep(.el-drawer__header) {
+  padding: 16px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--el-border-color);
+}
+
+.mobile-drawer :deep(.el-drawer__body) {
+  padding: 0;
+}
+
+.mobile-drawer :deep(.el-drawer__title) {
+  font-size: 18px;
+  font-weight: 500;
 }
 </style>
