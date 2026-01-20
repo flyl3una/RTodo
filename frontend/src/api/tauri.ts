@@ -309,6 +309,13 @@ export async function getDataPath(): Promise<string> {
 }
 
 /**
+ * 检查目录是否为空
+ */
+export async function checkDirectoryEmpty(path: string): Promise<boolean> {
+  return safeInvoke<boolean>('check_directory_empty', { path });
+}
+
+/**
  * 设置数据路径
  */
 export async function setDataPath(newPath: string): Promise<void> {
@@ -325,8 +332,14 @@ export async function resetDataPath(): Promise<void> {
 /**
  * 迁移数据到新路径
  */
-export async function migrateData(newPath: string): Promise<void> {
-  return safeInvoke<void>('migrate_data', { new_path: newPath });
+export async function migrateData(newPath: string, keepOriginal: boolean): Promise<void> {
+  console.log('[API] migrateData called with:', { newPath, keepOriginal });
+  const result = await safeInvoke<void>('migrate_data', {
+    newPath,
+    keepOriginal
+  });
+  console.log('[API] migrateData result:', result);
+  return result;
 }
 
 // ==================== Stats API ====================

@@ -5,7 +5,8 @@
 //! 处理 CSV 和 ZIP 文件的读写操作
 
 use crate::models::{TaskGroup, Tag, Todo};
-use std::io::{Cursor, Read, Write};
+use std::io::{Cursor, Read, Seek, Write};
+use std::path::Path;
 use anyhow::{Result, Context};
 use serde::Deserialize;
 
@@ -432,4 +433,188 @@ pub fn extract_csv_from_zip(zip_data: Vec<u8>) -> Result<ZipCsvData, String> {
         todos_csv,
         todo_tags_csv,
     })
+}
+
+/// 递归将目录添加到 ZIP 文件中
+fn add_dir_to_zip<W>(
+    zip_writer: &mut zip::ZipWriter<W>,
+    dir_path: &Path,
+    zip_prefix: &str,
+    options: zip::write::FileOptions<()>,
+) -> Result<(), String>
+where
+    W: Write + Seek,
+{
+    for entry in std::fs::read_dir(dir_path)
+        .map_err(|e| format!("Failed to read directory {}: {}", dir_path.display(), e))?
+    {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let path = entry.path();
+        let file_type = entry.file_type().map_err(|e| format!("Failed to get file type: {}", e))?;
+
+        let relative_path = path
+            .strip_prefix(dir_path)
+            .map_err(|e| format!("Failed to strip prefix: {}", e))?;
+
+        let zip_name = format!("{}/{}", zip_prefix, relative_path.display());
+
+        if file_type.is_dir() {
+            // 对于目录，我们需要以 / 结尾，这样解压时才能正确识别为目录
+            let dir_name = format!("{}/", zip_name);
+            zip_writer
+                .start_file(&dir_name, options)
+                .map_err(|e| format!("Failed to create directory {} in ZIP: {}", dir_name, e))?;
+
+            // 递归处理子目录
+            add_dir_to_zip(zip_writer, &path, zip_prefix, options)?;
+        } else {
+            // 对于文件，直接添加到 ZIP
+            zip_writer
+                .start_file(&zip_name, options)
+                .map_err(|e| format!("Failed to create file {} in ZIP: {}", zip_name, e))?;
+
+            let file_content = std::fs::read(&path)
+                .map_err(|e| format!("Failed to read file {}: {}", path.display(), e))?;
+
+            zip_writer
+                .write_all(&file_content)
+                .map_err(|e| format!("Failed to write file {} to ZIP: {}", zip_name, e))?;
+        }
+    }
+
+    Ok(())
+}
+
+/// 从 ZIP 文件中提取指定目录到目标位置
+fn extract_dir_from_zip(
+    zip_archive: &mut zip::ZipArchive<Cursor<Vec<u8>>>,
+    zip_dir_prefix: &str,
+    target_dir: &Path,
+) -> Result<(), String> {
+    // 确保目标目录存在
+    std::fs::create_dir_all(target_dir)
+        .map_err(|e| format!("Failed to create target directory {}: {}", target_dir.display(), e))?;
+
+    // 遍历 ZIP 中的所有文件
+    for i in 0..zip_archive.len() {
+        let mut zip_file = zip_archive
+            .by_index(i)
+            .map_err(|e| format!("Failed to get file at index {}: {}", i, e))?;
+
+        let name = zip_file.name();
+
+        // 检查文件是否在指定的目录前缀下
+        if name.starts_with(&format!("{}/", zip_dir_prefix)) {
+            // 计算相对路径
+            let relative_path = name
+                .strip_prefix(&format!("{}/", zip_dir_prefix))
+                .unwrap_or(name);
+
+            let target_path = target_dir.join(relative_path);
+
+            // 如果是目录（以 / 结尾），创建目录
+            if name.ends_with('/') {
+                std::fs::create_dir_all(&target_path)
+                    .map_err(|e| format!("Failed to create directory {}: {}", target_path.display(), e))?;
+            } else {
+                // 确保父目录存在
+                if let Some(parent) = target_path.parent() {
+                    std::fs::create_dir_all(parent)
+                        .map_err(|e| format!("Failed to create parent directory {}: {}", parent.display(), e))?;
+                }
+
+                // 解压文件
+                let mut file =
+                    std::fs::File::create(&target_path).map_err(|e| {
+                        format!("Failed to create file {}: {}", target_path.display(), e)
+                    })?;
+
+                std::io::copy(&mut zip_file, &mut file)
+                    .map_err(|e| format!("Failed to write file {}: {}", target_path.display(), e))?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// 创建包含多个 CSV 文件和附件的 ZIP 压缩包
+/// attachments_path 是附件目录的路径，如果为 None 则不包含附件
+pub fn create_zip_archive_with_attachments(
+    groups_csv: Vec<u8>,
+    tags_csv: Vec<u8>,
+    todos_csv: Vec<u8>,
+    todo_tags_csv: Vec<u8>,
+    attachments_path: Option<&Path>,
+) -> Result<Vec<u8>, String> {
+    let zip_buffer = Cursor::new(Vec::new());
+    let mut zip_writer = zip::ZipWriter::new(zip_buffer);
+    let file_options: zip::write::FileOptions<()> =
+        zip::write::FileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+    // 添加任务组 CSV
+    zip_writer
+        .start_file("task_groups.csv", file_options)
+        .map_err(|e| format!("Failed to create task_groups.csv: {}", e))?;
+    zip_writer
+        .write_all(&groups_csv)
+        .map_err(|e| format!("Failed to write task_groups.csv: {}", e))?;
+
+    // 添加标签 CSV
+    zip_writer
+        .start_file("tags.csv", file_options)
+        .map_err(|e| format!("Failed to create tags.csv: {}", e))?;
+    zip_writer
+        .write_all(&tags_csv)
+        .map_err(|e| format!("Failed to write tags.csv: {}", e))?;
+
+    // 添加任务 CSV
+    zip_writer
+        .start_file("todos.csv", file_options)
+        .map_err(|e| format!("Failed to create todos.csv: {}", e))?;
+    zip_writer
+        .write_all(&todos_csv)
+        .map_err(|e| format!("Failed to write todos.csv: {}", e))?;
+
+    // 添加任务-标签关联 CSV
+    zip_writer
+        .start_file("todo_tags.csv", file_options)
+        .map_err(|e| format!("Failed to create todo_tags.csv: {}", e))?;
+    zip_writer
+        .write_all(&todo_tags_csv)
+        .map_err(|e| format!("Failed to write todo_tags.csv: {}", e))?;
+
+    // 如果提供了附件目录，添加附件文件
+    if let Some(attachments_dir) = attachments_path {
+        if attachments_dir.exists() {
+            tracing::info!("Adding attachments from: {}", attachments_dir.display());
+            add_dir_to_zip(&mut zip_writer, attachments_dir, "attachments", file_options)?;
+        } else {
+            tracing::info!("Attachments directory does not exist, skipping: {}", attachments_dir.display());
+        }
+    }
+
+    // 完成 ZIP 文件
+    let result = zip_writer
+        .finish()
+        .map_err(|e| format!("Failed to finish ZIP: {}", e))?;
+
+    Ok(result.into_inner())
+}
+
+/// 从 ZIP 压缩包中提取附件到指定目录
+pub fn extract_attachments_from_zip(
+    zip_data: Vec<u8>,
+    target_attachments_dir: &Path,
+) -> Result<(), String> {
+    let reader = Cursor::new(zip_data);
+    let mut zip_archive =
+        zip::ZipArchive::new(reader).map_err(|e| format!("Failed to open zip: {}", e))?;
+
+    extract_dir_from_zip(&mut zip_archive, "attachments", target_attachments_dir)?;
+
+    tracing::info!("Attachments extracted to: {}", target_attachments_dir.display());
+
+    Ok(())
 }

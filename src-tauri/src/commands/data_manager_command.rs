@@ -11,9 +11,11 @@ use crate::utils::data_export::{
     export_tags_to_csv,
     export_todos_to_csv,
     export_todo_tags_to_csv,
-    create_zip_archive,
+    create_zip_archive_with_attachments,
     extract_csv_from_zip,
+    extract_attachments_from_zip,
 };
+use std::path::PathBuf;
 
 /// 导出所有数据为 JSON 格式
 #[tauri::command]
@@ -46,7 +48,7 @@ pub async fn import_data(
         .map_err(|e| format!("Failed to import data: {}", e))
 }
 
-/// 导出所有数据为 CSV 格式并保存到指定文件
+/// 导出所有数据为 CSV 格式并保存到指定文件（包含附件）
 #[tauri::command]
 pub async fn export_data_as_csv(
     file_path: String,
@@ -72,9 +74,26 @@ pub async fn export_data_as_csv(
     let todo_tags_csv = export_todo_tags_to_csv(&export_data.todos)
         .map_err(|e| format!("Failed to export todo tags to CSV: {}", e))?;
 
-    // 创建 ZIP 压缩包
-    let zip_data = create_zip_archive(groups_csv, tags_csv, todos_csv, todo_tags_csv)
-        .map_err(|e| format!("Failed to create ZIP: {}", e))?;
+    // 获取附件目录路径
+    let attachments_dir = crate::database::DbConnection::get_attachments_dir()
+        .unwrap_or_else(|_| PathBuf::from("attachments"));
+
+    let attachments_path = if attachments_dir.exists() {
+        Some(attachments_dir.as_path())
+    } else {
+        tracing::info!("Attachments directory does not exist: {}", attachments_dir.display());
+        None
+    };
+
+    // 创建包含附件的 ZIP 压缩包
+    let zip_data = create_zip_archive_with_attachments(
+        groups_csv,
+        tags_csv,
+        todos_csv,
+        todo_tags_csv,
+        attachments_path,
+    )
+    .map_err(|e| format!("Failed to create ZIP: {}", e))?;
 
     // 直接写入文件
     std::fs::write(&file_path, &zip_data)
@@ -85,7 +104,7 @@ pub async fn export_data_as_csv(
     Ok(())
 }
 
-/// 从 CSV 压缩包导入数据（通过文件路径）
+/// 从 CSV 压缩包导入数据（通过文件路径，包含附件）
 #[tauri::command]
 pub async fn import_data_from_csv(
     file_path: String,
@@ -99,8 +118,8 @@ pub async fn import_data_from_csv(
 
     tracing::info!("File read successfully: {} bytes", file_data.len());
 
-    // 解析 ZIP 文件
-    let csv_data = extract_csv_from_zip(file_data)
+    // 解析 ZIP 文件中的 CSV 数据
+    let csv_data = extract_csv_from_zip(file_data.clone())
         .map_err(|e| format!("Failed to extract CSV: {}", e))?;
 
     let conn = db.get_connection().await;
@@ -112,6 +131,22 @@ pub async fn import_data_from_csv(
         .map_err(|e| format!("Failed to import CSV data: {}", e))?;
 
     tracing::info!("CSV data imported successfully");
+
+    // 导入附件文件
+    let attachments_dir = crate::database::DbConnection::get_attachments_dir()
+        .map_err(|e| format!("Failed to get attachments directory: {}", e))?;
+
+    tracing::info!("Extracting attachments to: {}", attachments_dir.display());
+
+    match extract_attachments_from_zip(file_data, &attachments_dir) {
+        Ok(_) => {
+            tracing::info!("Attachments imported successfully");
+        }
+        Err(e) => {
+            // 附件导入失败不应阻止整体导入，记录警告即可
+            tracing::warn!("Failed to import attachments (non-critical): {}", e);
+        }
+    }
 
     Ok(())
 }

@@ -89,12 +89,16 @@
         <h2 class="section-title">{{ t('settings.dataManagement') }}</h2>
         <div class="setting-item">
           <span class="setting-label">{{ t('settings.dataPath') }}</span>
-          <el-input :value="currentDataPath" readonly style="width: 400px">
-            <template #append>
-              <el-button @click="handleChangeDataPath">{{ t('common.change') }}</el-button>
-              <el-button @click="handleResetDataPath" type="warning">{{ t('common.reset') }}</el-button>
-            </template>
-          </el-input>
+          <div class="data-path-input-group">
+            <el-input :value="currentDataPath" readonly style="flex: 1">
+              <template #append>
+                <el-button @click="handleChangeDataPath">{{ t('messages.browse') }}</el-button>
+              </template>
+            </el-input>
+            <el-button @click="handleResetDataPath" type="warning" style="margin-left: 8px">
+              {{ t('common.reset') }}
+            </el-button>
+          </div>
         </div>
         <div class="setting-item">
           <span class="setting-label">{{ t('settings.exportData') }}</span>
@@ -146,7 +150,7 @@
         <el-form-item :label="t('settings.newPath')">
           <el-input v-model="dataPathForm.newPath" readonly>
             <template #append>
-              <el-button @click="selectDataPathFolder">{{ t('common.browse') }}</el-button>
+              <el-button @click="selectDataPathFolder">{{ t('messages.browse') }}</el-button>
             </template>
           </el-input>
         </el-form-item>
@@ -154,6 +158,12 @@
           <el-checkbox v-model="dataPathForm.migrateData">
             {{ t('settings.migrateDataConfirm') }}
           </el-checkbox>
+        </el-form-item>
+        <el-form-item v-if="dataPathForm.migrateData">
+          <el-radio-group v-model="dataPathForm.keepOriginal">
+            <el-radio :label="false">迁移后删除原始数据</el-radio>
+            <el-radio :label="true">保留原始数据</el-radio>
+          </el-radio-group>
         </el-form-item>
       </el-form>
 
@@ -167,6 +177,40 @@
         <el-button @click="showDataPathDialog = false">{{ t('common.cancel') }}</el-button>
         <el-button type="primary" @click="confirmDataPathChange" :loading="migrating" :disabled="!dataPathForm.newPath">
           {{ t('common.confirm') }}
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <!-- Migration Progress Dialog (Full Screen Modal) -->
+    <el-dialog
+      v-model="showMigrateDialog"
+      :title="t('settings.migratingData')"
+      :close-on-click-modal="false"
+      :close-on-press-escape="false"
+      :show-close="false"
+      width="500px"
+      center
+    >
+      <div class="migrate-dialog-content">
+        <div class="migrate-icon">
+          <el-icon :size="60" :class="{ 'is-rotating': migrating }">
+            <Refresh />
+          </el-icon>
+        </div>
+        <div class="migrate-info">
+          <h3 class="migrate-title">{{ migrateMessage }}</h3>
+          <el-progress
+            :percentage="migrateProgress"
+            :status="migrateStatus"
+            :stroke-width="12"
+            :duration="{ duration: 0.3, easing: 'linear' }"
+          />
+        </div>
+      </div>
+
+      <template #footer v-if="migrateStatus === 'success' || migrateStatus === 'exception'">
+        <el-button type="primary" @click="closeMigrateDialog">
+          {{ migrateStatus === 'success' ? t('common.confirm') : t('common.close') }}
         </el-button>
       </template>
     </el-dialog>
@@ -203,9 +247,11 @@ const autoLaunchLoading = ref(false);
 // Data path management
 const currentDataPath = ref('');
 const showDataPathDialog = ref(false);
+const showMigrateDialog = ref(false);
 const dataPathForm = ref({
   newPath: '',
   migrateData: true,
+  keepOriginal: false,
 });
 const migrating = ref(false);
 const migrateProgress = ref(0);
@@ -263,18 +309,18 @@ async function handleAutoLaunchChange(enabled: boolean) {
 async function handleGlobalShortcutChange() {
   try {
     await uiStore.setGlobalShortcut(currentGlobalShortcut.value);
-    ElMessage.success(t('messages.globalShortcutSet'));
+    // Reset to original value on failure
   } catch (error) {
     console.error('Failed to set global shortcut:', error);
     ElMessage.error(t('messages.globalShortcutFailed'));
-    // 鎭㈠鍘熷€?
+    // Restore original value if setting failed
     currentGlobalShortcut.value = uiStore.globalShortcut;
   }
 }
 
 async function handleExport() {
   try {
-    // 鍏堟墦寮€鏂囦欢淇濆瓨瀵硅瘽妗嗚幏鍙栫敤鎴烽€夋嫨鐨勮矾寰?
+    // Use Tauri save API to let user choose the save path
     const filePath = await save({
       defaultPath: `rtodo-backup-${new Date().toISOString().split('T')[0]}.zip`,
       filters: [{
@@ -290,7 +336,7 @@ async function handleExport() {
 
     exportLoading.value = true;
 
-    // 灏嗘枃浠惰矾寰勪紶閫掔粰鍚庣锛屽悗绔洿鎺ュ啓鍏ユ枃浠?
+    // Send the file path to backend for CSV export
     await api.exportDataAsCsv(filePath);
     ElMessage.success(t('messages.dataExported'));
   } catch (error) {
@@ -313,9 +359,10 @@ async function handleImport() {
       }
     );
 
-    // 浣跨敤 Tauri 鐨?open API 閫夋嫨鏂囦欢
+    // Use Tauri open API to select file
     const selectedPath = await open({
       multiple: false,
+      title: t('messages.importSelectFile'),
       filters: [{
         name: t('fileTypes.zipArchive'),
         extensions: ['zip']
@@ -329,7 +376,7 @@ async function handleImport() {
 
     exportLoading.value = true;
 
-    // 灏嗘枃浠惰矾寰勪紶缁欏悗绔紝鍚庣璐熻矗璇诲彇鍜岃В鏋?
+    // After sending file path to backend, parse and load data
     await api.importDataFromCsv(selectedPath);
     ElMessage.success(t('messages.importSuccess'));
     setTimeout(() => window.location.reload(), 1500);
@@ -366,6 +413,7 @@ async function handleClear() {
 async function handleChangeDataPath() {
   dataPathForm.value.newPath = '';
   dataPathForm.value.migrateData = true;
+  dataPathForm.value.keepOriginal = false;
   showDataPathDialog.value = true;
 }
 
@@ -374,6 +422,7 @@ async function selectDataPathFolder() {
     const selectedPath = await open({
       multiple: false,
       directory: true,
+      title: t('messages.browse'),
     });
 
     if (selectedPath && typeof selectedPath === 'string') {
@@ -388,9 +437,13 @@ async function selectDataPathFolder() {
 async function confirmDataPathChange() {
   if (!dataPathForm.value.newPath) return;
 
+  console.log('[SettingsView] confirmDataPathChange called, newPath:', dataPathForm.value.newPath);
+  console.log('[SettingsView] migrateData:', dataPathForm.value.migrateData, 'keepOriginal:', dataPathForm.value.keepOriginal);
+
   try {
     // Warn about migration if selected
     if (dataPathForm.value.migrateData) {
+      console.log('[SettingsView] Showing migrateDataWarning dialog');
       await ElMessageBox.confirm(
         t('messages.migrateDataWarning'),
         t('settings.changeDataPath'),
@@ -400,6 +453,29 @@ async function confirmDataPathChange() {
           cancelButtonText: t('common.cancel'),
         }
       );
+      console.log('[SettingsView] User confirmed migrateDataWarning');
+    }
+
+    // Check if target directory is empty
+    console.log('[SettingsView] Calling checkDirectoryEmpty for path:', dataPathForm.value.newPath);
+    const isTargetEmpty = await api.checkDirectoryEmpty(dataPathForm.value.newPath);
+    console.log('[SettingsView] checkDirectoryEmpty returned:', isTargetEmpty, 'type:', typeof isTargetEmpty);
+
+    // If target directory is not empty, ask for confirmation
+    if (!isTargetEmpty) {
+      console.log('[SettingsView] Directory is NOT empty, showing confirmation dialog');
+      await ElMessageBox.confirm(
+        t('messages.targetDirectoryNotEmptyWarning'),
+        t('settings.changeDataPath'),
+        {
+          type: 'warning',
+          confirmButtonText: t('common.confirm'),
+          cancelButtonText: t('common.cancel'),
+        }
+      );
+      console.log('[SettingsView] User confirmed to continue with non-empty directory');
+    } else {
+      console.log('[SettingsView] Directory is empty, proceeding without confirmation');
     }
 
     migrating.value = true;
@@ -407,39 +483,58 @@ async function confirmDataPathChange() {
     migrateStatus.value = '';
     migrateMessage.value = t('messages.migrationStarting');
 
+    // Close data path dialog and show migrate dialog
+    showDataPathDialog.value = false;
+    showMigrateDialog.value = true;
+
     if (dataPathForm.value.migrateData) {
       // Perform migration
-      await api.migrateData(dataPathForm.value.newPath);
+      await api.migrateData(dataPathForm.value.newPath, dataPathForm.value.keepOriginal);
+
+      // 迁移完成后立即刷新路径显示
+      console.log('[SettingsView] Migration completed, reloading path');
+      await loadDataPath();
     } else {
       // Just set the new path
       await api.setDataPath(dataPathForm.value.newPath);
+      // For simple path change without migration, complete immediately
+      migrateProgress.value = 100;
+      migrateStatus.value = 'success';
+      migrateMessage.value = t('messages.dataPathChanged');
+
+      // 立即刷新路径显示
+      await loadDataPath();
     }
 
-    // Ask about restart
-    try {
-      await ElMessageBox.confirm(
-        t('messages.restartRequired'),
-        t('settings.changeDataPath'),
-        {
-          type: 'info',
-          confirmButtonText: t('messages.restartNow'),
-          cancelButtonText: t('messages.restartLater'),
-        }
-      );
-      // Restart the app
-      window.location.reload();
-    } catch {
-      // User chose to restart later
+    // Ask about restart (only show if migration is complete)
+    if (migrateStatus.value === 'success') {
+      try {
+        await ElMessageBox.confirm(
+          t('messages.restartRequired'),
+          t('settings.changeDataPath'),
+          {
+            type: 'info',
+            confirmButtonText: t('messages.restartNow'),
+            cancelButtonText: t('messages.restartLater'),
+          }
+        );
+        // Restart the app
+        window.location.reload();
+      } catch {
+        // User chose to restart later
+      }
     }
 
-    ElMessage.success(t('messages.dataMigrated'));
     showDataPathDialog.value = false;
     await loadDataPath();
   } catch (error) {
-    console.error('Failed to change data path:', error);
+    console.error('[SettingsView] Failed to change data path:', error);
+    console.error('[SettingsView] Error type:', typeof error);
+    console.error('[SettingsView] Error message:', String(error));
     ElMessage.error(`${t('messages.operationFailed')}: ${error}`);
     migrateStatus.value = 'exception';
     migrateMessage.value = t('messages.migrationFailed');
+    showMigrateDialog.value = true; // Keep dialog open to show error
   } finally {
     migrating.value = false;
   }
@@ -493,6 +588,14 @@ async function loadDataPath() {
   }
 }
 
+function closeMigrateDialog() {
+  showMigrateDialog.value = false;
+  migrating.value = false;
+  migrateProgress.value = 0;
+  migrateStatus.value = '';
+  migrateMessage.value = '';
+}
+
 onMounted(async () => {
   currentTheme.value = uiStore.theme;
   currentLanguage.value = uiStore.language;
@@ -542,12 +645,17 @@ onMounted(async () => {
       case 'finalizing':
         migrateProgress.value = 95;
         break;
+      case 'cleaning':
+        migrateProgress.value = 98;
+        break;
       case 'completed':
         migrateProgress.value = 100;
         migrateStatus.value = 'success';
+        migrating.value = false; // Stop rotation animation
         break;
       case 'error':
         migrateStatus.value = 'exception';
+        migrating.value = false; // Stop rotation animation
         break;
     }
   });
@@ -612,6 +720,18 @@ onMounted(async () => {
 .setting-label {
   font-size: 14px;
   color: var(--el-text-color-regular);
+}
+
+.data-path-input-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  max-width: 550px;
+}
+
+.data-path-input-group .el-input {
+  flex: 1;
 }
 
 .about-content {
@@ -797,6 +917,76 @@ onMounted(async () => {
   font-size: 14px;
   color: var(--el-text-color-regular);
   text-align: center;
+}
+
+/* Migration Dialog Styles */
+.migrate-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  gap: 24px;
+}
+
+.migrate-icon {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: var(--el-fill-color-light);
+}
+
+.migrate-icon .el-icon {
+  color: var(--el-color-primary);
+  transition: transform 0.3s ease;
+}
+
+.migrate-icon .is-rotating {
+  animation: rotate 2s linear infinite;
+}
+
+@keyframes rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.migrate-info {
+  width: 100%;
+  text-align: center;
+}
+
+.migrate-title {
+  margin: 0 0 16px;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--el-text-color-primary);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+  .migrate-dialog-content {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .migrate-icon {
+    width: 60px;
+    height: 60px;
+  }
+
+  .migrate-icon .el-icon {
+    font-size: 48px;
+  }
+
+  .migrate-title {
+    font-size: 14px;
+  }
 }
 </style>
 

@@ -295,6 +295,7 @@ async fn main() {
             commands::attachment_commands::open_attachment,
             commands::attachment_commands::download_attachment,
             commands::data_path_commands::get_data_path,
+            commands::data_path_commands::check_directory_empty,
             commands::data_path_commands::set_data_path,
             commands::data_path_commands::reset_data_path,
             commands::data_path_commands::migrate_data,
