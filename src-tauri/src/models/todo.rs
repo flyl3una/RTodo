@@ -42,8 +42,8 @@ pub struct Todo {
 }
 
 /// 创建任务请求
-#[derive(Debug, Deserialize)]
-#[allow(dead_code)]
+#[derive(Debug, Default, Deserialize)]
+#[serde(default)]
 pub struct CreateTodoRequest {
     pub title: String,
     pub description: Option<String>,

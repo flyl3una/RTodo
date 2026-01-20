@@ -487,12 +487,20 @@ watch(visible, async (isOpen) => {
       await groupStore.fetchGroups();
       await tagStore.fetchTags();
 
-      // 根据当前视图设置默认值
+      // 根据当前视图设置默认值（需要将 string 转换为 number）
       if (props.currentView === 'group' && props.filterGroupId) {
-        form.value.group_id = props.filterGroupId;
+        const groupId = parseInt(props.filterGroupId, 10);
+        if (!isNaN(groupId)) {
+          form.value.group_id = groupId;
+          console.log('[CreateTodoDialog] Set default group_id:', groupId);
+        }
       }
       if (props.currentView === 'tag' && props.filterTagId) {
-        form.value.tag_ids = [props.filterTagId];
+        const tagId = parseInt(props.filterTagId, 10);
+        if (!isNaN(tagId)) {
+          form.value.tag_ids = [tagId];
+          console.log('[CreateTodoDialog] Set default tag_ids:', [tagId]);
+        }
       }
     } catch (error) {
       console.error('Failed to load groups/tags:', error);

@@ -168,7 +168,7 @@ impl TodoRepository {
 
     /// 根据 ID 获取单个任务
     pub fn get(conn: &Connection, id: i64) -> Result<Option<Todo>> {
-        tracing::debug!("TodoRepository::get called with id={}", id);
+        tracing::debug!("[TodoRepository::get] called with id={}", id);
 
         let mut stmt = conn.prepare(
             "SELECT * FROM todos WHERE id = ?"
@@ -181,14 +181,17 @@ impl TodoRepository {
                 0 => TodoStatus::Todo,
                 1 => TodoStatus::InProgress,
                 2 => TodoStatus::Done,
-                _ => TodoStatus::Todo, // 默认为待办
+                _ => TodoStatus::Todo,
             };
 
             // 直接从数据库读取并记录日志
+            let group_id: Option<i64> = row.get("group_id")?;
             let start_date: Option<i64> = row.get("start_date")?;
             let due_date: Option<i64> = row.get("due_date")?;
 
-            tracing::info!("Database row - start_date: {:?}, due_date: {:?}", start_date, due_date);
+            tracing::info!("[TodoRepository::get] Database row for id={}:", id);
+            tracing::info!("  group_id from db: {:?}", group_id);
+            tracing::info!("  start_date: {:?}, due_date: {:?}", start_date, due_date);
 
             Ok(Todo {
                 id: row.get("id")?,
@@ -196,7 +199,7 @@ impl TodoRepository {
                 description: row.get("description")?,
                 status,
                 priority: row.get("priority")?,
-                group_id: row.get("group_id")?,
+                group_id,
                 assignee: row.get("assignee")?,
                 start_date,
                 due_date,
@@ -213,14 +216,14 @@ impl TodoRepository {
         .context("Failed to execute get_todo query")?;
 
         if let Some(mut todo) = todo_opt {
-            tracing::info!("Todo found before loading relations - start_date: {:?}, due_date: {:?}",
-                todo.start_date, todo.due_date);
+            tracing::info!("[TodoRepository::get] Todo found before loading relations - start_date: {:?}, due_date: {:?}, group_id: {:?}",
+                todo.start_date, todo.due_date, todo.group_id);
             Self::load_relations(conn, &mut todo)?;
-            tracing::info!("Todo after loading relations - start_date: {:?}, due_date: {:?}",
-                todo.start_date, todo.due_date);
+            tracing::info!("[TodoRepository::get] Todo after loading relations - start_date: {:?}, due_date: {:?}, group_id: {:?}, tags: {}",
+                todo.start_date, todo.due_date, todo.group_id, todo.tags.as_ref().map(|t| t.len()).unwrap_or(0));
             Ok(Some(todo))
         } else {
-            tracing::warn!("Todo not found with id: {}", id);
+            tracing::warn!("[TodoRepository::get] Todo not found with id: {}", id);
             Ok(None)
         }
     }
@@ -236,6 +239,11 @@ impl TodoRepository {
         priority: i32,
         tag_ids: Option<Vec<i64>>,
     ) -> Result<Todo> {
+        tracing::info!("[TodoRepository::create] Creating todo:");
+        tracing::info!("  title: {}", title);
+        tracing::info!("  group_id: {:?} (being inserted)", group_id);
+        tracing::info!("  tag_ids: {:?}", tag_ids);
+
         let now = Utc::now().timestamp_millis();
         let status = TodoStatus::Todo;
 
@@ -261,9 +269,11 @@ impl TodoRepository {
 
         // 获取新插入的ID
         let id: i64 = conn.last_insert_rowid();
+        tracing::info!("[TodoRepository::create] Inserted todo with id: {}", id);
 
         // 插入标签关联
         if let Some(tags) = tag_ids {
+            tracing::info!("[TodoRepository::create] Inserting {} tag associations", tags.len());
             for tag_id in tags {
                 conn.execute(
                     "INSERT INTO todo_tags (todo_id, tag_id) VALUES (?1, ?2)",
@@ -274,7 +284,10 @@ impl TodoRepository {
         }
 
         // 返回完整的 todo 对象
-        Self::get(conn, id)?.context("Created todo not found")
+        tracing::info!("[TodoRepository::create] Fetching created todo from db...");
+        let result = Self::get(conn, id)?.context("Created todo not found")?;
+        tracing::info!("[TodoRepository::create] Returning created todo with group_id: {:?}", result.group_id);
+        Ok(result)
     }
 
     /// 更新任务

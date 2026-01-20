@@ -3,7 +3,7 @@
 
 use crate::database::Database;
 use crate::database::repositories::TodoRepository;
-use crate::models::{Todo, UpdateTodoRequest};
+use crate::models::{Todo, CreateTodoRequest, UpdateTodoRequest};
 use crate::models::todo::GetTodosRequest;
 
 /// 获取任务列表
@@ -66,17 +66,17 @@ pub async fn get_todo(
 /// 创建任务
 #[tauri::command]
 pub async fn create_todo(
-    title: String,
-    description: Option<String>,
-    group_id: Option<i64>,
-    start_date: Option<i64>,
-    due_date: Option<i64>,
-    priority: Option<i32>,
-    tag_ids: Option<Vec<i64>>,
+    payload: CreateTodoRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<Todo, String> {
-    tracing::info!("create_todo called: title={}, start_date={:?}, due_date={:?}, group_id={:?}, tag_ids={:?}",
-        title, start_date, due_date, group_id, tag_ids);
+    tracing::info!("create_todo called:");
+    tracing::info!("  title: {}", payload.title);
+    tracing::info!("  description: {:?}", payload.description);
+    tracing::info!("  group_id: {:?} (raw value)", payload.group_id);
+    tracing::info!("  start_date: {:?}", payload.start_date);
+    tracing::info!("  due_date: {:?}", payload.due_date);
+    tracing::info!("  priority: {:?}", payload.priority);
+    tracing::info!("  tag_ids: {:?}", payload.tag_ids);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
@@ -84,19 +84,23 @@ pub async fn create_todo(
 
     let result = TodoRepository::create(
         inner,
-        &title,
-        description.as_deref(),
-        group_id,
-        start_date,
-        due_date,
-        priority.unwrap_or(0),
-        tag_ids,
+        &payload.title,
+        payload.description.as_deref(),
+        payload.group_id,
+        payload.start_date,
+        payload.due_date,
+        payload.priority.unwrap_or(0),
+        payload.tag_ids,
     ).map_err(|e| {
         tracing::error!("create_todo failed: {}", e);
         format!("Failed to create todo: {}", e)
     })?;
 
-    tracing::info!("create_todo succeeded: id={}, title={}", result.id, result.title);
+    tracing::info!("create_todo succeeded:");
+    tracing::info!("  id: {}", result.id);
+    tracing::info!("  title: {}", result.title);
+    tracing::info!("  group_id: {:?}", result.group_id);
+    tracing::info!("  tags: {:?}", result.tags.as_ref().map(|t| t.len()).unwrap_or(0));
     Ok(result)
 }
 

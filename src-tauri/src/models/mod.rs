@@ -9,7 +9,7 @@ pub mod attachment;
 pub mod stats;
 
 // 重新导出常用类型
-pub use todo::{Todo, TodoStatus, UpdateTodoRequest};
+pub use todo::{Todo, TodoStatus, CreateTodoRequest, UpdateTodoRequest};
 pub use group::TaskGroup;
 pub use tag::Tag;
 pub use step::TodoStep;

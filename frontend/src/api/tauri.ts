@@ -59,7 +59,22 @@ export async function getTodo(id: string): Promise<Todo> {
  */
 export async function createTodo(request: CreateTodoRequest): Promise<Todo> {
   console.log('[API] createTodo called with:', request);
-  return safeInvoke<Todo>('create_todo', request);
+
+  // 构建动态 payload - 只包含非 undefined 的字段
+  const payload: Record<string, unknown> = {
+    title: request.title,
+  };
+
+  // 只有非 undefined 的字段才添加到 payload
+  if (request.description !== undefined) payload.description = request.description;
+  if (request.group_id !== undefined) payload.group_id = request.group_id;
+  if (request.start_date !== undefined) payload.start_date = request.start_date;
+  if (request.due_date !== undefined) payload.due_date = request.due_date;
+  if (request.priority !== undefined) payload.priority = request.priority;
+  if (request.tag_ids !== undefined) payload.tag_ids = request.tag_ids;
+
+  console.log('[API] Sending payload to Tauri:', payload);
+  return safeInvoke<Todo>('create_todo', { payload });
 }
 
 /**
