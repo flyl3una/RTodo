@@ -114,6 +114,82 @@
         </div>
       </el-tab-pane>
 
+      <!-- 日志 -->
+      <el-tab-pane :label="t('settings.logging')" name="logging">
+        <div class="tab-content">
+          <!-- 日志级别选择 -->
+          <div class="setting-item">
+            <span class="setting-label">{{ t('settings.logLevel') }}</span>
+            <el-select v-model="logConfig.level" @change="handleLogLevelChange" style="width: 200px">
+              <el-option value="trace">Trace</el-option>
+              <el-option value="debug">Debug</el-option>
+              <el-option value="info">Info</el-option>
+              <el-option value="warn">Warn</el-option>
+              <el-option value="error">Error</el-option>
+            </el-select>
+          </div>
+
+          <!-- 日志目录 -->
+          <div class="setting-item">
+            <span class="setting-label">{{ t('settings.logDirectory') }}</span>
+            <div class="data-path-input-group">
+              <el-input :value="logConfig.log_dir || 'Loading...'" readonly style="flex: 1">
+                <template #append>
+                  <el-button @click="handleChangeLogDirectory">{{ t('messages.browse') }}</el-button>
+                </template>
+              </el-input>
+            </div>
+          </div>
+
+          <!-- 回滚策略 -->
+          <div class="setting-item">
+            <span class="setting-label">{{ t('settings.logRolling') }}</span>
+            <el-select v-model="logConfig.rolling" @change="handleLogRollingChange" style="width: 200px">
+              <el-option value="daily">{{ t('settings.rollingDaily') }}</el-option>
+              <el-option value="hourly">{{ t('settings.rollingHourly') }}</el-option>
+              <el-option value="minutely">{{ t('settings.rollingMinutely') }}</el-option>
+              <el-option value="never">{{ t('settings.rollingNever') }}</el-option>
+            </el-select>
+          </div>
+
+          <!-- 自动压缩开关 -->
+          <div class="setting-item">
+            <span class="setting-label">{{ t('settings.logCompress') }}</span>
+            <el-switch v-model="logConfig.compress" @change="handleLogCompressChange" />
+          </div>
+
+          <!-- 保留天数 -->
+          <div class="setting-item">
+            <span class="setting-label">{{ t('settings.logRetention') }}</span>
+            <el-input-number v-model="logConfig.retention_days" :min="1" :max="365" @change="handleLogRetentionDaysChange" style="width: 150px" />
+            <span style="margin-left: 8px; color: var(--el-text-color-secondary);">{{ t('settings.days') }}</span>
+          </div>
+
+          <!-- 日志文件列表 -->
+          <div class="setting-item">
+            <span class="setting-label">{{ t('settings.logFiles') }}</span>
+            <el-button @click="handleRefreshLogFiles" :loading="logFilesLoading">
+              {{ t('settings.refreshLogFiles') }}
+            </el-button>
+          </div>
+
+          <!-- 显示日志文件列表 -->
+          <div v-if="logFiles.length > 0" class="log-files-list">
+            <div v-for="file in logFiles" :key="file" class="log-file-item">
+              <span>{{ file }}</span>
+            </div>
+          </div>
+
+          <!-- 手动压缩 -->
+          <div class="setting-item">
+            <span class="setting-label">{{ t('settings.manualCompress') }}</span>
+            <el-button @click="handleManualCompress" :loading="compressLoading" type="primary">
+              {{ t('settings.compressNow') }}
+            </el-button>
+          </div>
+        </div>
+      </el-tab-pane>
+
       <!-- 关于 -->
       <el-tab-pane :label="t('settings.about')" name="about">
         <div class="tab-content about-content">
@@ -255,6 +331,22 @@ const migrateProgress = ref(0);
 const migrateStatus = ref<'success' | 'exception' | ''>('');
 const migrateMessage = ref('');
 let unlistenMigrate: (() => void) | null = null;
+
+// 日志配置状态
+const logConfig = ref<api.LogConfig>({
+  level: 'info',
+  console: false,
+  file: true,
+  log_dir: null,
+  format: 'full',
+  rolling: 'daily',
+  max_file_size_mb: 100,
+  compress: true,
+  retention_days: 30,
+});
+const logFiles = ref<string[]>([]);
+const logFilesLoading = ref(false);
+const compressLoading = ref(false);
 
 function handleThemeChange(value: 'light' | 'dark' | 'auto') {
   uiStore.setTheme(value);
@@ -593,6 +685,112 @@ function closeMigrateDialog() {
   migrateMessage.value = '';
 }
 
+// 日志配置相关函数
+async function loadLogConfig() {
+  try {
+    logConfig.value = await api.getLogConfig();
+  } catch (error) {
+    console.error('Failed to load log config:', error);
+  }
+}
+
+async function handleLogLevelChange(level: string) {
+  try {
+    await api.setLogLevel(level);
+    ElMessage.success(t('messages.logLevelChanged') + ' ' + t('messages.logLevelRestartRequired'));
+  } catch (error) {
+    console.error('Failed to set log level:', error);
+    ElMessage.error(t('messages.logLevelChangeFailed'));
+    await loadLogConfig();
+  }
+}
+
+async function handleChangeLogDirectory() {
+  try {
+    const selectedPath = await open({
+      multiple: false,
+      directory: true,
+      title: t('settings.selectLogDirectory'),
+    });
+
+    if (selectedPath && typeof selectedPath === 'string') {
+      await ElMessageBox.confirm(
+        t('messages.logDirectoryChangeWarning'),
+        t('settings.changeLogDirectory'),
+        { type: 'warning', confirmButtonText: t('common.confirm'), cancelButtonText: t('common.cancel') }
+      );
+
+      await api.setLogDirectory(selectedPath);
+      logConfig.value.log_dir = selectedPath;
+      ElMessage.success(t('messages.logDirectoryChanged') + ' ' + t('messages.restartRequired'));
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('Failed to change log directory:', error);
+      ElMessage.error(t('messages.operationFailed'));
+    }
+  }
+}
+
+async function handleLogRollingChange(rolling: string) {
+  try {
+    await api.setLogRolling(rolling);
+    ElMessage.success(t('messages.logRollingChanged') + ' ' + t('messages.restartRequired'));
+  } catch (error) {
+    console.error('Failed to set log rolling:', error);
+    ElMessage.error(t('messages.operationFailed'));
+    await loadLogConfig();
+  }
+}
+
+async function handleLogCompressChange(compress: boolean) {
+  try {
+    await api.setLogCompress(compress);
+    ElMessage.success((compress ? t('messages.logCompressEnabled') : t('messages.logCompressDisabled')) + ' ' + t('messages.restartRequired'));
+  } catch (error) {
+    console.error('Failed to set log compress:', error);
+    ElMessage.error(t('messages.operationFailed'));
+    await loadLogConfig();
+  }
+}
+
+async function handleLogRetentionDaysChange(days: number) {
+  try {
+    await api.setLogRetentionDays(days);
+    ElMessage.success(t('messages.logRetentionDaysChanged') + ' ' + t('messages.restartRequired'));
+  } catch (error) {
+    console.error('Failed to set log retention days:', error);
+    ElMessage.error(t('messages.operationFailed'));
+    await loadLogConfig();
+  }
+}
+
+async function handleRefreshLogFiles() {
+  try {
+    logFilesLoading.value = true;
+    logFiles.value = await api.getLogFiles();
+  } catch (error) {
+    console.error('Failed to get log files:', error);
+    ElMessage.error(t('messages.operationFailed'));
+  } finally {
+    logFilesLoading.value = false;
+  }
+}
+
+async function handleManualCompress() {
+  try {
+    compressLoading.value = true;
+    await api.compressLogs();
+    ElMessage.success(t('messages.logCompressed'));
+    await handleRefreshLogFiles();
+  } catch (error) {
+    console.error('Failed to compress logs:', error);
+    ElMessage.error(t('messages.logCompressFailed'));
+  } finally {
+    compressLoading.value = false;
+  }
+}
+
 onMounted(async () => {
   currentTheme.value = uiStore.theme;
   currentLanguage.value = uiStore.language;
@@ -611,6 +809,10 @@ onMounted(async () => {
 
   // Load data path
   await loadDataPath();
+
+  // Load log configuration
+  await loadLogConfig();
+  await handleRefreshLogFiles();
 
   // Listen for auto-launch state changes from tray menu
   const unlisten = await listen<boolean>('autolaunch-changed', (event) => {
@@ -1011,5 +1213,29 @@ onMounted(async () => {
   .migrate-title {
     font-size: 14px;
   }
+}
+
+/* 日志文件列表样式 */
+.log-files-list {
+  margin: 12px 0;
+  padding: 12px;
+  background: var(--el-fill-color-light);
+  border-radius: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.log-file-item {
+  padding: 6px 12px;
+  margin: 4px 0;
+  background: var(--el-bg-color);
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+  word-break: break-all;
+}
+
+.log-file-item:hover {
+  background: var(--el-fill-color);
 }
 </style>

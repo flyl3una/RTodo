@@ -25,6 +25,7 @@ mod config;
 use database::Database;
 use logging::{load_config, init_logging};
 use commands::app_commands::AppState;
+use commands::log_commands::LogState;
 use config::AppConfig;
 
 /// 辅助函数：恢复托盘菜单中开机启动选项的状态
@@ -89,9 +90,9 @@ async fn main() {
     // 加载日志配置
     let log_config = load_config();
 
-    // 初始化日志系统并获取 guards
+    // 初始化日志系统并获取 guards 和 reload handle
     // _log_guards 必须在程序整个生命周期中保持存活，否则日志后台线程会停止
-    let _log_guards = init_logging(&log_config).expect("Failed to initialize logging");
+    let (_log_guards, log_reload_handle) = init_logging(&log_config).expect("Failed to initialize logging");
 
     tracing::info!("RTodo application starting...");
 
@@ -164,6 +165,10 @@ async fn main() {
             // 初始化数据库连接池
             let db = Database::new().expect("Failed to initialize database");
             app.manage(db);
+
+            // 初始化日志状态
+            let log_state = LogState::new(log_reload_handle, log_config);
+            app.manage(log_state);
 
             // 创建托盘图标菜单（使用系统实际状态作为初始值）
             let show_item = MenuItem::with_id(app, "show", "显示", true, None::<&str>).unwrap();
@@ -346,6 +351,14 @@ async fn main() {
             commands::app_commands::set_auto_launch,
             commands::app_commands::get_auto_launch,
             commands::app_commands::toggle_auto_launch,
+            commands::log_commands::get_log_config,
+            commands::log_commands::set_log_level,
+            commands::log_commands::set_log_directory,
+            commands::log_commands::set_log_rolling,
+            commands::log_commands::set_log_compress,
+            commands::log_commands::set_log_retention_days,
+            commands::log_commands::get_log_files,
+            commands::log_commands::compress_logs,
         ])
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::CloseRequested { api, .. } => {

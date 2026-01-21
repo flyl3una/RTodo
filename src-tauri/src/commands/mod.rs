@@ -10,3 +10,4 @@ pub mod data_path_commands;
 pub mod stats_commands;
 pub mod data_manager_command;
 pub mod app_commands;
+pub mod log_commands;

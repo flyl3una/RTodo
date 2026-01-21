@@ -503,3 +503,76 @@ export async function getAutoLaunch(): Promise<boolean> {
 export async function toggleAutoLaunch(): Promise<boolean> {
   return safeInvoke<boolean>('toggle_auto_launch');
 }
+
+// ==================== 日志配置 API ====================
+
+/**
+ * 日志配置接口
+ */
+export interface LogConfig {
+  level: 'trace' | 'debug' | 'info' | 'warn' | 'error';
+  console: boolean;
+  file: boolean;
+  log_dir: string | null;
+  format: 'full' | 'compact' | 'json';
+  rolling: 'daily' | 'hourly' | 'minutely' | 'never';
+  max_file_size_mb: number;
+  compress: boolean;
+  retention_days: number;
+}
+
+/**
+ * 获取当前日志配置
+ */
+export async function getLogConfig(): Promise<LogConfig> {
+  return safeInvoke<LogConfig>('get_log_config');
+}
+
+/**
+ * 设置日志级别（立即生效）
+ */
+export async function setLogLevel(level: string): Promise<void> {
+  return safeInvoke<void>('set_log_level', { level });
+}
+
+/**
+ * 设置日志目录（需要重启应用才能生效）
+ */
+export async function setLogDirectory(directory: string): Promise<void> {
+  return safeInvoke<void>('set_log_directory', { directory });
+}
+
+/**
+ * 设置日志回滚策略（需要重启应用才能生效）
+ */
+export async function setLogRolling(rolling: string): Promise<void> {
+  return safeInvoke<void>('set_log_rolling', { rolling });
+}
+
+/**
+ * 设置日志自动压缩（需要重启应用才能生效）
+ */
+export async function setLogCompress(compress: boolean): Promise<void> {
+  return safeInvoke<void>('set_log_compress', { compress });
+}
+
+/**
+ * 设置日志保留天数（需要重启应用才能生效）
+ */
+export async function setLogRetentionDays(days: number): Promise<void> {
+  return safeInvoke<void>('set_log_retention_days', { days });
+}
+
+/**
+ * 获取日志文件列表
+ */
+export async function getLogFiles(): Promise<string[]> {
+  return safeInvoke<string[]>('get_log_files');
+}
+
+/**
+ * 手动触发日志压缩
+ */
+export async function compressLogs(): Promise<void> {
+  return safeInvoke<void>('compress_logs');
+}

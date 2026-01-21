@@ -1,16 +1,43 @@
 // Copyright 2025 RTodo Team. All rights reserved.
 // SPDX-License-Identifier: MIT
 
-use tracing_subscriber::{fmt, prelude::*, registry, EnvFilter};
+use tracing_subscriber::{fmt, prelude::*, registry, EnvFilter, Layer};
 use tracing_appender::{rolling, non_blocking};
 use tracing_appender::non_blocking::WorkerGuard;
 use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::sync::RwLock;
 use anyhow::Result;
 
 /// 日志 Worker Guards，必须在程序生命周期中保持存活
 pub struct LogWorkerGuards {
     _file_guard: WorkerGuard,
     _console_guard: Option<WorkerGuard>,
+}
+
+/// 日志重新加载句柄
+/// 用于在运行时动态修改日志级别
+#[derive(Clone)]
+pub struct LogReloadHandle {
+    log_level: Arc<RwLock<tracing::Level>>,
+}
+
+impl LogReloadHandle {
+    pub fn new(log_level: tracing::Level) -> Self {
+        Self {
+            log_level: Arc::new(RwLock::new(log_level)),
+        }
+    }
+
+    pub async fn set_level(&self, level: tracing::Level) -> Result<()> {
+        let mut guard = self.log_level.write().await;
+        *guard = level;
+        Ok(())
+    }
+
+    pub async fn get_level(&self) -> tracing::Level {
+        *self.log_level.read().await
+    }
 }
 
 /// 日志级别配置
@@ -104,6 +131,14 @@ pub struct LogConfig {
     /// 注意：这个选项只在 rolling 为 never 时生效
     #[serde(default)]
     pub max_file_size_mb: usize,
+
+    /// 是否自动压缩旧日志文件
+    #[serde(default = "default_compress")]
+    pub compress: bool,
+
+    /// 日志保留天数
+    #[serde(default = "default_retention_days")]
+    pub retention_days: usize,
 }
 
 impl Default for LogConfig {
@@ -116,6 +151,8 @@ impl Default for LogConfig {
             format: LogFormat::Full,
             rolling: RollingKind::Daily,
             max_file_size_mb: 100,
+            compress: true,
+            retention_days: 30,
         }
     }
 }
@@ -128,11 +165,21 @@ fn default_file() -> bool {
     true
 }
 
+fn default_compress() -> bool {
+    true
+}
+
+fn default_retention_days() -> usize {
+    30
+}
+
 /// 初始化日志系统
 ///
 /// **重要**: 返回的 WorkerGuards 必须在程序整个生命周期中保持存活，
 /// 否则日志后台线程会停止，导致日志丢失。
-pub fn init_logging(config: &LogConfig) -> Result<LogWorkerGuards> {
+///
+/// 返回 (LogWorkerGuards, LogReloadHandle)
+pub fn init_logging(config: &LogConfig) -> Result<(LogWorkerGuards, LogReloadHandle)> {
     // 确定日志目录
     let log_dir = if let Some(dir) = &config.log_dir {
         PathBuf::from(dir)
@@ -242,96 +289,212 @@ pub fn init_logging(config: &LogConfig) -> Result<LogWorkerGuards> {
     tracing::info!("  - Directory: {:?}", log_dir);
     tracing::info!("  - Format: {:?}", format_config);
     tracing::info!("  - Rolling: {:?}", config.rolling);
+    tracing::info!("  - Compress: {:?}", config.compress);
+    tracing::info!("  - Retention Days: {:?}", config.retention_days);
 
-    // 返回 guards，必须在程序整个生命周期中保持存活
-    Ok(LogWorkerGuards {
+    // 返回 guards 和 reload handle，必须在程序整个生命周期中保持存活
+    let guards = LogWorkerGuards {
         _file_guard: file_guard,
         _console_guard: console_guard,
-    })
+    };
+
+    let reload_handle = LogReloadHandle::new(config.level.into());
+
+    Ok((guards, reload_handle))
 }
 
 /// 从配置文件加载日志配置
 ///
-/// 根据编译模式自动应用不同的日志策略：
-/// - **debug 模式**：日志级别为 debug，输出到控制台和文件
-/// - **release 模式**：日志级别为 error，仅输出到文件
+/// 如果配置文件不存在，则创建默认配置文件并返回默认配置
+/// 配置文件的优先级高于编译模式的默认值
 ///
-/// 配置文件中的设置会被编译模式自动覆盖
+/// 配置文件默认存储在程序安装目录下（可执行文件同目录）
 pub fn load_config() -> LogConfig {
-    // 确定编译模式并应用相应的默认配置
-    let mut config = if cfg!(debug_assertions) {
-        // Debug 模式：日志级别 debug，输出到控制台和文件
-        LogConfig {
-            level: LogLevel::Debug,
-            console: true,
-            file: true,
-            ..Default::default()
+    // 使用程序安装目录（可执行文件所在目录）
+    let config_path = if let Ok(exe_path) = std::env::current_exe() {
+        // 获取可执行文件所在的目录
+        if let Some(exe_dir) = exe_path.parent() {
+            exe_dir.join("log-config.toml")
+        } else {
+            // 如果无法获取父目录，回退到用户数据目录
+            if let Some(data_dir) = dirs::data_local_dir() {
+                let mut path = data_dir;
+                path.push("rtodo");
+                path.push("log-config.toml");
+                path
+            } else {
+                return LogConfig::default();
+            }
         }
     } else {
-        // Release 模式：日志级别 error，仅输出到文件
-        LogConfig {
-            level: LogLevel::Error,
-            console: false,
-            file: true,
-            ..Default::default()
+        // 如果无法获取可执行文件路径，回退到用户数据目录
+        if let Some(data_dir) = dirs::data_local_dir() {
+            let mut path = data_dir;
+            path.push("rtodo");
+            path.push("log-config.toml");
+            path
+        } else {
+            return LogConfig::default();
         }
-    };
-
-    // 首先尝试从用户数据目录读取配置文件
-    let config_path = if let Some(data_dir) = dirs::data_local_dir() {
-        let mut path = data_dir;
-        path.push("rtodo");
-        path.push("log-config.toml");
-        path
-    } else {
-        return config;
     };
 
     // 如果配置文件存在，读取并解析
     if let Ok(content) = std::fs::read_to_string(&config_path) {
         if let Ok(file_config) = toml::from_str::<LogConfig>(&content) {
-            // 合并配置：编译模式的设置优先级高于配置文件
-            // 这确保 debug 模式总是 debug 级别且输出到控制台
-            // release 模式总是 error 级别且不输出到控制台
-            config.log_dir = file_config.log_dir;
-            config.format = file_config.format;
-            config.rolling = file_config.rolling;
-            config.max_file_size_mb = file_config.max_file_size_mb;
-            // 注意：level、console、file 由编译模式决定，不从配置文件读取
-            // 不在这里记录日志，因为日志系统还未初始化
-            return config;
+            // 配置文件存在且有效，直接使用
+            return file_config;
         }
     }
 
     // 否则创建默认配置文件
-    if let Some(data_dir) = dirs::data_local_dir() {
-        let config_dir = data_dir.join("rtodo");
-        std::fs::create_dir_all(&config_dir).ok();
-
-        // 创建配置文件模板（注释说明由编译模式控制）
-        let config_template = r#"# RTodo 日志配置文件
-#
-# 注意：以下配置由编译模式自动控制，配置文件中的设置不会生效：
-# - level: Debug 模式固定为 debug，Release 模式固定为 error
-# - console: Debug 模式固定为 true，Release 模式固定为 false
-# - file: 始终为 true
-#
-# 可配置项：
-# 日志目录（留空则使用默认路径）
-# log_dir = "C:\\path\\to\\logs"
-
-# 日志格式：full, compact, json
-format = "full"
-
-# 文件回滚方式：daily, hourly, minutely, never
-rolling = "daily"
-
-# 日志文件大小限制（MB），仅当 rolling = "never" 时生效
-max_file_size_mb = 100
-"#;
-
-        std::fs::write(&config_path, config_template).ok();
-    }
+    let config = LogConfig::default();
+    save_config(&config);
 
     config
+}
+
+/// 保存配置到文件
+///
+/// 配置文件默认存储在程序安装目录下（可执行文件同目录）
+pub fn save_config(config: &LogConfig) -> LogConfig {
+    // 使用程序安装目录（可执行文件所在目录）
+    let config_path = if let Ok(exe_path) = std::env::current_exe() {
+        // 获取可执行文件所在的目录
+        if let Some(exe_dir) = exe_path.parent() {
+            exe_dir.join("log-config.toml")
+        } else {
+            // 如果无法获取父目录，回退到用户数据目录
+            if let Some(data_dir) = dirs::data_local_dir() {
+                data_dir.join("rtodo").join("log-config.toml")
+            } else {
+                return config.clone();
+            }
+        }
+    } else {
+        // 如果无法获取可执行文件路径，回退到用户数据目录
+        if let Some(data_dir) = dirs::data_local_dir() {
+            data_dir.join("rtodo").join("log-config.toml")
+        } else {
+            return config.clone();
+        }
+    };
+
+    // 序列化配置
+    if let Ok(toml_string) = toml::to_string_pretty(config) {
+        std::fs::write(&config_path, toml_string).ok();
+    }
+
+    config.clone()
+}
+
+/// 重新加载日志级别
+/// 注意：由于 tracing-subscriber 的限制，此函数只更新配置但不立即生效
+/// 需要重启应用才能完全生效
+pub async fn reload_log_level(handle: &LogReloadHandle, level: LogLevel) -> Result<()> {
+    handle.set_level(level.into()).await?;
+    Ok(())
+}
+
+/// 压缩旧的日志文件
+///
+/// 压缩指定天数之前的日志文件（非 .gz 文件）
+pub async fn compress_old_logs(log_dir: &PathBuf, retention_days: usize) -> Result<()> {
+    let mut compressed_count = 0;
+
+    let mut entries = std::fs::read_dir(log_dir)?
+        .filter_map(Result::ok)
+        .collect::<Vec<_>>();
+
+    // 按修改时间排序，旧文件在前
+    entries.sort_by_key(|entry| {
+        entry.metadata()
+            .and_then(|m| m.modified())
+            .unwrap_or(std::time::SystemTime::UNIX_EPOCH)
+    });
+
+    let now = chrono::Utc::now();
+    let retention_duration = chrono::Duration::days(retention_days as i64);
+
+    for entry in entries {
+        let path = entry.path();
+
+        // 跳过已压缩的文件
+        if path.extension().and_then(|s| s.to_str()) == Some("gz") {
+            continue;
+        }
+
+        // 只处理日志文件
+        if path.extension().and_then(|s| s.to_str()) != Some("log") {
+            continue;
+        }
+
+        // 获取文件修改时间
+        if let Ok(metadata) = entry.metadata() {
+            if let Ok(modified) = metadata.modified() {
+                let modified_datetime = chrono::DateTime::<chrono::Utc>::from(modified);
+                let age = now.signed_duration_since(modified_datetime);
+
+                // 如果文件超过保留天数，进行压缩
+                if age > retention_duration {
+                    compress_log_file(&path)?;
+                    compressed_count += 1;
+                }
+            }
+        }
+    }
+
+    tracing::info!("Compressed {} old log files", compressed_count);
+    Ok(())
+}
+
+/// 压缩单个日志文件
+fn compress_log_file(log_path: &PathBuf) -> Result<()> {
+    let gz_path = log_path.with_extension("log.gz");
+
+    // 读取原始文件
+    let content = std::fs::read(log_path)?;
+
+    // 创建压缩文件
+    let file = std::fs::File::create(&gz_path)?;
+    let mut encoder = flate2::write::GzEncoder::new(file, flate2::Compression::default());
+    std::io::Write::write_all(&mut encoder, &content)?;
+    encoder.finish()?;
+
+    // 删除原始文件
+    std::fs::remove_file(log_path)?;
+
+    Ok(())
+}
+
+/// 获取日志目录下的所有日志文件
+pub fn get_log_files(config: &LogConfig) -> Result<Vec<String>> {
+    let log_dir = if let Some(dir) = &config.log_dir {
+        PathBuf::from(dir)
+    } else {
+        let mut path = dirs::data_local_dir()
+            .unwrap_or_else(|| PathBuf::from("."));
+        path.push("rtodo");
+        path.push("logs");
+        path
+    };
+
+    let mut files = Vec::new();
+
+    if let Ok(entries) = std::fs::read_dir(&log_dir) {
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                // 只包含日志文件和压缩的日志文件
+                if file_name.ends_with(".log") || file_name.ends_with(".gz") {
+                    files.push(file_name.to_string());
+                }
+            }
+        }
+    }
+
+    // 按名称排序
+    files.sort();
+    files.reverse();
+
+    Ok(files)
 }
