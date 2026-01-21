@@ -999,7 +999,6 @@ watch(() => props.editMode, (newEditMode) => {
 
 .empty-text {
   text-align: center;
-  padding: 20px;
   color: var(--el-text-color-secondary);
   font-size: 14px;
 }

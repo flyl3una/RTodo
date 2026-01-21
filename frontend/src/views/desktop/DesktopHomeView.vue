@@ -40,6 +40,10 @@
                   {{ t('todo.due') }}: {{ formatSimpleDate(todo.due_date) }}
                   <el-tag v-if="isTodoOverdue(todo)" size="small" type="danger" effect="plain">{{ t('nav.overdue') }}</el-tag>
                 </span>
+                <span v-if="todo.attachments && todo.attachments.length > 0" class="meta-item attachment-indicator">
+                  <el-icon><Paperclip /></el-icon>
+                  {{ todo.attachments.length }}
+                </span>
                 <el-tag
                   v-if="todo.group_id"
                   size="small"
@@ -181,7 +185,8 @@
           </div>
         </div>
         <div class="card-footer">
-          <div class="card-meta">
+          <!-- Date Row -->
+          <div v-if="todo.start_date || todo.due_date || (todo.attachments && todo.attachments.length > 0)" class="card-dates">
             <span v-if="todo.start_date" class="meta-item">
               <el-icon><Clock /></el-icon>
               {{ t('todo.start') }}: {{ formatSimpleDate(todo.start_date) }}
@@ -191,27 +196,32 @@
               {{ t('todo.due') }}: {{ formatSimpleDate(todo.due_date) }}
               <el-tag v-if="isTodoOverdue(todo)" size="small" type="danger" effect="plain">{{ t('nav.overdue') }}</el-tag>
             </span>
-            <div class="card-tags">
-              <el-tag
-                v-if="todo.group_id"
-                size="small"
-                effect="plain"
-                class="group-tag"
-              >
-                {{ getGroupName(todo.group_id) }}
-              </el-tag>
-              <el-tag
-                v-for="tag in todo.tags?.slice(0, 3)"
-                :key="tag.id"
-                size="small"
-                :style="{ backgroundColor: tag.color, color: 'white' }"
-              >
-                {{ tag.name }}
-              </el-tag>
-              <span v-if="todo.tags && todo.tags.length > 3" class="more-tags">
-                +{{ todo.tags.length - 3 }}
-              </span>
-            </div>
+            <span v-if="todo.attachments && todo.attachments.length > 0" class="meta-item attachment-indicator">
+              <el-icon><Paperclip /></el-icon>
+              {{ todo.attachments.length }}
+            </span>
+          </div>
+          <!-- Tags Row -->
+          <div v-if="todo.group_id || (todo.tags && todo.tags.length > 0)" class="card-tags">
+            <el-tag
+              v-if="todo.group_id"
+              size="small"
+              effect="plain"
+              class="group-tag"
+            >
+              {{ getGroupName(todo.group_id) }}
+            </el-tag>
+            <el-tag
+              v-for="tag in todo.tags?.slice(0, 3)"
+              :key="tag.id"
+              size="small"
+              :style="{ backgroundColor: tag.color, color: 'white' }"
+            >
+              {{ tag.name }}
+            </el-tag>
+            <span v-if="todo.tags && todo.tags.length > 3" class="more-tags">
+              +{{ todo.tags.length - 3 }}
+            </span>
           </div>
         </div>
       </div>
@@ -249,7 +259,7 @@
 </template>
 
 <script setup lang="ts">
-import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete, Edit, Clock } from '@element-plus/icons-vue';
+import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete, Edit, Clock, Paperclip } from '@element-plus/icons-vue';
 import TodoDetailPanel from '@/components/todo/TodoDetailPanel.vue';
 import { useTodoList } from '@/composables/useTodoList';
 
@@ -405,6 +415,10 @@ const {
   font-weight: 500;
 }
 
+.attachment-indicator {
+  color: var(--el-color-primary);
+}
+
 .group-tag {
   display: inline-flex;
   align-items: center;
@@ -487,16 +501,20 @@ const {
 
 .card-footer {
   margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.card-meta {
+.card-dates {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   font-size: 13px;
+  flex-wrap: wrap;
 }
 
-.card-meta .meta-item {
+.card-dates .meta-item {
   display: flex;
   align-items: center;
   gap: 4px;
@@ -507,6 +525,7 @@ const {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-wrap: wrap;
 }
 
 .more-tags {

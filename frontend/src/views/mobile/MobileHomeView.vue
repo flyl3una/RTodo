@@ -36,6 +36,10 @@
                   <el-icon><Calendar /></el-icon>
                   {{ formatSimpleDate(todo.due_date) }}
                 </span>
+                <span v-if="todo.attachments && todo.attachments.length > 0" class="meta-item attachment-indicator">
+                  <el-icon><Paperclip /></el-icon>
+                  {{ todo.attachments.length }}
+                </span>
                 <el-tag
                   v-if="todo.group_id"
                   size="small"
@@ -96,10 +100,24 @@
           {{ todo.description }}
         </div>
         <div class="card-footer">
-          <span v-if="todo.due_date" class="meta-item" :class="{ 'overdue': isTodoOverdue(todo) }">
-            <el-icon><Calendar /></el-icon>
-            {{ formatSimpleDate(todo.due_date) }}
-          </span>
+          <div class="card-meta">
+            <span v-if="todo.due_date" class="meta-item" :class="{ 'overdue': isTodoOverdue(todo) }">
+              <el-icon><Calendar /></el-icon>
+              {{ formatSimpleDate(todo.due_date) }}
+            </span>
+            <span v-if="todo.attachments && todo.attachments.length > 0" class="meta-item attachment-indicator">
+              <el-icon><Paperclip /></el-icon>
+              {{ todo.attachments.length }}
+            </span>
+            <el-tag
+              v-if="todo.group_id"
+              size="small"
+              effect="plain"
+              class="group-tag"
+            >
+              {{ getGroupName(todo.group_id) }}
+            </el-tag>
+          </div>
           <div class="card-actions">
             <el-button
               :icon="todo.priority >= 1 ? StarFilled : Star"
@@ -153,7 +171,7 @@
 </template>
 
 <script setup lang="ts">
-import { Calendar, Star, StarFilled, Edit } from '@element-plus/icons-vue';
+import { Calendar, Star, StarFilled, Edit, Paperclip } from '@element-plus/icons-vue';
 import TodoDetailPanel from '@/components/todo/TodoDetailPanel.vue';
 import { useTodoList } from '@/composables/useTodoList';
 
@@ -283,6 +301,9 @@ const {
   color: var(--el-color-danger);
   font-weight: 500;
 }
+.attachment-indicator {
+  color: var(--el-color-primary);
+}
 
 .group-tag {
   border-color: var(--el-border-color);
@@ -368,6 +389,13 @@ const {
   padding-top: 8px;
   border-top: 1px solid var(--el-border-color-lighter);
 }
+.card-footer .card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 
 .card-footer .meta-item {
   display: flex;
