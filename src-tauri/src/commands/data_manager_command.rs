@@ -6,11 +6,14 @@
 
 use crate::database::Database;
 use crate::database::repositories::DataRepository;
+use crate::database::repositories::{StepRepository, AttachmentRepository};
 use crate::utils::data_export::{
     export_groups_to_csv,
     export_tags_to_csv,
     export_todos_to_csv,
     export_todo_tags_to_csv,
+    export_steps_to_csv,
+    export_attachments_to_csv,
     create_zip_archive_with_attachments,
     extract_csv_from_zip,
     extract_attachments_from_zip,
@@ -48,7 +51,7 @@ pub async fn import_data(
         .map_err(|e| format!("Failed to import data: {}", e))
 }
 
-/// 导出所有数据为 CSV 格式并保存到指定文件（包含附件）
+/// 导出所有数据为 CSV 格式并保存到指定文件（包含附件和步骤）
 #[tauri::command]
 pub async fn export_data_as_csv(
     file_path: String,
@@ -74,6 +77,20 @@ pub async fn export_data_as_csv(
     let todo_tags_csv = export_todo_tags_to_csv(&export_data.todos)
         .map_err(|e| format!("Failed to export todo tags to CSV: {}", e))?;
 
+    // 导出步骤数据
+    let steps = StepRepository::list_all(inner)
+        .map_err(|e| format!("Failed to export steps: {}", e))?;
+    let steps_csv = export_steps_to_csv(&steps)
+        .map_err(|e| format!("Failed to export steps to CSV: {}", e))?;
+
+    // 导出附件数据
+    let attachments = AttachmentRepository::list_all(inner)
+        .map_err(|e| format!("Failed to export attachments: {}", e))?;
+    let attachments_csv = export_attachments_to_csv(&attachments)
+        .map_err(|e| format!("Failed to export attachments to CSV: {}", e))?;
+
+    tracing::info!("Exported {} steps and {} attachments", steps.len(), attachments.len());
+
     // 获取附件目录路径
     let attachments_dir = crate::database::DbConnection::get_attachments_dir()
         .unwrap_or_else(|_| PathBuf::from("attachments"));
@@ -85,12 +102,14 @@ pub async fn export_data_as_csv(
         None
     };
 
-    // 创建包含附件的 ZIP 压缩包
+    // 创建包含附件、步骤和附件表的 ZIP 压缩包
     let zip_data = create_zip_archive_with_attachments(
         groups_csv,
         tags_csv,
         todos_csv,
         todo_tags_csv,
+        steps_csv,
+        attachments_csv,
         attachments_path,
     )
     .map_err(|e| format!("Failed to create ZIP: {}", e))?;

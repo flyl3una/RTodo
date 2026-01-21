@@ -13,6 +13,8 @@ use crate::utils::data_export::{
     parse_tag_csv,
     parse_todo_csv,
     parse_todo_tag_csv,
+    parse_step_csv,
+    parse_attachment_csv,
 };
 
 /// 数据管理仓库
@@ -188,6 +190,62 @@ impl DataRepository {
         Ok(())
     }
 
+    /// 从 CSV 导入步骤
+    fn import_steps_from_csv(conn: &Transaction<'_>, steps_csv: &str) -> Result<()> {
+        if steps_csv.is_empty() {
+            return Ok(());
+        }
+
+        let mut rdr = csv::Reader::from_reader(steps_csv.as_bytes());
+
+        // 先删除所有旧的步骤
+        conn.execute("DELETE FROM todo_steps", [])
+            .context("Failed to clear old steps")?;
+
+        for result in rdr.records() {
+            let record = result.map_err(|e| anyhow::anyhow!("Failed to read CSV record: {}", e))?;
+
+            let (id, todo_id, title, is_completed, sort_order, created_at) =
+                parse_step_csv(&record)?;
+
+            conn.execute(
+                "INSERT INTO todo_steps (id, todo_id, title, is_completed, sort_order, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+                params![id, todo_id, title, is_completed as i32, sort_order, created_at],
+            ).context(format!("Failed to import step {} for todo {}", id, todo_id))?;
+        }
+
+        Ok(())
+    }
+
+    /// 从 CSV 导入附件
+    fn import_attachments_from_csv(conn: &Transaction<'_>, attachments_csv: &str) -> Result<()> {
+        if attachments_csv.is_empty() {
+            return Ok(());
+        }
+
+        let mut rdr = csv::Reader::from_reader(attachments_csv.as_bytes());
+
+        // 先删除所有旧的附件
+        conn.execute("DELETE FROM attachments", [])
+            .context("Failed to clear old attachments")?;
+
+        for result in rdr.records() {
+            let record = result.map_err(|e| anyhow::anyhow!("Failed to read CSV record: {}", e))?;
+
+            let (id, todo_id, name, file_path, file_size, mime_type, created_at) =
+                parse_attachment_csv(&record)?;
+
+            conn.execute(
+                "INSERT INTO attachments (id, todo_id, name, file_path, file_size, mime_type, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                params![id, todo_id, name, file_path, file_size, mime_type, created_at],
+            ).context(format!("Failed to import attachment {} for todo {}", id, todo_id))?;
+        }
+
+        Ok(())
+    }
+
     /// 从 CSV 数据导入所有数据（在事务中执行）
     pub fn import_from_csv(conn: &Connection, csv_data: &crate::utils::data_export::ZipCsvData) -> Result<()> {
         // 开始事务
@@ -208,6 +266,14 @@ impl DataRepository {
         // 导入任务-标签关联
         Self::import_todo_tags_from_csv(&transaction, &csv_data.todo_tags_csv)
             .context("Failed to import todo tags")?;
+
+        // 导入步骤
+        Self::import_steps_from_csv(&transaction, &csv_data.steps_csv)
+            .context("Failed to import steps")?;
+
+        // 导入附件
+        Self::import_attachments_from_csv(&transaction, &csv_data.attachments_csv)
+            .context("Failed to import attachments")?;
 
         // 提交事务
         transaction.commit()?;

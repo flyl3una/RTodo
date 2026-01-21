@@ -11,6 +11,32 @@ use crate::models::TodoStep;
 pub struct StepRepository;
 
 impl StepRepository {
+    /// 获取所有步骤
+    pub fn list_all(conn: &Connection) -> Result<Vec<TodoStep>> {
+        let mut stmt = conn.prepare(
+            "SELECT id, todo_id, title, is_completed, sort_order, created_at
+             FROM todo_steps
+             ORDER BY todo_id ASC, sort_order ASC"
+        )
+        .context("Failed to prepare list all steps query")?;
+
+        let steps = stmt.query_map([], |row| {
+            Ok(TodoStep {
+                id: row.get(0)?,
+                todo_id: row.get(1)?,
+                title: row.get(2)?,
+                is_completed: row.get::<_, i32>(3)? == 1,
+                sort_order: row.get(4)?,
+                created_at: row.get(5)?,
+            })
+        })
+        .context("Failed to execute list all steps query")?
+        .collect::<Result<Vec<_>, _>>()
+        .context("Failed to parse steps")?;
+
+        Ok(steps)
+    }
+
     /// 获取任务的所有步骤
     pub fn list_by_todo(conn: &Connection, todo_id: i64) -> Result<Vec<TodoStep>> {
         let mut stmt = conn.prepare(

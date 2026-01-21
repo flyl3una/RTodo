@@ -11,6 +11,33 @@ use crate::models::Attachment;
 pub struct AttachmentRepository;
 
 impl AttachmentRepository {
+    /// 获取所有附件
+    pub fn list_all(conn: &Connection) -> Result<Vec<Attachment>> {
+        let mut stmt = conn.prepare(
+            "SELECT id, todo_id, name, file_path, file_size, mime_type, created_at
+             FROM attachments
+             ORDER BY todo_id ASC, created_at DESC"
+        )
+        .context("Failed to prepare list all attachments query")?;
+
+        let attachments = stmt.query_map([], |row| {
+            Ok(Attachment {
+                id: row.get(0)?,
+                todo_id: row.get(1)?,
+                name: row.get(2)?,
+                file_path: row.get(3)?,
+                file_size: row.get(4)?,
+                mime_type: row.get(5)?,
+                created_at: row.get(6)?,
+            })
+        })
+        .context("Failed to execute list all attachments query")?
+        .collect::<Result<Vec<_>, _>>()
+        .context("Failed to parse attachments")?;
+
+        Ok(attachments)
+    }
+
     /// 获取任务的所有附件
     pub fn list_by_todo(conn: &Connection, todo_id: i64) -> Result<Vec<Attachment>> {
         let mut stmt = conn.prepare(

@@ -4,7 +4,7 @@
 //! 数据导出工具函数
 //! 处理 CSV 和 ZIP 文件的读写操作
 
-use crate::models::{TaskGroup, Tag, Todo};
+use crate::models::{TaskGroup, Tag, Todo, TodoStep, Attachment};
 use std::io::{Cursor, Read, Seek, Write};
 use std::path::Path;
 use anyhow::{Result, Context};
@@ -61,6 +61,28 @@ struct TodoCsvRecord {
 struct TodoTagCsvRecord {
     todo_id: String,
     tag_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct TodoStepCsvRecord {
+    id: String,
+    todo_id: String,
+    title: String,
+    is_completed: String,
+    sort_order: String,
+    created_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct AttachmentCsvRecord {
+    id: String,
+    todo_id: String,
+    name: String,
+    file_path: String,
+    file_size: String,
+    #[serde(default)]
+    mime_type: String,
+    created_at: String,
 }
 
 /// 解析任务组 CSV 记录
@@ -390,41 +412,85 @@ pub struct ZipCsvData {
     pub tags_csv: String,
     pub todos_csv: String,
     pub todo_tags_csv: String,
+    pub steps_csv: String,
+    pub attachments_csv: String,
 }
 
 /// 从 ZIP 压缩包中提取所有 CSV 文件
+/// 从 tables/ 目录提取CSV文件
 pub fn extract_csv_from_zip(zip_data: Vec<u8>) -> Result<ZipCsvData, String> {
     let reader = Cursor::new(zip_data);
     let mut zip_archive =
         zip::ZipArchive::new(reader).map_err(|e| format!("Failed to open zip: {}", e))?;
 
+    tracing::info!("ZIP file contains {} files", zip_archive.len());
+
     let mut groups_csv = String::new();
     let mut tags_csv = String::new();
     let mut todos_csv = String::new();
     let mut todo_tags_csv = String::new();
+    let mut steps_csv = String::new();
+    let mut attachments_csv = String::new();
 
     // 读取任务组 CSV
-    if let Ok(mut file) = zip_archive.by_name("task_groups.csv") {
+    if let Ok(mut file) = zip_archive.by_name("tables/task_groups.csv") {
         file.read_to_string(&mut groups_csv)
-            .map_err(|e| format!("Failed to read task_groups.csv: {}", e))?;
+            .map_err(|e| format!("Failed to read tables/task_groups.csv: {}", e))?;
+        tracing::info!("Successfully read tables/task_groups.csv: {} bytes", groups_csv.len());
+    } else {
+        tracing::warn!("tables/task_groups.csv not found in ZIP");
     }
 
     // 读取标签 CSV
-    if let Ok(mut file) = zip_archive.by_name("tags.csv") {
+    if let Ok(mut file) = zip_archive.by_name("tables/tags.csv") {
         file.read_to_string(&mut tags_csv)
-            .map_err(|e| format!("Failed to read tags.csv: {}", e))?;
+            .map_err(|e| format!("Failed to read tables/tags.csv: {}", e))?;
+        tracing::info!("Successfully read tables/tags.csv: {} bytes", tags_csv.len());
+    } else {
+        tracing::warn!("tables/tags.csv not found in ZIP");
     }
 
     // 读取任务 CSV
-    if let Ok(mut file) = zip_archive.by_name("todos.csv") {
+    if let Ok(mut file) = zip_archive.by_name("tables/todos.csv") {
         file.read_to_string(&mut todos_csv)
-            .map_err(|e| format!("Failed to read todos.csv: {}", e))?;
+            .map_err(|e| format!("Failed to read tables/todos.csv: {}", e))?;
+        tracing::info!("Successfully read tables/todos.csv: {} bytes", todos_csv.len());
+    } else {
+        tracing::warn!("tables/todos.csv not found in ZIP");
     }
 
     // 读取任务-标签关联 CSV
-    if let Ok(mut file) = zip_archive.by_name("todo_tags.csv") {
+    if let Ok(mut file) = zip_archive.by_name("tables/todo_tags.csv") {
         file.read_to_string(&mut todo_tags_csv)
-            .map_err(|e| format!("Failed to read todo_tags.csv: {}", e))?;
+            .map_err(|e| format!("Failed to read tables/todo_tags.csv: {}", e))?;
+        tracing::info!("Successfully read tables/todo_tags.csv: {} bytes", todo_tags_csv.len());
+    } else {
+        tracing::warn!("tables/todo_tags.csv not found in ZIP");
+    }
+
+    // 读取步骤 CSV
+    if let Ok(mut file) = zip_archive.by_name("tables/steps.csv") {
+        file.read_to_string(&mut steps_csv)
+            .map_err(|e| format!("Failed to read tables/steps.csv: {}", e))?;
+        tracing::info!("Successfully read tables/steps.csv: {} bytes", steps_csv.len());
+    } else {
+        tracing::warn!("tables/steps.csv not found in ZIP");
+    }
+
+    // 读取附件 CSV
+    if let Ok(mut file) = zip_archive.by_name("tables/attachments.csv") {
+        file.read_to_string(&mut attachments_csv)
+            .map_err(|e| format!("Failed to read tables/attachments.csv: {}", e))?;
+        tracing::info!("Successfully read tables/attachments.csv: {} bytes", attachments_csv.len());
+    } else {
+        tracing::warn!("tables/attachments.csv not found in ZIP");
+    }
+
+    // 列出ZIP中的所有文件用于调试
+    for i in 0..zip_archive.len() {
+        if let Ok(zip_file) = zip_archive.by_index(i) {
+            tracing::info!("Found file in ZIP: {}", zip_file.name());
+        }
     }
 
     Ok(ZipCsvData {
@@ -432,6 +498,8 @@ pub fn extract_csv_from_zip(zip_data: Vec<u8>) -> Result<ZipCsvData, String> {
         tags_csv,
         todos_csv,
         todo_tags_csv,
+        steps_csv,
+        attachments_csv,
     })
 }
 
@@ -539,12 +607,26 @@ fn extract_dir_from_zip(
 }
 
 /// 创建包含多个 CSV 文件和附件的 ZIP 压缩包
-/// attachments_path 是附件目录的路径，如果为 None 则不包含附件
+/// attachments_path 是附件目录的路径，如果为 None 则不包含附件文件
+///
+/// ZIP 结构:
+/// tables/
+///   ├── task_groups.csv
+///   ├── tags.csv
+///   ├── todos.csv
+///   ├── todo_tags.csv
+///   ├── steps.csv
+///   └── attachments.csv
+/// data/
+///   └── attachments/
+///       └── (附件文件)
 pub fn create_zip_archive_with_attachments(
     groups_csv: Vec<u8>,
     tags_csv: Vec<u8>,
     todos_csv: Vec<u8>,
     todo_tags_csv: Vec<u8>,
+    steps_csv: Vec<u8>,
+    attachments_csv: Vec<u8>,
     attachments_path: Option<&Path>,
 ) -> Result<Vec<u8>, String> {
     let zip_buffer = Cursor::new(Vec::new());
@@ -553,43 +635,60 @@ pub fn create_zip_archive_with_attachments(
         zip::write::FileOptions::default()
             .compression_method(zip::CompressionMethod::Deflated);
 
-    // 添加任务组 CSV
+    // 添加 tables 目录下的 CSV 文件
+    // 任务组 CSV
     zip_writer
-        .start_file("task_groups.csv", file_options)
-        .map_err(|e| format!("Failed to create task_groups.csv: {}", e))?;
+        .start_file("tables/task_groups.csv", file_options)
+        .map_err(|e| format!("Failed to create tables/task_groups.csv: {}", e))?;
     zip_writer
         .write_all(&groups_csv)
         .map_err(|e| format!("Failed to write task_groups.csv: {}", e))?;
 
-    // 添加标签 CSV
+    // 标签 CSV
     zip_writer
-        .start_file("tags.csv", file_options)
-        .map_err(|e| format!("Failed to create tags.csv: {}", e))?;
+        .start_file("tables/tags.csv", file_options)
+        .map_err(|e| format!("Failed to create tables/tags.csv: {}", e))?;
     zip_writer
         .write_all(&tags_csv)
         .map_err(|e| format!("Failed to write tags.csv: {}", e))?;
 
-    // 添加任务 CSV
+    // 任务 CSV
     zip_writer
-        .start_file("todos.csv", file_options)
-        .map_err(|e| format!("Failed to create todos.csv: {}", e))?;
+        .start_file("tables/todos.csv", file_options)
+        .map_err(|e| format!("Failed to create tables/todos.csv: {}", e))?;
     zip_writer
         .write_all(&todos_csv)
         .map_err(|e| format!("Failed to write todos.csv: {}", e))?;
 
-    // 添加任务-标签关联 CSV
+    // 任务-标签关联 CSV
     zip_writer
-        .start_file("todo_tags.csv", file_options)
-        .map_err(|e| format!("Failed to create todo_tags.csv: {}", e))?;
+        .start_file("tables/todo_tags.csv", file_options)
+        .map_err(|e| format!("Failed to create tables/todo_tags.csv: {}", e))?;
     zip_writer
         .write_all(&todo_tags_csv)
         .map_err(|e| format!("Failed to write todo_tags.csv: {}", e))?;
 
-    // 如果提供了附件目录，添加附件文件
+    // 步骤 CSV
+    zip_writer
+        .start_file("tables/steps.csv", file_options)
+        .map_err(|e| format!("Failed to create tables/steps.csv: {}", e))?;
+    zip_writer
+        .write_all(&steps_csv)
+        .map_err(|e| format!("Failed to write steps.csv: {}", e))?;
+
+    // 附件 CSV
+    zip_writer
+        .start_file("tables/attachments.csv", file_options)
+        .map_err(|e| format!("Failed to create tables/attachments.csv: {}", e))?;
+    zip_writer
+        .write_all(&attachments_csv)
+        .map_err(|e| format!("Failed to write attachments.csv: {}", e))?;
+
+    // 如果提供了附件目录，添加附件文件到 data/attachments/
     if let Some(attachments_dir) = attachments_path {
         if attachments_dir.exists() {
-            tracing::info!("Adding attachments from: {}", attachments_dir.display());
-            add_dir_to_zip(&mut zip_writer, attachments_dir, "attachments", file_options)?;
+            tracing::info!("Adding attachments from: {} to data/attachments/", attachments_dir.display());
+            add_dir_to_zip(&mut zip_writer, attachments_dir, "data/attachments", file_options)?;
         } else {
             tracing::info!("Attachments directory does not exist, skipping: {}", attachments_dir.display());
         }
@@ -604,6 +703,7 @@ pub fn create_zip_archive_with_attachments(
 }
 
 /// 从 ZIP 压缩包中提取附件到指定目录
+/// 从 data/attachments/ 提取附件文件
 pub fn extract_attachments_from_zip(
     zip_data: Vec<u8>,
     target_attachments_dir: &Path,
@@ -612,9 +712,153 @@ pub fn extract_attachments_from_zip(
     let mut zip_archive =
         zip::ZipArchive::new(reader).map_err(|e| format!("Failed to open zip: {}", e))?;
 
-    extract_dir_from_zip(&mut zip_archive, "attachments", target_attachments_dir)?;
+    extract_dir_from_zip(&mut zip_archive, "data/attachments", target_attachments_dir)?;
 
     tracing::info!("Attachments extracted to: {}", target_attachments_dir.display());
 
     Ok(())
 }
+
+/// 导出步骤为 CSV 格式
+pub fn export_steps_to_csv(steps: &[TodoStep]) -> Result<Vec<u8>> {
+    let mut csv_writer = csv::Writer::from_writer(vec![]);
+
+    // 写入表头
+    csv_writer
+        .write_record(&[
+            "id",
+            "todo_id",
+            "title",
+            "is_completed",
+            "sort_order",
+            "created_at",
+        ])
+        .context("Failed to write CSV header for steps")?;
+
+    // 写入数据
+    for step in steps {
+        csv_writer
+            .write_record(&[
+                &step.id.to_string(),
+                &step.todo_id.to_string(),
+                &step.title,
+                &if step.is_completed { "1".to_string() } else { "0".to_string() },
+                &step.sort_order.to_string(),
+                &step.created_at.to_string(),
+            ])
+            .context(format!("Failed to write CSV record for step {}", step.id))?;
+    }
+
+    csv_writer.into_inner().context("Failed to finalize CSV writer for steps")
+}
+
+/// 导出附件为 CSV 格式
+pub fn export_attachments_to_csv(attachments: &[Attachment]) -> Result<Vec<u8>> {
+    let mut csv_writer = csv::Writer::from_writer(vec![]);
+
+    // 写入表头
+    csv_writer
+        .write_record(&[
+            "id",
+            "todo_id",
+            "name",
+            "file_path",
+            "file_size",
+            "mime_type",
+            "created_at",
+        ])
+        .context("Failed to write CSV header for attachments")?;
+
+    // 写入数据
+    for attachment in attachments {
+        csv_writer
+            .write_record(&[
+                &attachment.id.to_string(),
+                &attachment.todo_id.to_string(),
+                &attachment.name,
+                &attachment.file_path,
+                &attachment.file_size.to_string(),
+                &attachment.mime_type.as_ref().map(|s| s.as_str()).unwrap_or("").to_string(),
+                &attachment.created_at.to_string(),
+            ])
+            .context(format!("Failed to write CSV record for attachment {}", attachment.id))?;
+    }
+
+    csv_writer.into_inner().context("Failed to finalize CSV writer for attachments")
+}
+
+/// 解析步骤 CSV 记录
+pub fn parse_step_csv(record: &csv::StringRecord) -> anyhow::Result<(i64, i64, String, bool, i32, i64)> {
+    let id: i64 = record
+        .get(0)
+        .ok_or_else(|| anyhow::anyhow!("Missing id field"))?
+        .parse()
+        .context("Failed to parse step id")?;
+    let todo_id: i64 = record
+        .get(1)
+        .ok_or_else(|| anyhow::anyhow!("Missing todo_id field"))?
+        .parse()
+        .context("Failed to parse step todo_id")?;
+    let title: String = record
+        .get(2)
+        .ok_or_else(|| anyhow::anyhow!("Missing title field"))?
+        .to_string();
+    let is_completed_str = record
+        .get(3)
+        .ok_or_else(|| anyhow::anyhow!("Missing is_completed field"))?;
+    let is_completed: bool = match is_completed_str {
+        "1" => true,
+        "0" | "" => false,
+        _ => anyhow::bail!("Invalid is_completed value: {}", is_completed_str),
+    };
+    let sort_order: i32 = record
+        .get(4)
+        .ok_or_else(|| anyhow::anyhow!("Missing sort_order field"))?
+        .parse()
+        .context("Failed to parse step sort_order")?;
+    let created_at: i64 = record
+        .get(5)
+        .ok_or_else(|| anyhow::anyhow!("Missing created_at field"))?
+        .parse()
+        .context("Failed to parse step created_at")?;
+
+    Ok((id, todo_id, title, is_completed, sort_order, created_at))
+}
+
+/// 解析附件 CSV 记录
+pub fn parse_attachment_csv(record: &csv::StringRecord) -> anyhow::Result<(i64, i64, String, String, i64, Option<String>, i64)> {
+    let id: i64 = record
+        .get(0)
+        .ok_or_else(|| anyhow::anyhow!("Missing id field"))?
+        .parse()
+        .context("Failed to parse attachment id")?;
+    let todo_id: i64 = record
+        .get(1)
+        .ok_or_else(|| anyhow::anyhow!("Missing todo_id field"))?
+        .parse()
+        .context("Failed to parse attachment todo_id")?;
+    let name: String = record
+        .get(2)
+        .ok_or_else(|| anyhow::anyhow!("Missing name field"))?
+        .to_string();
+    let file_path: String = record
+        .get(3)
+        .ok_or_else(|| anyhow::anyhow!("Missing file_path field"))?
+        .to_string();
+    let file_size: i64 = record
+        .get(4)
+        .ok_or_else(|| anyhow::anyhow!("Missing file_size field"))?
+        .parse()
+        .context("Failed to parse attachment file_size")?;
+    let mime_type: Option<String> = record
+        .get(5)
+        .and_then(|s| if s.is_empty() { None } else { Some(s.to_string()) });
+    let created_at: i64 = record
+        .get(6)
+        .ok_or_else(|| anyhow::anyhow!("Missing created_at field"))?
+        .parse()
+        .context("Failed to parse attachment created_at")?;
+
+    Ok((id, todo_id, name, file_path, file_size, mime_type, created_at))
+}
+
