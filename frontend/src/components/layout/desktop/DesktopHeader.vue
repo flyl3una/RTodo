@@ -223,11 +223,9 @@ const tagStore = useTagStore();
 const searchQuery = ref('');
 const viewMode = computed(() => uiStore.viewMode);
 
-// 判断是否是设置页面或统计页面
 const isSettingsPage = computed(() => route.path === '/settings');
 const isStatsPage = computed(() => route.path === '/stats');
 
-// Filter states
 const filterStatus = ref<TodoStatus | undefined>();
 const filterPriority = ref<number | undefined>();
 const filterGroupId = ref<string | undefined>();
@@ -235,7 +233,6 @@ const filterTagIds = ref<string[]>([]);
 const filterStartDate = ref<number | undefined>();
 const filterEndDate = ref<number | undefined>();
 
-// Computed
 const groups = computed(() => groupStore.groups);
 const tags = computed(() => tagStore.tags);
 
@@ -254,7 +251,6 @@ const activeFilterCount = computed(() => {
   return count;
 });
 
-// Methods
 function handleSearch(value: string) {
   todoStore.setFilter({ search: value || undefined });
 }
@@ -279,12 +275,8 @@ function applyFilters() {
     params.group_id = filterGroupId.value;
   }
   if (filterTagIds.value.length > 0) {
-    // Use first tag for now (API only supports single tag)
     params.tag_id = filterTagIds.value[0];
   }
-  // 新的时间筛选逻辑：
-  // - filterStartDate 筛选 start_date 在该时间之后的任务
-  // - filterEndDate 筛选 due_date 在该时间之前的任务
   if (filterStartDate.value !== undefined) {
     params.start_date = filterStartDate.value;
   }
@@ -309,7 +301,6 @@ function setViewMode(mode: 'list' | 'card') {
   uiStore.setViewMode(mode);
 }
 
-// Load groups and tags on mount
 (async () => {
   try {
     await Promise.all([
@@ -409,31 +400,5 @@ function setViewMode(mode: 'list' | 'card') {
 
 [data-density='compact'] .filter-item {
   gap: 6px;
-}
-
-/* Mobile responsive styles */
-@media (max-width: 767px) {
-  .header {
-    height: 52px;
-    padding: 0 12px;
-  }
-
-  .header-left,
-  .header-right {
-    gap: 8px;
-  }
-
-  .app-title {
-    font-size: 16px;
-  }
-
-  .header-right .el-button {
-    padding: 8px;
-  }
-
-  /* Hide less important elements on small screens */
-  .header-right .el-divider {
-    display: none;
-  }
 }
 </style>

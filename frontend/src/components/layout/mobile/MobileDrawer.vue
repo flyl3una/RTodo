@@ -168,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
@@ -182,8 +182,9 @@ import { useUIStore } from '@/stores';
 import { TodoStatus } from '@/types';
 import type { TaskGroup } from '@/types';
 import type { Tag } from '@/types';
-import GroupManageDialog from '@/components/group/GroupManageDialog.vue';
-import TagCreateDialog from '@/components/tag/TagCreateDialog.vue';
+import GroupManageDialog from '../../group/GroupManageDialog.vue';
+import TagCreateDialog from '../../tag/TagCreateDialog.vue';
+import { useTodoFilters } from '@/composables/useTodoFilters';
 
 const { t } = useI18n();
 const route = useRoute();
@@ -192,11 +193,6 @@ const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 const uiStore = useUIStore();
-
-// Local state for active view tracking
-const currentView = ref<'all' | 'todo' | 'important' | 'urgent' | 'completed' | 'overdue' | 'group' | 'tag'>('todo');
-const filterGroupId = ref<string | undefined>();
-const filterTagId = ref<string | undefined>();
 
 // Touch gesture state
 const touchStartX = ref(0);
@@ -208,134 +204,29 @@ const contextMenuStyle = ref<{ top: string; left: string }>({ top: '0px', left: 
 const contextMenuItem = ref<{ type: 'group' | 'tag'; data: TaskGroup | Tag } | null>(null);
 const longPressTimer = ref<number | null>(null);
 
-// Dialog state
-const groupDialogVisible = ref(false);
-const editingGroup = ref<TaskGroup | undefined>();
-const tagDialogVisible = ref(false);
-const editingTag = ref<Tag | undefined>();
+const {
+  currentView,
+  filterGroupId,
+  filterTagId,
+  groupDialogVisible,
+  editingGroup,
+  tagDialogVisible,
+  editingTag,
+  groups,
+  tags,
+  setFilter,
+  selectGroup,
+  selectTag,
+  showAddGroup,
+  handleGroupUpdated,
+  showAddTag,
+  handleTagUpdated,
+} = useTodoFilters();
 
 const visible = computed(() => uiStore.mobileDrawerVisible);
-const groups = computed(() => groupStore.groups);
-const tags = computed(() => tagStore.tags);
-
-// Watch store changes to sync local state
-watch(() => todoStore.filterGroupId, (newVal) => {
-  filterGroupId.value = newVal;
-  if (newVal) currentView.value = 'group';
-});
-
-watch(() => todoStore.filterTagId, (newVal) => {
-  filterTagId.value = newVal;
-  if (newVal) currentView.value = 'tag';
-});
-
-watch(() => todoStore.isTodoView, (isNewTodoView) => {
-  if (isNewTodoView) currentView.value = 'todo';
-});
-
-watch(() => todoStore.isOverdueView, (isOverdue) => {
-  if (isOverdue) currentView.value = 'overdue';
-});
-
-watch(() => todoStore.filterPriority, (newPriority) => {
-  if (newPriority === 1) currentView.value = 'important';
-  else if (newPriority === 3) currentView.value = 'urgent';
-  else if (!newPriority && !todoStore.filterGroupId && !todoStore.filterTagId && !todoStore.isTodoView && !todoStore.isOverdueView) {
-    currentView.value = 'all';
-  }
-});
 
 function closeDrawer() {
   uiStore.setMobileDrawerVisible(false);
-}
-
-function setFilter(view: 'all' | 'todo' | 'important' | 'urgent' | 'completed' | 'overdue') {
-  console.log('[MobileDrawer] setFilter called with view:', view);
-  currentView.value = view;
-  filterGroupId.value = undefined;
-  filterTagId.value = undefined;
-
-  // Apply filter
-  switch (view) {
-    case 'all':
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({});
-      break;
-    case 'todo':
-      todoStore.setTodoView(true);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({});
-      break;
-    case 'important':
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({ priority: 1 });
-      break;
-    case 'urgent':
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({ priority: 3 });
-      break;
-    case 'completed':
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({ status: TodoStatus.Done });
-      break;
-    case 'overdue':
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(true);
-      todoStore.setFilter({});
-      break;
-  }
-
-  // Navigate to home and close drawer
-  if (route.path !== '/') {
-    router.push('/');
-  }
-  closeDrawer();
-}
-
-function selectGroup(groupId: string) {
-  // If long press was triggered, don't handle click
-  if (longPressTimer.value) {
-    return;
-  }
-  console.log('[MobileDrawer] selectGroup called with groupId:', groupId);
-  currentView.value = 'group';
-  filterGroupId.value = groupId;
-  filterTagId.value = undefined;
-  todoStore.setFilter({ group_id: groupId });
-  if (route.path !== '/') {
-    router.push('/');
-  }
-  closeDrawer();
-}
-
-function selectTag(tagId: string) {
-  // If long press was triggered, don't handle click
-  if (longPressTimer.value) {
-    return;
-  }
-  console.log('[MobileDrawer] selectTag called with tagId:', tagId);
-  currentView.value = 'tag';
-  filterGroupId.value = undefined;
-  filterTagId.value = tagId;
-  todoStore.setFilter({ tag_id: tagId });
-  if (route.path !== '/') {
-    router.push('/');
-  }
-  closeDrawer();
-}
-
-function showAddGroup() {
-  editingGroup.value = undefined;
-  groupDialogVisible.value = true;
-}
-
-function showAddTag() {
-  editingTag.value = undefined;
-  tagDialogVisible.value = true;
 }
 
 // Long press handlers for items
@@ -343,16 +234,14 @@ function handleItemTouchStart(e: TouchEvent, item: TaskGroup | Tag, type: 'group
   touchStartX.value = e.touches[0].clientX;
   touchStartY.value = e.touches[0].clientY;
 
-  // Start long press timer
   longPressTimer.value = window.setTimeout(() => {
     contextMenuItem.value = { type, data: item };
     showContextMenu(e.touches[0].clientX, e.touches[0].clientY);
     longPressTimer.value = null;
-  }, 500); // 500ms for long press
+  }, 500);
 }
 
 function handleItemTouchEnd() {
-  // Clear long press timer if released before threshold
   if (longPressTimer.value) {
     clearTimeout(longPressTimer.value);
     longPressTimer.value = null;
@@ -361,7 +250,6 @@ function handleItemTouchEnd() {
 
 function handleItemContextMenu(item: TaskGroup | Tag, type: 'group' | 'tag') {
   contextMenuItem.value = { type, data: item };
-  // For mouse right-click, show menu at cursor position
   const event = window.event as MouseEvent;
   if (event) {
     showContextMenu(event.clientX, event.clientY);
@@ -396,30 +284,8 @@ function handleContextMenuAction(action: 'edit' | 'delete') {
       tagDialogVisible.value = true;
     }
   } else if (action === 'delete') {
-    if (item.type === 'group') {
-      // Handle group delete
-      const group = item.data as TaskGroup;
-      // TODO: Implement delete confirmation
-      console.log('Delete group:', group);
-    } else {
-      // Handle tag delete
-      const tag = item.data as Tag;
-      // TODO: Implement delete confirmation
-      console.log('Delete tag:', tag);
-    }
+    console.log('Delete:', item);
   }
-}
-
-function handleGroupUpdated() {
-  groupDialogVisible.value = false;
-  editingGroup.value = undefined;
-  groupStore.fetchGroups();
-}
-
-function handleTagUpdated() {
-  tagDialogVisible.value = false;
-  editingTag.value = undefined;
-  tagStore.fetchTags();
 }
 
 // Touch gesture handlers for swipe-to-close
@@ -429,12 +295,10 @@ function handleTouchStart(e: TouchEvent) {
 }
 
 function handleTouchMove(e: TouchEvent) {
-  // Prevent default only if swiping horizontally
   const deltaX = e.touches[0].clientX - touchStartX.value;
   const deltaY = e.touches[0].clientY - touchStartY.value;
 
   if (Math.abs(deltaX) > Math.abs(deltaY) && deltaX > 0) {
-    // Swiping right to close
     e.preventDefault();
   }
 }
@@ -445,9 +309,7 @@ function handleTouchEnd(e: TouchEvent) {
   const deltaX = touchEndX - touchStartX.value;
   const deltaY = touchEndY - touchStartY.value;
 
-  // Only handle horizontal swipes (not vertical scrolls)
   if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 50) {
-    // Swiped right to close
     if (deltaX > 0) {
       closeDrawer();
     }
@@ -479,7 +341,6 @@ function handleTouchEnd(e: TouchEvent) {
   box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15);
 }
 
-/* Slide transition */
 .slide-left-enter-active,
 .slide-left-leave-active {
   transition: transform 0.3s ease;

@@ -39,15 +39,6 @@
             <el-icon><Grid /></el-icon>
             <span>{{ t('nav.allTodos') }}</span>
           </a>
-          <!-- <a
-            href="#"
-            class="quick-link"
-            :class="{ active: currentView === 'today' && route.path === '/' }"
-            @click.prevent="setFilter('today')"
-          >
-            <el-icon><Calendar /></el-icon>
-            <span>今天</span>
-          </a> -->
           <a
             href="#"
             class="quick-link"
@@ -239,9 +230,10 @@ import { useTagStore } from '@/stores';
 import { TodoStatus } from '@/types';
 import type { TaskGroup } from '@/types';
 import type { Tag } from '@/types';
-import GroupManageDialog from '../group/GroupManageDialog.vue';
-import TagCreateDialog from '../tag/TagCreateDialog.vue';
+import GroupManageDialog from '../../group/GroupManageDialog.vue';
+import TagCreateDialog from '../../tag/TagCreateDialog.vue';
 import Logo from '@/components/icon/logo.vue';
+import { useTodoFilters } from '@/composables/useTodoFilters';
 
 const { t } = useI18n();
 
@@ -259,181 +251,39 @@ const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
-const currentView = ref<'all' | 'todo' | 'today' | 'important' | 'urgent' | 'completed' | 'overdue' | 'group' | 'tag'>('todo');
-const filterGroupId = ref<string | undefined>();
-const filterTagId = ref<string | undefined>();
-const groupDialogVisible = ref(false);
-const editingGroup = ref<TaskGroup | undefined>();
-const tagDialogVisible = ref(false);
-const editingTag = ref<Tag | undefined>();
-
-const groups = computed(() => groupStore.groups);
-const tags = computed(() => tagStore.tags);
-
-// Reset to 'todo' view (can be called from parent)
-function resetToAllView() {
-  console.log('[Sidebar] resetToAllView called');
-  currentView.value = 'todo';
-  filterGroupId.value = undefined;
-  filterTagId.value = undefined;
-  todoStore.setFilter({});
-}
-
-function setFilter(view: 'all' | 'todo' | 'today' | 'important' | 'urgent' | 'completed' | 'overdue') {
-  console.log('[Sidebar] setFilter called with view:', view);
-  currentView.value = view;
-  filterGroupId.value = undefined;
-  filterTagId.value = undefined;
-
-  // Apply filter
-  switch (view) {
-    case 'all':
-      console.log('[Sidebar] Applying "all" filter (no params)');
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({});
-      break;
-    case 'todo':
-      console.log('[Sidebar] Applying "todo" filter (not done)');
-      todoStore.setTodoView(true);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({});
-      break;
-    case 'today':
-      // Get today's date range
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const todayStart = today.getTime();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const tomorrowStart = tomorrow.getTime();
-      console.log('[Sidebar] Applying "today" filter:', { start_date: todayStart, end_date: tomorrowStart });
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      // Filter by due_date in range [today, tomorrow)
-      todoStore.setFilter({
-        start_date: todayStart,
-        end_date: tomorrowStart
-      });
-      break;
-    case 'important':
-      // Filter by priority = 1 (important)
-      console.log('[Sidebar] Applying "important" filter:', { priority: 1 });
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({ priority: 1 });
-      break;
-    case 'urgent':
-      // Filter by priority = 3 (urgent)
-      console.log('[Sidebar] Applying "urgent" filter:', { priority: 3 });
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({ priority: 3 });
-      break;
-    case 'completed':
-      // Filter by status = Done (2)
-      console.log('[Sidebar] Applying "completed" filter:', { status: TodoStatus.Done });
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(false);
-      todoStore.setFilter({ status: TodoStatus.Done });
-      break;
-    case 'overdue':
-      // Filter by overdue: not done and due_date < now
-      console.log('[Sidebar] Applying "overdue" filter');
-      todoStore.setTodoView(false);
-      todoStore.setOverdueView(true);
-      // Fetch all non-completed todos and filter client-side
-      todoStore.setFilter({});
-      break;
-  }
-
-  // Navigate to home
-  if (route.path !== '/') {
-    router.push('/');
-  }
-}
-
-function selectGroup(groupId: string) {
-  console.log('[Sidebar] selectGroup called with groupId:', groupId);
-  // 设置视图为 group 类型，而不是 'all'
-  currentView.value = 'group';
-  filterGroupId.value = groupId;
-  filterTagId.value = undefined;
-  todoStore.setFilter({ group_id: groupId });
-  if (route.path !== '/') {
-    router.push('/');
-  }
-}
-
-function selectTag(tagId: string) {
-  console.log('[Sidebar] selectTag called with tagId:', tagId);
-  // 设置视图为 tag 类型，而不是 'all'
-  currentView.value = 'tag';
-  filterGroupId.value = undefined;
-  filterTagId.value = tagId;
-  todoStore.setFilter({ tag_id: tagId });
-  if (route.path !== '/') {
-    router.push('/');
-  }
-}
-
-function showAddGroup() {
-  editingGroup.value = undefined;
-  groupDialogVisible.value = true;
-}
-
-function editGroup(group: TaskGroup) {
-  editingGroup.value = group;
-  groupDialogVisible.value = true;
-}
-
-function handleGroupUpdated() {
-  groupDialogVisible.value = false;
-  editingGroup.value = undefined;
-  groupStore.fetchGroups();
-}
-
-function showTagManage() {
-  editingTag.value = undefined;
-  tagDialogVisible.value = true;
-}
-
-function handleTagUpdated() {
-  tagDialogVisible.value = false;
-  editingTag.value = undefined;
-  tagStore.fetchTags();
-}
-
-function editTag(tag: Tag) {
-  editingTag.value = tag;
-  tagDialogVisible.value = true;
-}
+const {
+  currentView,
+  filterGroupId,
+  filterTagId,
+  groupDialogVisible,
+  editingGroup,
+  tagDialogVisible,
+  editingTag,
+  groups,
+  tags,
+  setFilter,
+  selectGroup,
+  selectTag,
+  showAddGroup,
+  editGroup,
+  handleGroupUpdated,
+  showTagManage,
+  handleTagUpdated,
+  editTag,
+  resetToTodoView,
+  refreshCurrentView,
+  getCurrentView,
+} = useTodoFilters();
 
 // Initialize with todo view on mount
 onMounted(() => {
-  console.log('[Sidebar] onMounted, initializing with todo view');
+  console.log('[DesktopSidebar] onMounted, initializing with todo view');
   setFilter('todo');
 });
 
-// Get current view state (for passing to CreateTodoDialog)
-function getCurrentView() {
-  return {
-    currentView: currentView.value,
-    filterGroupId: filterGroupId.value,
-    filterTagId: filterTagId.value,
-  };
-}
-
-// Refresh current view without resetting (for after creating todo)
-async function refreshCurrentView() {
-  console.log('[Sidebar] refreshCurrentView called');
-  // Don't reset, just refresh todos with current filter
-  await todoStore.fetchTodos();
-}
-
 // Expose methods to parent components
 defineExpose({
-  resetToAllView,
+  resetToTodoView,
   getCurrentView,
   refreshCurrentView,
 });

@@ -561,6 +561,8 @@ async function toggleStep(step: TodoStep) {
       s.id === step.id ? updated : s
     );
     steps.value = updatedSteps;
+    // 通知父组件刷新数据
+    emit('updated', props.todo);
   } catch (error) {
     ElMessage.error(t('step.stepStatusUpdateFailed'));
   }
@@ -588,6 +590,8 @@ async function saveStep() {
     newStepTitle.value = '';
     editingStep.value = null;
     showAddStep.value = false;
+    // 通知父组件刷新数据
+    emit('updated', props.todo);
   } catch (error) {
     ElMessage.error(editingStep.value ? t('step.updateStepFailed') : t('step.addStepFailed'));
   }
@@ -610,6 +614,8 @@ async function deleteStep(stepId: string) {
     await todoStore.deleteStep(stepId);
     ElMessage.success(t('step.deleteSuccess'));
     await loadSteps();
+    // 通知父组件刷新数据
+    emit('updated', props.todo);
   } catch (error) {
     if (error !== 'cancel') {
       ElMessage.error(t('step.deleteStepFailed'));
@@ -661,6 +667,8 @@ async function handleAddAttachment() {
     const newAttachment = await todoStore.uploadAttachment(props.todo.id, selected, fileName);
     attachments.value.push(newAttachment);
     ElMessage.success(t('attachment.uploadSuccess'));
+    // 通知父组件刷新数据
+    emit('updated', props.todo);
   } catch (error) {
     console.error('Failed to add attachment:', error);
     // 显示具体的错误信息
@@ -684,6 +692,8 @@ async function handleDeleteAttachment(attachment: Attachment) {
     await todoStore.deleteAttachment(attachment.id);
     attachments.value = attachments.value.filter(a => a.id !== attachment.id);
     ElMessage.success(t('attachment.deleteSuccess'));
+    // 通知父组件刷新数据
+    emit('updated', props.todo);
   } catch (error) {
     if (error !== 'cancel') {
       console.error('Failed to delete attachment:', error);

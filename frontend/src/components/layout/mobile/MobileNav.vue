@@ -22,7 +22,6 @@ import { Tickets, TrendCharts, Setting } from '@element-plus/icons-vue';
 const { t } = useI18n();
 
 function handleNavClick() {
-  // 移动端导航点击后可以做一些额外处理
   console.log('[MobileNav] Navigation clicked');
 }
 </script>

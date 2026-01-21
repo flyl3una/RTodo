@@ -44,73 +44,53 @@ const uiStore = useUIStore();
 
 const viewMode = computed(() => uiStore.viewMode);
 
-// 当前视图图标和名称
 const currentViewIcon = computed(() => {
-  // 优先检查分组筛选
   if (todoStore.filterGroupId) {
     return Folder;
   }
-
-  // 检查标签筛选
   if (todoStore.filterTagId) {
     return PriceTag;
   }
-
-  // 检查特殊视图
   if (todoStore.isTodoView) {
     return Tickets;
   }
   if (todoStore.isOverdueView) {
     return Clock;
   }
-
-  // 检查优先级筛选
   if (todoStore.filterPriority === 2) {
     return BellFilled;
   }
   if (todoStore.filterPriority === 1) {
     return Star;
   }
-
-  // 默认视图 - 所有任务
   return Tickets;
 });
 
-// 当前视图名称
 const currentViewName = computed(() => {
-  // 优先检查分组筛选
   if (todoStore.filterGroupId) {
     const group = groupStore.groups.find(g => g.id === todoStore.filterGroupId);
     if (group) {
       return group.name;
     }
   }
-
-  // 检查标签筛选
   if (todoStore.filterTagId) {
     const tag = tagStore.tags.find(tg => tg.id === todoStore.filterTagId);
     if (tag) {
       return tag.name;
     }
   }
-
-  // 检查特殊视图
   if (todoStore.isTodoView) {
     return t('nav.todo');
   }
   if (todoStore.isOverdueView) {
     return t('nav.overdue');
   }
-
-  // 检查优先级筛选
   if (todoStore.filterPriority === 2) {
     return t('nav.urgent');
   }
   if (todoStore.filterPriority === 1) {
     return t('nav.important');
   }
-
-  // 默认视图 - 所有任务
   return t('nav.allTodos');
 });
 
