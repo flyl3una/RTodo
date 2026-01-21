@@ -463,6 +463,152 @@ impl TodoRepository {
         Ok(())
     }
 
+    /// 支持多任务组和多标签筛选的任务列表
+    pub fn list_with_filters(
+        conn: &Connection,
+        group_ids: Option<Vec<i64>>,
+        tag_ids: Option<Vec<i64>>,
+        status: Option<i32>,
+        search: Option<&str>,
+        priority: Option<i32>,
+        start_date: Option<i64>,
+        end_date: Option<i64>,
+    ) -> Result<Vec<Todo>> {
+        let mut query = String::from(
+            "SELECT t.* FROM todos t
+             WHERE 1=1"
+        );
+        let mut where_clauses = Vec::new();
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+        // 多任务组筛选 (使用 IN 查询)
+        if let Some(gids) = &group_ids {
+            if !gids.is_empty() {
+                let placeholders: Vec<String> = (0..gids.len()).map(|_| "?".to_string()).collect();
+                where_clauses.push(format!("t.group_id IN ({})", placeholders.join(", ")));
+                for gid in gids {
+                    params.push(Box::new(*gid));
+                }
+            }
+        }
+
+        // 按状态筛选
+        if let Some(s) = status {
+            where_clauses.push("t.status = ?".to_string());
+            params.push(Box::new(s));
+        }
+
+        // 多标签筛选（任务满足任一标签即可）
+        if let Some(tids) = &tag_ids {
+            if !tids.is_empty() {
+                let tag_conditions: Vec<String> = tids.iter().map(|_| {
+                    "EXISTS (SELECT 1 FROM todo_tags tt WHERE tt.todo_id = t.id AND tt.tag_id = ?)".to_string()
+                }).collect();
+                where_clauses.push(format!("({})", tag_conditions.join(" OR ")));
+                for tid in tids {
+                    params.push(Box::new(*tid));
+                }
+            }
+        }
+
+        // 搜索筛选（标题或描述）
+        if let Some(keyword) = search {
+            if !keyword.is_empty() {
+                where_clauses.push("(t.title LIKE ? OR t.description LIKE ?)".to_string());
+                let pattern = format!("%{}%", keyword);
+                params.push(Box::new(pattern.clone()));
+                params.push(Box::new(pattern));
+            }
+        }
+
+        // 按优先级筛选
+        if let Some(p) = priority {
+            where_clauses.push("t.priority = ?".to_string());
+            params.push(Box::new(p));
+        }
+
+        // 按时间范围筛选
+        if let Some(start) = start_date {
+            if let Some(end) = end_date {
+                where_clauses.push("(t.start_date >= ? AND t.start_date < ?) OR (t.due_date >= ? AND t.due_date < ?)".to_string());
+                params.push(Box::new(start));
+                params.push(Box::new(end));
+                params.push(Box::new(start));
+                params.push(Box::new(end));
+            } else {
+                where_clauses.push("(t.start_date >= ?) OR (t.due_date >= ?)".to_string());
+                params.push(Box::new(start));
+                params.push(Box::new(start));
+            }
+        } else if let Some(end) = end_date {
+            where_clauses.push("(t.start_date < ?) OR (t.due_date < ?)".to_string());
+            params.push(Box::new(end));
+            params.push(Box::new(end));
+        }
+
+        // 添加 WHERE 子句
+        if !where_clauses.is_empty() {
+            query.push_str(" AND ");
+            query.push_str(&where_clauses.join(" AND "));
+        }
+
+        tracing::info!("list_with_filters SQL: {}", query);
+        tracing::info!("list_with_filters group_ids: {:?}, tag_ids: {:?}", group_ids, tag_ids);
+        tracing::info!("list_with_filters params count: {}", params.len());
+
+        // 排序
+        query.push_str(" ORDER BY
+            CASE WHEN t.status = 2 THEN 1 ELSE 0 END,
+            t.priority DESC,
+            t.due_date ASC,
+            t.created_at DESC");
+
+        let mut stmt = conn.prepare(&query)
+            .context("Failed to prepare list_with_filters query")?;
+
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+
+        let todo_iter = stmt.query_map(param_refs.as_slice(), |row| {
+            let status_int: i32 = row.get("status")?;
+            let status = match status_int {
+                0 => TodoStatus::Todo,
+                1 => TodoStatus::InProgress,
+                2 => TodoStatus::Done,
+                _ => TodoStatus::Todo,
+            };
+            Ok(Todo {
+                id: row.get("id")?,
+                title: row.get("title")?,
+                description: row.get("description")?,
+                status,
+                priority: row.get("priority")?,
+                group_id: row.get("group_id")?,
+                assignee: row.get("assignee")?,
+                start_date: row.get("start_date")?,
+                due_date: row.get("due_date")?,
+                completed_at: row.get("completed_at")?,
+                created_at: row.get("created_at")?,
+                updated_at: row.get("updated_at")?,
+                tags: None,
+                steps: None,
+                attachments: None,
+                group_info: None,
+            })
+        })
+        .context("Failed to execute list_with_filters query")?;
+
+        let mut todos = Vec::new();
+        for todo in todo_iter {
+            todos.push(todo.context("Failed to parse todo row")?);
+        }
+
+        for todo in &mut todos {
+            Self::load_relations(conn, todo)?;
+        }
+
+        Ok(todos)
+    }
+
     /// 更新任务状态
     pub fn update_status(conn: &Connection, id: i64, status: i32) -> Result<Todo> {
         let now = Utc::now().timestamp_millis();

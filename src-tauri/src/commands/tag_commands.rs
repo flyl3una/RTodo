@@ -4,6 +4,7 @@
 use crate::database::Database;
 use crate::database::repositories::TagRepository;
 use crate::models::Tag;
+use crate::pojo::request::{CreateTagRequest, UpdateTagRequest};
 
 /// 获取所有标签
 #[tauri::command]
@@ -23,28 +24,26 @@ pub async fn get_tags(
 /// 创建标签
 #[tauri::command]
 pub async fn create_tag(
-    name: String,
-    color: String,
+    payload: CreateTagRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<Tag, String> {
-    tracing::info!("create_tag called: name={}", name);
+    tracing::info!("create_tag called: name={}", payload.name);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    TagRepository::create(inner, &name, &color)
+    TagRepository::create(inner, &payload.name, &payload.color)
         .map_err(|e| format!("Failed to create tag: {}", e))
 }
 
 /// 更新标签
 #[tauri::command]
 pub async fn update_tag(
-    id: i64,
-    name: Option<String>,
-    color: Option<String>,
+    payload: UpdateTagRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<Tag, String> {
+    let id = payload.id;
     tracing::info!("update_tag called: id={}", id);
 
     let conn = db.get_connection().await;
@@ -54,8 +53,8 @@ pub async fn update_tag(
     TagRepository::update(
         inner,
         id,
-        name.as_deref(),
-        color.as_deref(),
+        payload.name.as_deref(),
+        payload.color.as_deref(),
     )
     .map_err(|e| format!("Failed to update tag: {}", e))
 }

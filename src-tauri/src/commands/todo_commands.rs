@@ -3,8 +3,8 @@
 
 use crate::database::Database;
 use crate::database::repositories::TodoRepository;
-use crate::models::{Todo, CreateTodoRequest, UpdateTodoRequest};
-use crate::models::todo::GetTodosRequest;
+use crate::models::Todo;
+use crate::pojo::request::{CreateTodoRequest, UpdateTodoRequest, UpdateTodoStatusRequest, GetTodosRequest};
 
 /// 获取任务列表
 #[tauri::command]
@@ -171,19 +171,18 @@ pub async fn delete_todo(
 /// 更新任务状态
 #[tauri::command]
 pub async fn update_todo_status(
-    id: i64,
-    status: i32,
+    payload: UpdateTodoStatusRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<Todo, String> {
-    tracing::info!("update_todo_status called: id={}, status={}", id, status);
+    tracing::info!("update_todo_status called: id={}, status={}", payload.id, payload.status);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    let result = TodoRepository::update_status(inner, id, status)
+    let result = TodoRepository::update_status(inner, payload.id, payload.status)
         .map_err(|e| {
-            tracing::error!("update_todo_status failed for id={}: {}", id, e);
+            tracing::error!("update_todo_status failed for id={}: {}", payload.id, e);
             format!("Failed to update todo status: {}", e)
         })?;
 

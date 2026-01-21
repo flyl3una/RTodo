@@ -15,10 +15,3 @@ pub struct Attachment {
     pub created_at: i64,
 }
 
-/// 创建附件请求
-#[derive(Debug, Deserialize)]
-pub struct CreateAttachmentRequest {
-    pub todo_id: i64,
-    pub file_path: String,
-    pub name: String,
-}

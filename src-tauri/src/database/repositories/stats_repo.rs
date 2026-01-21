@@ -160,17 +160,19 @@ impl StatsRepository {
         Ok(stats)
     }
 
-    /// 获取带任务详情的统计（支持时间范围筛选）
+    /// 获取带任务详情的统计（支持时间范围、多任务组、多标签筛选）
     pub fn get_stats_with_details(
         conn: &Connection,
         start_date: Option<i64>,
         end_date: Option<i64>,
+        group_ids: Option<Vec<i64>>,
+        tag_ids: Option<Vec<i64>>,
     ) -> Result<TodoStatsWithDetails> {
-        // 获取所有任务（带时间筛选）
-        let all_todos = TodoRepository::list(
+        // 获取所有任务（带筛选条件）
+        let all_todos = TodoRepository::list_with_filters(
             conn,
-            None, // group_id
-            None, // tag_id
+            group_ids,
+            tag_ids,
             None, // status
             None, // search
             None, // priority

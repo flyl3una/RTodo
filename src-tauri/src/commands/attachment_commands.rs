@@ -8,6 +8,7 @@ use crate::database::Database;
 use crate::database::repositories::AttachmentRepository;
 use crate::database::DbConnection;
 use crate::models::Attachment;
+use crate::pojo::request::DownloadAttachmentRequest;
 use std::path::Path;
 use std::fs;
 use tauri_plugin_shell::ShellExt;
@@ -187,17 +188,16 @@ pub async fn open_attachment(
 /// 下载附件到指定位置
 #[tauri::command]
 pub async fn download_attachment(
-    attachment_id: i64,
-    target_path: String,
+    payload: DownloadAttachmentRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<(), String> {
-    tracing::info!("download_attachment called: id={}, target={}", attachment_id, target_path);
+    tracing::info!("download_attachment called: id={}, target={}", payload.attachment_id, payload.target_path);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    let attachment = AttachmentRepository::get(inner, attachment_id)
+    let attachment = AttachmentRepository::get(inner, payload.attachment_id)
         .map_err(|e| format!("查询附件失败: {}", e))?
         .ok_or_else(|| "附件不存在".to_string())?;
 
@@ -210,9 +210,9 @@ pub async fn download_attachment(
     }
 
     // 复制文件到目标位置
-    fs::copy(&source_path, &target_path)
+    fs::copy(&source_path, &payload.target_path)
         .map_err(|e| format!("复制文件失败: {}", e))?;
 
-    tracing::info!("Attachment downloaded successfully: id={} to {}", attachment_id, target_path);
+    tracing::info!("Attachment downloaded successfully: id={} to {}", payload.attachment_id, payload.target_path);
     Ok(())
 }

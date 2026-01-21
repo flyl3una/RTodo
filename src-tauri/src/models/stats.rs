@@ -63,3 +63,4 @@ pub struct TodoStatsWithDetails {
     pub in_progress_tasks: Vec<Todo>,
     pub done_tasks: Vec<Todo>,
 }
+

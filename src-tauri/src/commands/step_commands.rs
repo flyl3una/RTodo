@@ -4,6 +4,7 @@
 use crate::database::Database;
 use crate::database::repositories::StepRepository;
 use crate::models::TodoStep;
+use crate::pojo::request::{CreateStepRequest, UpdateStepRequest};
 
 /// 获取任务的所有步骤
 #[tauri::command]
@@ -24,17 +25,16 @@ pub async fn get_todo_steps(
 /// 创建步骤
 #[tauri::command]
 pub async fn create_step(
-    todo_id: i64,
-    title: String,
+    payload: CreateStepRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<TodoStep, String> {
-    tracing::info!("create_step called: todo_id={}, title={}", todo_id, title);
+    tracing::info!("create_step called: todo_id={}, title={}", payload.todo_id, payload.title);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    StepRepository::create(inner, todo_id, &title)
+    StepRepository::create(inner, payload.todo_id, &payload.title)
         .map_err(|e| format!("Failed to create step: {}", e))
 }
 
@@ -57,10 +57,11 @@ pub async fn toggle_step(
 /// 更新步骤标题
 #[tauri::command]
 pub async fn update_step(
-    id: i64,
-    title: String,
+    payload: UpdateStepRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<TodoStep, String> {
+    let id = payload.id;
+    let title = payload.title.unwrap_or_default();
     tracing::info!("update_step called: id={}, title={}", id, title);
 
     let conn = db.get_connection().await;

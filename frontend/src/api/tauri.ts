@@ -147,7 +147,8 @@ export async function deleteTodo(id: number): Promise<void> {
  * 更新任务状态
  */
 export async function updateTodoStatus(id: number, status: TodoStatus): Promise<Todo> {
-  return safeInvoke<Todo>('update_todo_status', { id, status });
+  const payload = { id, status };
+  return safeInvoke<Todo>('update_todo_status', { payload });
 }
 
 // ==================== TaskGroup API ====================
@@ -168,7 +169,11 @@ export async function createTaskGroup(params: {
   icon?: string;
   color?: string;
 }): Promise<TaskGroup> {
-  return safeInvoke<TaskGroup>('create_task_group', params);
+  const payload: Record<string, unknown> = { name: params.name };
+  if (params.parent_id !== undefined) payload.parent_id = params.parent_id;
+  if (params.icon !== undefined) payload.icon = params.icon;
+  if (params.color !== undefined) payload.color = params.color;
+  return safeInvoke<TaskGroup>('create_task_group', { payload });
 }
 
 /**
@@ -176,10 +181,16 @@ export async function createTaskGroup(params: {
  */
 export async function updateTaskGroup(id: number, params: {
   name?: string;
+  parent_id?: string;
   icon?: string;
   color?: string;
 }): Promise<TaskGroup> {
-  return safeInvoke<TaskGroup>('update_task_group', { id, ...params });
+  const payload: Record<string, unknown> = { id };
+  if (params.name !== undefined) payload.name = params.name;
+  if (params.parent_id !== undefined) payload.parent_id = params.parent_id;
+  if (params.icon !== undefined) payload.icon = params.icon;
+  if (params.color !== undefined) payload.color = params.color;
+  return safeInvoke<TaskGroup>('update_task_group', { payload });
 }
 
 /**
@@ -202,7 +213,8 @@ export async function getTags(): Promise<Tag[]> {
  * 创建标签
  */
 export async function createTag(name: string, color: string): Promise<Tag> {
-  return safeInvoke<Tag>('create_tag', { name, color });
+  const payload = { name, color };
+  return safeInvoke<Tag>('create_tag', { payload });
 }
 
 /**
@@ -215,7 +227,7 @@ export async function updateTag(id: number, params: {
   const payload: Record<string, unknown> = { id };
   if (params.name !== undefined) payload.name = params.name;
   if (params.color !== undefined) payload.color = params.color;
-  return safeInvoke<Tag>('update_tag', payload);
+  return safeInvoke<Tag>('update_tag', { payload });
 }
 
 /**
@@ -238,7 +250,8 @@ export async function getTodoSteps(todoId: number): Promise<TodoStep[]> {
  * 创建执行步骤
  */
 export async function createStep(todoId: number, title: string): Promise<TodoStep> {
-  return safeInvoke<TodoStep>('create_step', { todoId, title });
+  const payload = { todo_id: todoId, title };
+  return safeInvoke<TodoStep>('create_step', { payload });
 }
 
 /**
@@ -259,7 +272,8 @@ export async function deleteStep(stepId: number): Promise<void> {
  * 更新步骤标题
  */
 export async function updateStep(stepId: number, title: string): Promise<TodoStep> {
-  return safeInvoke<TodoStep>('update_step', { id: stepId, title });
+  const payload = { id: stepId, title };
+  return safeInvoke<TodoStep>('update_step', { payload });
 }
 
 // ==================== Attachment API ====================
@@ -296,7 +310,8 @@ export async function openAttachment(attachmentId: number): Promise<void> {
  * 下载附件到指定位置
  */
 export async function downloadAttachment(attachmentId: number, targetPath: string): Promise<void> {
-  return safeInvoke<void>('download_attachment', { attachmentId, targetPath });
+  const payload = { attachment_id: attachmentId, target_path: targetPath };
+  return safeInvoke<void>('download_attachment', { payload });
 }
 
 // ==================== Data Path API ====================
@@ -334,10 +349,8 @@ export async function resetDataPath(): Promise<void> {
  */
 export async function migrateData(newPath: string, keepOriginal: boolean): Promise<void> {
   console.log('[API] migrateData called with:', { newPath, keepOriginal });
-  const result = await safeInvoke<void>('migrate_data', {
-    newPath,
-    keepOriginal
-  });
+  const payload = { new_path: newPath, keep_original: keepOriginal };
+  const result = await safeInvoke<void>('migrate_data', { payload });
   console.log('[API] migrateData result:', result);
   return result;
 }
@@ -348,30 +361,37 @@ export async function migrateData(newPath: string, keepOriginal: boolean): Promi
  * 获取统计数据
  */
 export async function getStats(startDate?: number, endDate?: number): Promise<TodoStats> {
-  const args: Record<string, unknown> = {};
-  if (startDate !== undefined) args.start_date = startDate;
-  if (endDate !== undefined) args.end_date = endDate;
-  return safeInvoke<TodoStats>('get_stats', args);
+  const payload: Record<string, unknown> = {};
+  if (startDate !== undefined) payload.start_date = startDate;
+  if (endDate !== undefined) payload.end_date = endDate;
+  return safeInvoke<TodoStats>('get_stats', { payload });
 }
 
 /**
  * 按日期获取统计
  */
 export async function getStatsByDate(range: string, startDate?: number, endDate?: number): Promise<StatsByDate[]> {
-  const args: Record<string, unknown> = { range };
-  if (startDate !== undefined) args.start_date = startDate;
-  if (endDate !== undefined) args.end_date = endDate;
-  return safeInvoke<StatsByDate[]>('get_stats_by_date', args);
+  const payload: Record<string, unknown> = { range };
+  if (startDate !== undefined) payload.start_date = startDate;
+  if (endDate !== undefined) payload.end_date = endDate;
+  return safeInvoke<StatsByDate[]>('get_stats_by_date', { payload });
 }
 
 /**
  * 获取带详情的统计
  */
-export async function getStatsWithDetails(startDate?: number, endDate?: number): Promise<TodoStatsWithDetails> {
-  const args: Record<string, unknown> = {};
-  if (startDate !== undefined) args.start_date = startDate;
-  if (endDate !== undefined) args.end_date = endDate;
-  return safeInvoke<TodoStatsWithDetails>('get_stats_with_details', args);
+export async function getStatsWithDetails(
+  startDate?: number,
+  endDate?: number,
+  groupIds?: number[],
+  tagIds?: number[]
+): Promise<TodoStatsWithDetails> {
+  const payload: Record<string, unknown> = {};
+  if (startDate !== undefined) payload.start_date = startDate;
+  if (endDate !== undefined) payload.end_date = endDate;
+  if (groupIds !== undefined && groupIds.length > 0) payload.group_ids = groupIds;
+  if (tagIds !== undefined && tagIds.length > 0) payload.tag_ids = tagIds;
+  return safeInvoke<TodoStatsWithDetails>('get_stats_with_details', { payload });
 }
 
 // ==================== Import/Export API ====================

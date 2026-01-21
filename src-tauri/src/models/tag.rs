@@ -12,19 +12,3 @@ pub struct Tag {
     pub created_at: i64,
 }
 
-/// 创建标签请求
-#[derive(Debug, Deserialize)]
-pub struct CreateTagRequest {
-    pub name: String,
-    pub color: String,
-}
-
-/// 更新标签请求
-#[derive(Debug, Deserialize)]
-pub struct UpdateTagRequest {
-    pub id: i64,
-    #[serde(default)]
-    pub name: Option<String>,
-    #[serde(default)]
-    pub color: Option<String>,
-}

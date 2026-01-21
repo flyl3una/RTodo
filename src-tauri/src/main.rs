@@ -17,6 +17,7 @@ use tauri_plugin_dialog::DialogExt;
 mod commands;
 mod database;
 mod models;
+mod pojo;
 mod utils;
 mod logging;
 mod config;

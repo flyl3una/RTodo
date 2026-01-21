@@ -4,7 +4,49 @@
       <h1 class="page-title">{{ t('stats.title') }}</h1>
       <div class="header-controls">
         <el-segmented v-model="viewMode" :options="viewModeOptions" style="margin-right: 12px" />
-        <el-segmented v-model="dateRange" :options="dateRangeOptions" />
+        <el-segmented v-model="dateRange" :options="dateRangeOptions" style="margin-right: 12px" />
+        <el-select
+          v-model="selectedGroupIds"
+          multiple
+          collapse-tags
+          collapse-tags-tooltip
+          clearable
+          :placeholder="t('stats.selectGroups')"
+          style="width: 160px; margin-right: 12px"
+        >
+          <el-option
+            v-for="group in groups"
+            :key="group.id"
+            :label="group.name"
+            :value="group.id"
+          >
+            <span class="filter-option">
+              <span class="filter-dot" :style="{ backgroundColor: group.color }"></span>
+              <span>{{ group.name }}</span>
+            </span>
+          </el-option>
+        </el-select>
+        <el-select
+          v-model="selectedTagIds"
+          multiple
+          collapse-tags
+          collapse-tags-tooltip
+          clearable
+          :placeholder="t('stats.selectTags')"
+          style="width: 160px; margin-right: 12px"
+        >
+          <el-option
+            v-for="tag in tags"
+            :key="tag.id"
+            :label="tag.name"
+            :value="tag.id"
+          >
+            <span class="filter-option">
+              <span class="filter-dot" :style="{ backgroundColor: tag.color }"></span>
+              <span>{{ tag.name }}</span>
+            </span>
+          </el-option>
+        </el-select>
         <div v-if="dateRange === 'custom'" class="custom-date-range">
           <el-date-picker
             v-model="customStartDate"
@@ -253,8 +295,14 @@ const todoStore = useTodoStore();
 const groupStore = useGroupStore();
 const tagStore = useTagStore();
 
+const groups = computed(() => groupStore.groups);
+const tags = computed(() => tagStore.tags);
+
 const viewMode = ref<'dashboard' | 'report'>('dashboard');
 const showTimeAndTags = ref(false);
+
+const selectedGroupIds = ref<number[]>([]);
+const selectedTagIds = ref<number[]>([]);
 
 const dateRange = ref<'day' | 'week' | 'month' | 'custom'>('week');
 const customStartDate = ref<number | null>(null);
@@ -675,15 +723,35 @@ function formatDateTime(timestamp: number): string {
 async function loadStats() {
   try {
     const { startDate, endDate } = dateRangeFilter.value;
-    
-    // 只调用一个API获取所有详细数据，然后前端计算所有统计数据
-    statsWithDetails.value = await api.getStatsWithDetails(startDate, endDate);
+
+    console.log('[DesktopStatsView] loadStats called with:');
+    console.log('  startDate:', startDate);
+    console.log('  endDate:', endDate);
+    console.log('  selectedGroupIds:', selectedGroupIds.value);
+    console.log('  selectedTagIds:', selectedTagIds.value);
+
+    // 调用API获取所有详细数据，支持任务组和标签筛选
+    const result = await api.getStatsWithDetails(
+      startDate,
+      endDate,
+      selectedGroupIds.value.length > 0 ? selectedGroupIds.value : undefined,
+      selectedTagIds.value.length > 0 ? selectedTagIds.value : undefined
+    );
+
+    console.log('[DesktopStatsView] loadStats result:', {
+      total: result.total,
+      todo: result.todo,
+      in_progress: result.in_progress,
+      done: result.done,
+    });
+
+    statsWithDetails.value = result;
   } catch (error) {
     console.error('Failed to load stats:', error);
   }
 }
 
-watch([dateRange, customStartDate, customEndDate], () => {
+watch([dateRange, customStartDate, customEndDate, selectedGroupIds, selectedTagIds], () => {
   loadStats();
 });
 
@@ -715,6 +783,20 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .page-title {
@@ -725,7 +807,7 @@ onMounted(async () => {
 }
 
 .stats-cards {
-  display: grid;
+  display: grid; 
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 16px;
   margin-bottom: 24px;
@@ -1146,6 +1228,11 @@ onMounted(async () => {
 
   .header-controls :deep(.el-segmented) {
     height: 28px;
+  }
+
+  .header-controls :deep(.el-select) {
+    width: 100% !important;
+    margin: 4px 0;
   }
 
   .custom-date-range {

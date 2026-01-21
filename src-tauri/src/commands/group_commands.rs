@@ -4,6 +4,7 @@
 use crate::database::Database;
 use crate::database::repositories::GroupRepository;
 use crate::models::TaskGroup;
+use crate::pojo::request::{CreateGroupRequest, UpdateGroupRequest};
 
 /// 获取所有任务组
 #[tauri::command]
@@ -23,13 +24,10 @@ pub async fn get_task_groups(
 /// 创建任务组
 #[tauri::command]
 pub async fn create_task_group(
-    name: String,
-    parent_id: Option<i64>,
-    icon: Option<String>,
-    color: Option<String>,
+    payload: CreateGroupRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<TaskGroup, String> {
-    tracing::info!("create_task_group called: name={}", name);
+    tracing::info!("create_task_group called: name={}", payload.name);
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
@@ -37,10 +35,10 @@ pub async fn create_task_group(
 
     GroupRepository::create(
         inner,
-        &name,
-        parent_id,
-        icon.as_deref(),
-        color.as_deref(),
+        &payload.name,
+        payload.parent_id,
+        payload.icon.as_deref(),
+        payload.color.as_deref(),
     )
     .map_err(|e| format!("Failed to create task group: {}", e))
 }
@@ -48,13 +46,10 @@ pub async fn create_task_group(
 /// 更新任务组
 #[tauri::command]
 pub async fn update_task_group(
-    id: i64,
-    name: Option<String>,
-    parent_id: Option<i64>,
-    icon: Option<String>,
-    color: Option<String>,
+    payload: UpdateGroupRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<TaskGroup, String> {
+    let id = payload.id;
     tracing::info!("update_task_group called: id={}", id);
 
     let conn = db.get_connection().await;
@@ -64,10 +59,10 @@ pub async fn update_task_group(
     GroupRepository::update(
         inner,
         id,
-        name.as_deref(),
-        parent_id,
-        icon.as_deref(),
-        color.as_deref(),
+        payload.name.as_deref(),
+        payload.parent_id,
+        payload.icon.as_deref(),
+        payload.color.as_deref(),
     )
     .map_err(|e| format!("Failed to update task group: {}", e))
 }

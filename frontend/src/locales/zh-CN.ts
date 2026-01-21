@@ -264,6 +264,8 @@ export default {
     incompleteTasks: '未完成任务',
     noTasks: '暂无任务',
     showTimeAndTags: '显示时间和标签',
+    selectGroups: '选择任务组',
+    selectTags: '选择标签',
   },
 
   // 附件相关

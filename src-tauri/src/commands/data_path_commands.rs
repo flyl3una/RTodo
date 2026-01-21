@@ -6,6 +6,7 @@
 
 use crate::database::DbConnection;
 use crate::config::AppConfig;
+use crate::pojo::request::MigrateDataRequest;
 use tauri::{AppHandle, Emitter, Manager};
 use std::fs;
 use std::path::PathBuf;
@@ -143,18 +144,17 @@ pub async fn reset_data_path(app: AppHandle) -> Result<(), String> {
 /// 迁移数据到新路径
 #[tauri::command]
 pub async fn migrate_data(
-    newPath: String,
-    keepOriginal: bool,
+    payload: MigrateDataRequest,
     app: AppHandle,
 ) -> Result<(), String> {
     use serde_json::json;
 
-    tracing::info!("migrate_data called with: {}", newPath);
+    tracing::info!("migrate_data called with: {}", payload.new_path);
 
     // 1. 获取当前路径
     let current_path = DbConnection::get_data_dir()
         .map_err(|e| format!("Failed to get data dir: {}", e))?;
-    let target_path = PathBuf::from(&newPath);
+    let target_path = PathBuf::from(&payload.new_path);
 
     // 发送进度：开始迁移
     app.emit("migrate-progress", json!({
@@ -343,7 +343,7 @@ pub async fn migrate_data(
     // 8. 更新配置
     if let Some(config_state) = app.try_state::<std::sync::Mutex<AppConfig>>() {
         if let Ok(mut config) = config_state.lock() {
-            config.data_path = Some(newPath.clone());
+            config.data_path = Some(payload.new_path.clone());
             config.save(&app)?;
         }
     }
@@ -351,7 +351,7 @@ pub async fn migrate_data(
     // 9. 根据用户选择决定是否删除原始数据
     // 注意：原子替换操作后，原始位置的数据实际上已经移动到新位置
     // 如果目标位置之前存在数据，它会被重命名为 .bak 文件
-    if !keepOriginal {
+    if !payload.keep_original {
         // 删除备份文件（如果存在）
         app.emit("migrate-progress", json!({
             "status": "cleaning",
@@ -391,7 +391,7 @@ pub async fn migrate_data(
     // 发送完成事件
     app.emit("migrate-progress", json!({
         "status": "completed",
-        "message": if keepOriginal { "迁移完成！原始数据已保留" } else { "迁移完成！原始数据已删除" }
+        "message": if payload.keep_original { "迁移完成！原始数据已保留" } else { "迁移完成！原始数据已删除" }
     })).map_err(|e| e.to_string())?;
 
     tracing::info!("Data migration completed successfully");

@@ -8,10 +8,13 @@ pub mod step;
 pub mod attachment;
 pub mod stats;
 
-// 重新导出常用类型
-pub use todo::{Todo, TodoStatus, CreateTodoRequest, UpdateTodoRequest};
+// 重新导出数据模型（不包含 Request 对象，Request 对象已移至 pojo/request）
+pub use todo::{Todo, TodoStatus};
 pub use group::TaskGroup;
 pub use tag::Tag;
 pub use step::TodoStep;
 pub use attachment::Attachment;
-pub use stats::{TodoStats, StatsByDate, TodoStatsWithDetails, ExportData};
+pub use stats::{
+    TodoStats, StatsByDate, TodoStatsWithDetails, ExportData,
+    GroupStats, TagStats
+};
