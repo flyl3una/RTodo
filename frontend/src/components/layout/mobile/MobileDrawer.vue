@@ -27,7 +27,7 @@
                 :class="{ active: currentView === 'all' }"
                 @click.prevent="setFilter('all')"
               >
-                <el-icon><Grid /></el-icon>
+                <el-icon><Collection /></el-icon>
                 <span>{{ t('nav.allTodos') }}</span>
               </a>
               <a
@@ -172,7 +172,7 @@ import { ref, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
 import {
-  Tickets, Grid, Star, BellFilled, CircleCheck, Clock,
+  Tickets, Collection, Star, BellFilled, CircleCheck, Clock,
   Plus, Edit, Delete,
 } from '@element-plus/icons-vue';
 import { useTodoStore } from '@/stores';
