@@ -351,6 +351,7 @@ export default {
   // 设置页面 - 更多选项
   settings: {
     title: '设置',
+    app: '应用',
     appearance: '外观',
     theme: '主题',
     themeLight: '浅色',
@@ -382,6 +383,8 @@ export default {
     newPath: '新路径',
     resetDataPath: '重置数据路径',
     migrateDataConfirm: '同时迁移现有数据',
+    deleteOriginalData: '迁移后删除原始数据',
+    keepOriginalData: '保留原始数据',
     exportData: '导出数据',
     exportAllData: '导出所有数据',
     importData: '导入数据',
@@ -404,6 +407,8 @@ export default {
     themeChanged: '主题已切换',
     languageChanged: '语言已切换',
     themeColorChanged: '主题色已切换',
+    themeColorEnabled: '主题色已启用',
+    themeColorDisabled: '主题色已禁用',
     developerModeEnabled: '开发模式已开启',
     developerModeDisabled: '开发模式已关闭',
     densityCompact: '已切换到紧凑模式',

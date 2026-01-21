@@ -326,6 +326,7 @@ export default {
   // Settings page - more options
   settings: {
     title: 'Settings',
+    app: 'App',
     appearance: 'Appearance',
     theme: 'Theme',
     themeLight: 'Light',
@@ -353,6 +354,8 @@ export default {
     newPath: 'New Path',
     resetDataPath: 'Reset Data Path',
     migrateDataConfirm: 'Migrate existing data',
+    deleteOriginalData: 'Delete original data after migration',
+    keepOriginalData: 'Keep original data',
     exportData: 'Export Data',
     exportAllData: 'Export All Data',
     importData: 'Import Data',
@@ -379,6 +382,8 @@ export default {
     themeChanged: 'Theme changed',
     languageChanged: 'Language changed',
     themeColorChanged: 'Theme color changed',
+    themeColorEnabled: 'Theme color enabled',
+    themeColorDisabled: 'Theme color disabled',
     developerModeEnabled: 'Developer mode enabled',
     developerModeDisabled: 'Developer mode disabled',
     densityCompact: 'Switched to compact mode',
