@@ -11,6 +11,7 @@ use tauri::{
     Emitter,
     include_image,
 };
+use tauri_plugin_global_shortcut::GlobalShortcutExt;
 use tauri_plugin_dialog::DialogExt;
 
 mod commands;
@@ -97,7 +98,24 @@ async fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(
+            tauri_plugin_global_shortcut::Builder::new()
+                .with_handler(|app_handle, shortcut, _| {
+                    tracing::info!("Global shortcut triggered: {}", shortcut);
+                    // 调用 toggle_webview_window_visibility 命令
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        // 使用 async runtime 执行异步命令
+                        let app = app_handle.clone();
+                        tauri::async_runtime::spawn(async move {
+                            match commands::app_commands::toggle_webview_window_visibility(window).await {
+                                Ok(_) => tracing::info!("Window toggled successfully"),
+                                Err(e) => tracing::error!("Failed to toggle window: {}", e),
+                            }
+                        });
+                    }
+                })
+                .build()
+        )
         .setup(|app| {
             tracing::info!("Setting up application...");
 
@@ -124,6 +142,16 @@ async fn main() {
                 auto_launch: std::sync::Mutex::new(system_enabled),
             };
             app.manage(app_state);
+
+            // 如果配置中保存了快捷键，则注册它
+            if let Some(ref shortcut) = config.global_shortcut {
+                tracing::info!("Registering saved global shortcut: {}", shortcut);
+                let shortcut_manager = app.global_shortcut();
+                match shortcut_manager.register(shortcut.as_str()) {
+                    Ok(_) => tracing::info!("Successfully registered saved shortcut: {}", shortcut),
+                    Err(e) => tracing::warn!("Failed to register saved shortcut {}: {}", shortcut, e),
+                }
+            }
 
             // 更新配置中的开机启动状态（与系统保持同步）
             let mut config_to_save = config;

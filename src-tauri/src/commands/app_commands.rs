@@ -80,8 +80,17 @@ pub async fn set_global_shortcut(
         .register(shortcut.as_str())
         .map_err(|e| format!("Failed to register shortcut: {}", e))?;
 
-    // 保存新的快捷键
+    // 保存新的快捷键到内存
     *current_hotkey = Some(shortcut.clone());
+
+    // 保存到配置文件
+    if let Some(config_state) = app.try_state::<std::sync::Mutex<crate::config::AppConfig>>() {
+        if let Ok(mut config) = config_state.lock() {
+            let shortcut_to_save = Some(shortcut.clone());
+            config.update_global_shortcut(shortcut_to_save, &app)?;
+            tracing::info!("Saved global shortcut to config: {}", shortcut);
+        }
+    }
 
     tracing::info!("Registered new shortcut: {}", shortcut);
 
@@ -99,7 +108,22 @@ pub async fn get_global_shortcut(
 
 /// 显示/隐藏窗口
 #[tauri::command]
-pub async fn toggle_window_visibility(window: Window) -> Result<(), String> {
+pub async fn toggle_window_visibility(window: tauri::Window) -> Result<(), String> {
+    if window.is_visible().map_err(|e| format!("Failed to check visibility: {}", e))? {
+        window.hide().map_err(|e| format!("Failed to hide window: {}", e))?;
+        tracing::info!("Window hidden");
+    } else {
+        window.show().map_err(|e| format!("Failed to show window: {}", e))?;
+        window.set_focus().map_err(|e| format!("Failed to focus window: {}", e))?;
+        tracing::info!("Window shown and focused");
+    }
+    Ok(())
+}
+
+/// 显示/隐藏窗口 (WebviewWindow 版本)
+pub async fn toggle_webview_window_visibility(
+    window: tauri::WebviewWindow,
+) -> Result<(), String> {
     if window.is_visible().map_err(|e| format!("Failed to check visibility: {}", e))? {
         window.hide().map_err(|e| format!("Failed to hide window: {}", e))?;
         tracing::info!("Window hidden");
