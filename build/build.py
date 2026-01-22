@@ -11,9 +11,9 @@ import sys
 import json
 import argparse
 from pathlib import Path
-from utils.logger import logger, LogLevel
-from utils.executor import executor
-from platforms import build_windows, build_linux, build_macos
+from .utils.logger import logger, LogLevel
+from .utils.executor import executor
+from .platforms import build_windows, build_linux, build_macos
 
 
 # 获取项目根目录

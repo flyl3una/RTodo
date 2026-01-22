@@ -9,3 +9,5 @@ tmpclaude-*
 .spec-workflow
 logs
 .claude
+build/**/.pyc
+build/**/__pycache__
