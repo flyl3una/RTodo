@@ -23,7 +23,7 @@
           </div>
           <div class="setting-item">
             <span class="setting-label">{{ t('settings.themeColor') }}</span>
-            <el-switch v-model="currentThemeColorEnabled" @change="handleThemeColorEnabledChange" />
+            <el-color-picker v-model="currentThemeColor" @change="handleThemeColorChange" />
           </div>
           <div class="setting-item">
             <span class="setting-label">{{ t('settings.developerMode') }}</span>
@@ -308,7 +308,6 @@ const activeTab = ref('appearance');
 const currentTheme = ref(uiStore.theme);
 const currentLanguage = ref(uiStore.language);
 const currentThemeColor = ref(uiStore.themeColor);
-const currentThemeColorEnabled = ref(true); // 是否启用主题色
 const currentDeveloperMode = ref(uiStore.developerMode);
 const currentDensityMode = ref(uiStore.densityMode);
 const currentGlobalShortcut = ref(uiStore.globalShortcut);
@@ -358,9 +357,9 @@ function handleLanguageChange(value: 'zh-CN' | 'zh-TW' | 'en-US' | 'ja-JP') {
   ElMessage.success(t('messages.languageChanged'));
 }
 
-function handleThemeColorEnabledChange(enabled: boolean) {
-  // 可以在这里添加启用/禁用主题色的逻辑
-  ElMessage.success(enabled ? t('messages.themeColorEnabled') : t('messages.themeColorDisabled'));
+function handleThemeColorChange(color: string) {
+  uiStore.setThemeColor(color);
+  ElMessage.success(t('messages.themeColorChanged'));
 }
 
 function handleDeveloperModeChange(enabled: boolean) {
