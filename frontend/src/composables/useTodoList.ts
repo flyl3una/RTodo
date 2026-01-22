@@ -103,6 +103,8 @@ export function useTodoList() {
       console.log('[useTodoList] Syncing selectedTodo from store after update');
       selectedTodo.value = updatedInStore;
     }
+    // 退出编辑模式
+    editMode.value = false;
   }
 
   function handleTodoDeleted() {
