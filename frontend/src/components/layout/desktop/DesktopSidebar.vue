@@ -164,7 +164,7 @@
       <div class="sidebar-section" v-if="!collapsed">
         <div class="section-title">
           {{ t('common.tags') }}
-          <el-link type="primary" @click="showTagManage" style="float: right; font-size: 12px;">
+          <el-link type="primary" @click="showAddTag" style="float: right; font-size: 12px;">
             {{ t('common.add') }}
           </el-link>
         </div>
@@ -267,7 +267,7 @@ const {
   showAddGroup,
   editGroup,
   handleGroupUpdated,
-  showTagManage,
+  showAddTag,
   handleTagUpdated,
   editTag,
   resetToTodoView,
