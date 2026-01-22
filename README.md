@@ -109,6 +109,11 @@ cargo tauri dev
 ```bash
 # 构建生产版本
 cargo tauri build
+
+# 制作安装包
+python -m build/build 
+或者
+python build-cli -p windows/macos -a x86_64
 ```
 
 ### 运行测试
