@@ -74,7 +74,26 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
 
-      - name: Debug Tauri CLI
+      - name: Debug Tauri CLI (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          Write-Host "=== Checking Tauri CLI ==="
+          Write-Host "Node version:"
+          node --version
+          Write-Host "NPM version:"
+          npm --version
+          Write-Host ""
+          Write-Host "Checking Tauri CLI availability:"
+          npx tauri info
+          Write-Host ""
+          Write-Host "Project structure:"
+          Get-ChildItem -Path "src-tauri" -Force
+          Write-Host ""
+          Write-Host "Cargo.toml (first 20 lines):"
+          Get-Content "src-tauri\Cargo.toml" -Head 20
+
+      - name: Debug Tauri CLI (Unix)
+        if: matrix.platform != 'windows'
         run: |
           echo "=== Checking Tauri CLI ==="
           echo "Node version:"
@@ -83,13 +102,35 @@ jobs:
           npm --version
           echo ""
           echo "Checking Tauri CLI availability:"
-          npx tauri --help || echo "Tauri CLI check failed"
+          npx tauri info
           echo ""
           echo "Project structure:"
           ls -la src-tauri/
-          cat src-tauri/Cargo.toml | head -20 || true
+          echo ""
+          echo "Cargo.toml (first 20 lines):"
+          head -20 src-tauri/Cargo.toml || true
 
-      - name: Build Tauri app
+      - name: Build Tauri app (Windows)
+        if: matrix.platform == 'windows'
+        run: |
+          Write-Host "=== Starting Tauri build ==="
+          Write-Host "Platform: ${{ matrix.platform }}"
+          Write-Host "Target: ${{ matrix.target }}"
+          Write-Host "Current directory:"
+          Get-Location
+          Write-Host ""
+          Write-Host "Building frontend first..."
+          npm run build
+          Write-Host ""
+          Write-Host "Now building Tauri app..."
+          npx --yes tauri@latest build --verbose
+        env:
+          TAURI_PLATFORM: ${{ matrix.platform }}
+          TARGET: ${{ matrix.target }}
+          CARGO_TARGET: ${{ matrix.target }}
+
+      - name: Build Tauri app (Unix)
+        if: matrix.platform != 'windows'
         run: |
           echo "=== Starting Tauri build ==="
           echo "Platform: ${{ matrix.platform }}"
@@ -100,7 +141,7 @@ jobs:
           npm run build
           echo ""
           echo "Now building Tauri app..."
-          npx tauri build
+          npx --yes tauri@latest build --verbose
         env:
           TAURI_PLATFORM: ${{ matrix.platform }}
           TARGET: ${{ matrix.target }}
@@ -109,17 +150,23 @@ jobs:
       - name: List build outputs (Windows)
         if: matrix.platform == 'windows'
         run: |
-          echo "=== Checking build results ==="
-          echo "Current directory: $(pwd)"
-          echo "Root directory:"
+          Write-Host "=== Checking build results ==="
+          Write-Host "Current directory:"
+          Get-Location
+          Write-Host "Root directory:"
           Get-ChildItem -Path "." | Select-Object Name
-          echo ""
-          echo "src-tauri/target:"
+          Write-Host ""
+          Write-Host "Checking if src-tauri/target exists:"
           if (Test-Path "src-tauri\target") {
-            Get-ChildItem -Path "src-tauri\target" -Recurse | Select-Object -First 30 FullName
+            Write-Host "src-tauri\target found!"
+            Write-Host "Contents:"
+            Get-ChildItem -Path "src-tauri\target" -Recurse -File | Select-Object -First 30 FullName
           } else {
-            echo "src-tauri\target does not exist"
+            Write-Host "src-tauri\target does not exist"
           }
+          Write-Host ""
+          Write-Host "All directories in project:"
+          Get-ChildItem -Path "." -Directory -Recurse | Select-Object -First 30 FullName
 
       - name: List build outputs (Unix)
         if: matrix.platform != 'windows'
