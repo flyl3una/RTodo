@@ -84,7 +84,7 @@ jobs:
           npm --version
           Write-Host ""
           Write-Host "Checking Tauri CLI availability:"
-          npx tauri info
+          npx @tauri-apps/cli info
           Write-Host ""
           Write-Host "Project structure:"
           Get-ChildItem -Path "src-tauri" -Force
@@ -102,7 +102,7 @@ jobs:
           npm --version
           echo ""
           echo "Checking Tauri CLI availability:"
-          npx tauri info
+          npx @tauri-apps/cli info
           echo ""
           echo "Project structure:"
           ls -la src-tauri/
@@ -123,7 +123,7 @@ jobs:
           npm run build
           Write-Host ""
           Write-Host "Now building Tauri app..."
-          npx --yes tauri@latest build --verbose
+          npx --yes @tauri-apps/cli@latest build --verbose
         env:
           TAURI_PLATFORM: ${{ matrix.platform }}
           TARGET: ${{ matrix.target }}
@@ -141,7 +141,7 @@ jobs:
           npm run build
           echo ""
           echo "Now building Tauri app..."
-          npx --yes tauri@latest build --verbose
+          npx --yes @tauri-apps/cli@latest build --verbose
         env:
           TAURI_PLATFORM: ${{ matrix.platform }}
           TARGET: ${{ matrix.target }}
