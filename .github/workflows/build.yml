@@ -74,31 +74,67 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libayatana-appindicator3-dev librsvg2-dev
 
+      - name: Debug Tauri CLI
+        run: |
+          echo "=== Checking Tauri CLI ==="
+          echo "Node version:"
+          node --version
+          echo "NPM version:"
+          npm --version
+          echo ""
+          echo "Checking Tauri CLI availability:"
+          npx tauri --help || echo "Tauri CLI check failed"
+          echo ""
+          echo "Project structure:"
+          ls -la src-tauri/
+          cat src-tauri/Cargo.toml | head -20 || true
+
       - name: Build Tauri app
-        run: npm run tauri build
+        run: |
+          echo "=== Starting Tauri build ==="
+          echo "Platform: ${{ matrix.platform }}"
+          echo "Target: ${{ matrix.target }}"
+          echo "Current directory: $(pwd)"
+          echo ""
+          echo "Building frontend first..."
+          npm run build
+          echo ""
+          echo "Now building Tauri app..."
+          npx tauri build
         env:
           TAURI_PLATFORM: ${{ matrix.platform }}
           TARGET: ${{ matrix.target }}
+          CARGO_TARGET: ${{ matrix.target }}
 
       - name: List build outputs (Windows)
         if: matrix.platform == 'windows'
         run: |
-          echo "Listing src-tauri/target:"
-          Get-ChildItem -Path "src-tauri\target" -Recurse | Select-Object -First 20 FullName
-          echo "Searching for bundle directories:"
-          Get-ChildItem -Path "src-tauri\target" -Recurse -Directory -Filter "bundle" | Select-Object -First 10 FullName
-          echo "Searching for release files:"
-          Get-ChildItem -Path "src-tauri\target" -Recurse -Include *.msi,*.exe,*.dmg,*.deb,*.AppImage,*.rpm | Select-Object -First 20 FullName
+          echo "=== Checking build results ==="
+          echo "Current directory: $(pwd)"
+          echo "Root directory:"
+          Get-ChildItem -Path "." | Select-Object Name
+          echo ""
+          echo "src-tauri/target:"
+          if (Test-Path "src-tauri\target") {
+            Get-ChildItem -Path "src-tauri\target" -Recurse | Select-Object -First 30 FullName
+          } else {
+            echo "src-tauri\target does not exist"
+          }
 
       - name: List build outputs (Unix)
         if: matrix.platform != 'windows'
         run: |
-          echo "Listing src-tauri/target:"
-          find src-tauri/target -type d -name "release" 2>/dev/null || true
-          echo "Searching for bundle directories:"
-          find src-tauri/target -type d -name "bundle" 2>/dev/null || true
-          echo "All release files:"
-          find src-tauri/target -name "*.msi" -o -name "*.exe" -o -name "*.dmg" -o -name "*.app" -o -name "*.deb" -o -name "*.AppImage" -o -name "*.rpm" 2>/dev/null || true
+          echo "=== Checking build results ==="
+          echo "Current directory: $(pwd)"
+          echo "Root directory:"
+          ls -la
+          echo ""
+          if [ -d "src-tauri/target" ]; then
+            echo "src-tauri/target exists, listing:"
+            find src-tauri/target -type f 2>/dev/null | head -30
+          else
+            echo "src-tauri/target does not exist"
+          fi
 
       - name: Upload Windows artifacts
         if: matrix.platform == 'windows'
