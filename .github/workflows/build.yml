@@ -262,7 +262,7 @@ jobs:
           draft: true
           prerelease: false
           generate_release_notes: true
-          update_existing: true
+          overwrite_files: true
           fail_on_unmatched_files: false
           files: |
             artifacts/**/*.msi
@@ -271,8 +271,6 @@ jobs:
             artifacts/**/*.deb
             artifacts/**/*.AppImage
             artifacts/**/*.rpm
-            artifacts/**/*.tar.gz
-            artifacts/**/tarball/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # 手动创建 Release（通过 workflow_dispatch 触发）
@@ -305,7 +303,7 @@ jobs:
           draft: true
           prerelease: false
           generate_release_notes: true
-          update_existing: true
+          overwrite_files: true
           fail_on_unmatched_files: false
           files: |
             artifacts/**/*.msi
@@ -314,6 +312,4 @@ jobs:
             artifacts/**/*.deb
             artifacts/**/*.AppImage
             artifacts/**/*.rpm
-            artifacts/**/*.tar.gz
-            artifacts/**/tarball/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
