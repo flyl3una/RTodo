@@ -15,7 +15,7 @@
         <el-input
           v-model="form.description"
           type="textarea"
-          :rows="3"
+          :rows="6"
           :placeholder="t('todo.descriptionPlaceholder')"
         />
       </el-form-item>
