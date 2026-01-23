@@ -285,13 +285,13 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: false
           files: |
-            artifacts/windows-x64-bundle/*.msi
-            artifacts/windows-x64-bundle/*.exe
-            artifacts/macos-x64-bundle/*.dmg
-            artifacts/macos-arm64-bundle/*.dmg
-            artifacts/linux-x64-bundle/*.deb
-            artifacts/linux-x64-bundle/*.AppImage
-            artifacts/linux-x64-bundle/*.rpm
+            artifacts/windows-x64-bundle/target/release/bundle/msi/*.msi
+            artifacts/windows-x64-bundle/target/release/bundle/nsis/*.exe
+            artifacts/macos-x64-bundle/target/release/bundle/dmg/*.dmg
+            artifacts/macos-arm64-bundle/target/release/bundle/dmg/*.dmg
+            artifacts/linux-x64-bundle/target/release/bundle/deb/*.deb
+            artifacts/linux-x64-bundle/target/release/bundle/appimage/*.AppImage
+            artifacts/linux-x64-bundle/target/release/bundle/rpm/*.rpm
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # 手动创建 Release（通过 workflow_dispatch 触发）
@@ -347,11 +347,11 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: false
           files: |
-            artifacts/windows-x64-bundle/*.msi
-            artifacts/windows-x64-bundle/*.exe
-            artifacts/macos-x64-bundle/*.dmg
-            artifacts/macos-arm64-bundle/*.dmg
-            artifacts/linux-x64-bundle/*.deb
-            artifacts/linux-x64-bundle/*.AppImage
-            artifacts/linux-x64-bundle/*.rpm
+            artifacts/windows-x64-bundle/target/release/bundle/msi/*.msi
+            artifacts/windows-x64-bundle/target/release/bundle/nsis/*.exe
+            artifacts/macos-x64-bundle/target/release/bundle/dmg/*.dmg
+            artifacts/macos-arm64-bundle/target/release/bundle/dmg/*.dmg
+            artifacts/linux-x64-bundle/target/release/bundle/deb/*.deb
+            artifacts/linux-x64-bundle/target/release/bundle/appimage/*.AppImage
+            artifacts/linux-x64-bundle/target/release/bundle/rpm/*.rpm
           token: ${{ secrets.GITHUB_TOKEN }}
