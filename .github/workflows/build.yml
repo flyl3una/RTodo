@@ -292,6 +292,7 @@ jobs:
             artifacts/linux-x64-bundle/target/release/bundle/deb/*.deb
             artifacts/linux-x64-bundle/target/release/bundle/appimage/*.AppImage
             artifacts/linux-x64-bundle/target/release/bundle/rpm/*.rpm
+            artifacts/linux-x64-bundle/target/release/bundle/tarball/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # 手动创建 Release（通过 workflow_dispatch 触发）
@@ -354,4 +355,5 @@ jobs:
             artifacts/linux-x64-bundle/target/release/bundle/deb/*.deb
             artifacts/linux-x64-bundle/target/release/bundle/appimage/*.AppImage
             artifacts/linux-x64-bundle/target/release/bundle/rpm/*.rpm
+            artifacts/linux-x64-bundle/target/release/bundle/tarball/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
