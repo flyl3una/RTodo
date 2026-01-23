@@ -246,52 +246,66 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
         else:
             tauri_formats.append(format_type)
 
-    # 先构建基础二进制文件（如果有任何格式需要构建）
-    if tauri_formats:
+    # 检查二进制文件是否存在
+    binary_path = os.path.join(project_root, f'src-tauri/target/{target}/release/rtodo')
+
+    if not os.path.exists(binary_path):
         logger.info("构建基础二进制文件...")
 
-        # 构建第一个 Tauri bundle 格式（如果失败则只构建二进制文件）
-        first_format = tauri_formats[0]
-        logger.info(f"构建 {first_format.upper()} 包...")
+        # 如果有 Tauri 格式要构建，使用第一个格式来构建（会同时编译二进制文件）
+        # 如果没有 Tauri 格式（只要 tar.gz），则只编译二进制文件
+        if tauri_formats:
+            first_format = tauri_formats[0]
+            logger.info(f"构建 {first_format.upper()} 包（同时编译二进制文件）...")
 
-        build_command = f'cargo tauri build --target {target} --bundles {first_format}'
-        logger.info(f"执行: {build_command}")
+            build_command = f'cargo tauri build --target {target} --bundles {first_format}'
+            logger.info(f"执行: {build_command}")
 
-        spinner = Spinner(f"正在编译和打包 {first_format.upper()}...")
-        spinner.start()
+            spinner = Spinner(f"正在编译和打包 {first_format.upper()}...")
+            spinner.start()
 
-        try:
-            timeout = 1200 if first_format == 'appimage' else 600
-            executor.exec(build_command, cwd=project_root, timeout=timeout, silent=False)
-            spinner.succeed(f"{first_format.upper()} 构建完成")
-            build_results.append(first_format)
-            base_built = True
-        except Exception as e:
-            spinner.fail(f"{first_format.upper()} 构建失败")
-            if first_format == 'appimage':
-                # AppImage 失败时，尝试只构建二进制文件
-                logger.warning("AppImage 构建失败，尝试只构建二进制文件...")
-                logger.info("提示：")
-                logger.info("1. 检查网络连接或配置代理：")
-                logger.info("   export HTTP_PROXY=http://127.0.0.1:7890")
-                logger.info("   export HTTPS_PROXY=http://127.0.0.1:7890")
-                logger.info("")
-                logger.info("2. 或者使用 --no-appimage 跳过 AppImage")
-
-                # 尝试只构建二进制文件（不打包）
-                base_command = f'cargo tauri build --target {target}'
-                try:
-                    executor.exec(base_command, cwd=project_root, timeout=600, silent=False)
-                    logger.success("二进制文件构建完成（跳过打包）")
+            try:
+                timeout = 1200 if first_format == 'appimage' else 600
+                executor.exec(build_command, cwd=project_root, timeout=timeout, silent=False)
+                spinner.succeed(f"{first_format.upper()} 构建完成")
+                build_results.append(first_format)
+                base_built = True
+            except Exception as e:
+                spinner.fail(f"{first_format.upper()} 构建失败")
+                # 检查二进制文件是否已生成
+                if os.path.exists(binary_path):
+                    logger.warning(f"{first_format.upper()} 打包失败，但二进制文件已构建")
+                    logger.success("使用已构建的二进制文件继续...")
                     base_built = True
-                except Exception as e2:
-                    logger.error("二进制文件构建也失败了")
-                    raise e2
-            else:
-                # 其他格式的错误应该抛出
-                raise
+                else:
+                    logger.error(f"{first_format.upper()} 构建失败，且二进制文件也未生成")
+                    # 如果是 AppImage 失败，给出额外提示
+                    if first_format == 'appimage':
+                        logger.info("建议使用 --no-appimage 跳过 AppImage")
+                    raise
+        else:
+            # 只有 tar.gz，只编译二进制文件
+            logger.info("编译二进制文件（用于 tar.gz 打包）...")
 
-        # 构建其余的 bundle 格式
+            # 尝试不指定任何 bundles（Tauri 2.x 默认行为）
+            base_command = f'cargo tauri build --target {target}'
+
+            spinner = Spinner("正在编译 Tauri 应用...")
+            spinner.start()
+
+            try:
+                executor.exec(base_command, cwd=project_root, timeout=600, silent=False)
+                spinner.succeed("二进制文件构建完成")
+                base_built = True
+            except Exception as e:
+                spinner.fail("二进制文件构建失败")
+                raise
+    else:
+        logger.info("二进制文件已存在，跳过编译")
+        base_built = True
+
+    # 构建其余的 bundle 格式（除了第一个）
+    if tauri_formats:
         for format_type in tauri_formats[1:]:
             logger.info(f"构建 {format_type.upper()} 包...")
 
