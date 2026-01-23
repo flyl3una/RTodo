@@ -133,6 +133,7 @@ def build(options: argparse.Namespace):
                 'targets': targets,
                 'version': version,
                 'project_root': str(PROJECT_ROOT),
+                'no_appimage': options.no_appimage,
             }
 
             if platform_name == 'windows':
@@ -214,6 +215,12 @@ def main():
         '--version',
         action='version',
         version='%(prog)s 1.0.0'
+    )
+
+    parser.add_argument(
+        '--no-appimage',
+        action='store_true',
+        help='Linux 构建时跳过 AppImage 格式'
     )
 
     args = parser.parse_args()

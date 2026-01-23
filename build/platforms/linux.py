@@ -48,12 +48,12 @@ def check_linux_dependencies() -> bool:
     return all_found
 
 
-def get_package_formats(arch: str) -> List[str]:
+def get_package_formats(arch: str, no_appimage: bool = False) -> List[str]:
     """获取构建的包格式"""
     formats = ['deb']  # DEB 是默认格式
 
-    # AppImage 需要 linuxdeploy
-    if executor.command_exists('linuxdeploy') or arch == 'x86_64':
+    # AppImage 需要 linuxdeploy（可以通过 --no-appimage 跳过）
+    if not no_appimage and (executor.command_exists('linuxdeploy') or arch == 'x86_64'):
         formats.append('appimage')
 
     # RPM 需要 rpmbuild
@@ -73,6 +73,7 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
     targets = options.get('targets', {})
     version = options.get('version', {})
     project_root = options.get('project_root', '')
+    no_appimage = options.get('no_appimage', False)
 
     logger.title('Linux 平台构建')
     logger.newline()
@@ -93,8 +94,12 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
     logger.newline()
 
     # 确定要构建的包格式
-    package_formats = get_package_formats(arch)
+    package_formats = get_package_formats(arch, no_appimage)
     logger.info(f"将生成的包格式: {', '.join(package_formats)}")
+
+    if no_appimage and 'appimage' not in package_formats:
+        logger.info("已跳过 AppImage 构建 (--no-appimage)")
+
     logger.newline()
 
     # 检查是否需要添加 Rust 目标
@@ -120,6 +125,9 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
     # 构建 Tauri 应用
     logger.subtitle('构建 Tauri 应用')
 
+    # 设置网络超时环境变量（针对 AppImage 下载）
+    os.environ['TAURI_BUNDLE_SKIP_SIGNING'] = '1'
+
     build_results = []
 
     for format_type in package_formats:
@@ -133,13 +141,28 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
         spinner.start()
 
         try:
-            executor.exec(build_command, cwd=project_root, timeout=600, silent=False)
+            # AppImage 需要更长的超时时间（下载文件）
+            timeout = 1200 if format_type == 'appimage' else 600
+            executor.exec(build_command, cwd=project_root, timeout=timeout, silent=False)
             spinner.succeed(f"{format_type.upper()} 构建完成")
             build_results.append(format_type)
         except Exception as e:
             spinner.fail(f"{format_type.upper()} 构建失败")
-            if format_type != 'appimage':
-                # AppImage 可能失败，但不影响其他格式
+            if format_type == 'appimage':
+                # AppImage 失败时给出详细提示
+                logger.warning("AppImage 构建失败，可能是因为网络问题")
+                logger.info("提示：")
+                logger.info("1. 检查网络连接或配置代理：")
+                logger.info("   export HTTP_PROXY=http://127.0.0.1:7890")
+                logger.info("   export HTTPS_PROXY=http://127.0.0.1:7890")
+                logger.info("")
+                logger.info("2. 手动下载 AppRun 文件：")
+                logger.info("   python -m build.utils.apprun-helper")
+                logger.info("")
+                logger.info("3. 或者跳过 AppImage，只构建 DEB 包：")
+                logger.info("   将 build/platforms/linux.py 中的 'appimage' 从 formats 中移除")
+            else:
+                # 其他格式的错误应该抛出
                 raise
 
     logger.newline()
