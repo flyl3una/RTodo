@@ -3,7 +3,7 @@
 """
 Linux 平台构建脚本
 支持 x86_64 和 arm64 架构
-生成 DEB, RPM, AppImage 包
+生成 DEB, RPM, AppImage, tar.gz 包
 """
 
 import os
@@ -50,7 +50,7 @@ def check_linux_dependencies() -> bool:
 
 def get_package_formats(arch: str, no_appimage: bool = False) -> List[str]:
     """获取构建的包格式"""
-    formats = ['deb']  # DEB 是默认格式
+    formats = ['deb', 'tar.gz']  # DEB 和 tar.gz 是默认格式
 
     # AppImage 需要 linuxdeploy（可以通过 --no-appimage 跳过）
     if not no_appimage and (executor.command_exists('linuxdeploy') or arch == 'x86_64'):
