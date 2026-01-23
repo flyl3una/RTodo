@@ -129,7 +129,7 @@ jobs:
           npm run build
           Write-Host ""
           Write-Host "Now building Tauri app..."
-          npx --yes @tauri-apps/cli@latest build --verbose
+          npx --yes @tauri-apps/cli@latest build --target ${{ matrix.target }} --verbose
         env:
           TAURI_PLATFORM: ${{ matrix.platform }}
           TARGET: ${{ matrix.target }}
@@ -147,7 +147,7 @@ jobs:
           npm run build
           echo ""
           echo "Now building Tauri app..."
-          npx --yes @tauri-apps/cli@latest build --verbose
+          npx --yes @tauri-apps/cli@latest build --target ${{ matrix.target }} --verbose
         env:
           TAURI_PLATFORM: ${{ matrix.platform }}
           TARGET: ${{ matrix.target }}
