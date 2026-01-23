@@ -109,10 +109,12 @@ def create_tarball(target: str, project_root: str, version: dict) -> str:
 
     # 查找二进制文件
     binary_src = find_binary_path(target, project_root, app_name)
-    logger.info(f"使用二进制文件: {binary_src}")
+    # 不直接输出路径以避免 Windows 编码问题
+    logger.info(f"找到二进制文件，准备打包...")
 
-    # 临时目录
-    temp_dir = os.path.join(project_root, 'src-tauri/target', target, 'release', 'tarball-temp')
+    # 临时目录（使用项目根目录的 target/）
+    temp_base_dir = os.path.join(project_root, 'target', target, 'release')
+    temp_dir = os.path.join(temp_base_dir, 'tarball-temp')
     if os.path.exists(temp_dir):
         shutil.rmtree(temp_dir)
     os.makedirs(temp_dir)
@@ -129,44 +131,41 @@ def create_tarball(target: str, project_root: str, version: dict) -> str:
     # 创建 README
     readme_content = f"""# {app_name} v{app_version} ({arch})
 
-## 安装
+## Installation
 
-1. 解压文件：
+1. Extract the archive:
    tar -xzf {app_name}-{app_version}-{arch}.tar.gz
 
-2. 进入目录：
+2. Enter the directory:
    cd {app_name}-{app_version}-{arch}
 
-3. 运行程序：
+3. Run the application:
    ./{app_name}
 
-或者直接运行：
-   ./{app_name}-{app_version}-{arch}/{app_name}
-
-## 系统要求
+## System Requirements
 
 - GTK 3
 - WebKit2GTK
-- libayatana-appindicator (可选，用于系统托盘)
+- libayatana-appindicator (optional, for system tray)
 
-### Ubuntu/Debian 安装依赖：
+### Ubuntu/Debian:
 ```bash
 sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 libayatana-appindicator3-1
 ```
 
-### Fedora/RHEL 安装依赖：
+### Fedora/RHEL:
 ```bash
 sudo dnf install gtk3 webkit2gtk3 libappindicator-gtk3
 ```
 
-### Arch Linux 安装依赖：
+### Arch Linux:
 ```bash
 sudo pacman -S gtk3 webkit2gtk libappindicator-gtk3
 ```
 
-## 许可证
+## License
 
-Copyright © 2025 RTodo Team. All rights reserved.
+Copyright (c) 2025 RTodo Team. All rights reserved.
 """
     readme_path = os.path.join(package_dir, 'README.md')
     with open(readme_path, 'w', encoding='utf-8') as f:
@@ -176,7 +175,7 @@ Copyright © 2025 RTodo Team. All rights reserved.
     tarball_name = f'{app_name}-{app_version}-{arch}.tar.gz'
     tarball_path = os.path.join(
         project_root,
-        f'src-tauri/target/{target}/release/bundle/tarball',
+        f'target/{target}/release/bundle/tarball',
         tarball_name
     )
 
