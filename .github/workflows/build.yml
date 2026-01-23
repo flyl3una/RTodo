@@ -285,75 +285,11 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: false
           files: |
-            artifacts/windows-x64-bundle/target/release/bundle/msi/*.msi
-            artifacts/windows-x64-bundle/target/release/bundle/nsis/*.exe
-            artifacts/macos-x64-bundle/target/release/bundle/dmg/*.dmg
-            artifacts/macos-arm64-bundle/target/release/bundle/dmg/*.dmg
-            artifacts/linux-x64-bundle/target/release/bundle/deb/*.deb
-            artifacts/linux-x64-bundle/target/release/bundle/appimage/*.AppImage
-            artifacts/linux-x64-bundle/target/release/bundle/rpm/*.rpm
-            artifacts/linux-x64-bundle/target/release/bundle/tarball/*.tar.gz
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-  # 手动创建 Release（通过 workflow_dispatch 触发）
-  manual-release:
-    if: github.event_name == 'workflow_dispatch'
-    needs: build
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: artifacts
-
-      - name: Display structure of downloaded files
-        run: |
-          echo "=== All artifacts ==="
-          ls -R artifacts
-          echo ""
-          echo "=== All .dmg files ==="
-          find artifacts -name "*.dmg" -type f
-          echo ""
-          echo "=== All .msi files ==="
-          find artifacts -name "*.msi" -type f
-          echo ""
-          echo "=== All .exe files ==="
-          find artifacts -name "*.exe" -type f
-          echo ""
-          echo "=== All .deb files ==="
-          find artifacts -name "*.deb" -type f
-          echo ""
-          echo "=== All .AppImage files ==="
-          find artifacts -name "*.AppImage" -type f
-          echo ""
-          echo "=== All .rpm files ==="
-          find artifacts -name "*.rpm" -type f
-
-      - name: Get version from package.json
-        id: get-version
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.get-version.outputs.version }}
-          name: RTodo v${{ steps.get-version.outputs.version }}
-          draft: true
-          prerelease: false
-          generate_release_notes: true
-          overwrite_files: true
-          fail_on_unmatched_files: false
-          files: |
-            artifacts/windows-x64-bundle/target/release/bundle/msi/*.msi
-            artifacts/windows-x64-bundle/target/release/bundle/nsis/*.exe
-            artifacts/macos-x64-bundle/target/release/bundle/dmg/*.dmg
-            artifacts/macos-arm64-bundle/target/release/bundle/dmg/*.dmg
-            artifacts/linux-x64-bundle/target/release/bundle/deb/*.deb
-            artifacts/linux-x64-bundle/target/release/bundle/appimage/*.AppImage
-            artifacts/linux-x64-bundle/target/release/bundle/rpm/*.rpm
-            artifacts/linux-x64-bundle/target/release/bundle/tarball/*.tar.gz
+            artifacts/windows-x64-bundle/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+            artifacts/windows-x64-bundle/target/x86_64-pc-windows-msvc/release/bundle/nsis/*.exe
+            artifacts/macos-x64-bundle/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg
+            artifacts/macos-arm64-bundle/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            artifacts/linux-x64-bundle/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
+            artifacts/linux-x64-bundle/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+            artifacts/linux-x64-bundle/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
           token: ${{ secrets.GITHUB_TOKEN }}
