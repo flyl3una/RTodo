@@ -195,6 +195,8 @@ jobs:
         with:
           name: windows-x64-bundle
           path: |
+            target/**/release/bundle/**/*.msi
+            target/**/release/bundle/**/*.exe
             src-tauri/target/**/release/bundle/**/*.msi
             src-tauri/target/**/release/bundle/**/*.exe
           retention-days: 30
@@ -206,6 +208,8 @@ jobs:
         with:
           name: macos-x64-bundle
           path: |
+            target/**/release/bundle/**/*.dmg
+            target/**/release/bundle/**/*.app
             src-tauri/target/**/release/bundle/**/*.dmg
             src-tauri/target/**/release/bundle/**/*.app
           retention-days: 30
@@ -217,6 +221,8 @@ jobs:
         with:
           name: macos-arm64-bundle
           path: |
+            target/**/release/bundle/**/*.dmg
+            target/**/release/bundle/**/*.app
             src-tauri/target/**/release/bundle/**/*.dmg
             src-tauri/target/**/release/bundle/**/*.app
           retention-days: 30
@@ -228,6 +234,10 @@ jobs:
         with:
           name: linux-x64-bundle
           path: |
+            target/**/release/bundle/**/*.deb
+            target/**/release/bundle/**/*.AppImage
+            target/**/release/bundle/**/*.rpm
+            target/**/release/bundle/tarball/**/*.tar.gz
             src-tauri/target/**/release/bundle/**/*.deb
             src-tauri/target/**/release/bundle/**/*.AppImage
             src-tauri/target/**/release/bundle/**/*.rpm
@@ -265,8 +275,7 @@ jobs:
             artifacts/**/*.AppImage
             artifacts/**/*.rpm
             artifacts/**/*.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
   # 手动创建 Release（通过 workflow_dispatch 触发）
   manual-release:
@@ -307,5 +316,4 @@ jobs:
             artifacts/**/*.AppImage
             artifacts/**/*.rpm
             artifacts/**/*.tar.gz
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.GITHUB_TOKEN }}
