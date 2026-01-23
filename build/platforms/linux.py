@@ -63,6 +63,35 @@ def get_package_formats(arch: str, no_appimage: bool = False) -> List[str]:
     return formats
 
 
+def find_binary_path(target: str, project_root: str, app_name: str = 'rtodo') -> str:
+    """
+    查找二进制文件路径
+    Tauri 2.x 可能在不同位置输出二进制文件
+    :param target: Rust 目标架构
+    :param project_root: 项目根目录
+    :param app_name: 应用名称
+    :return: 二进制文件完整路径
+    :raises FileNotFoundError: 如果找不到二进制文件
+    """
+    # 尝试多个可能的路径
+    possible_paths = [
+        # Tauri 2.x 标准路径（项目根目录的 target/）
+        os.path.join(project_root, f'target/{target}/release/{app_name}'),
+        # Tauri 1.x 或某些配置下的路径
+        os.path.join(project_root, f'src-tauri/target/{target}/release/{app_name}'),
+    ]
+
+    for path in possible_paths:
+        if os.path.exists(path):
+            return path
+
+    # 如果都找不到，抛出异常
+    raise FileNotFoundError(
+        f"未找到二进制文件 '{app_name}'，尝试了以下路径：\n" +
+        "\n".join(f"  - {p}" for p in possible_paths)
+    )
+
+
 def create_tarball(target: str, project_root: str, version: dict) -> str:
     """
     手动创建 tar.gz 包
@@ -78,14 +107,9 @@ def create_tarball(target: str, project_root: str, version: dict) -> str:
     app_version = version.get('current', '0.1.1')
     arch = 'x86_64' if 'x86_64' in target else 'arm64'
 
-    # 源二进制文件路径
-    binary_src = os.path.join(
-        project_root,
-        f'src-tauri/target/{target}/release/{app_name}'
-    )
-
-    if not os.path.exists(binary_src):
-        raise FileNotFoundError(f"未找到二进制文件: {binary_src}")
+    # 查找二进制文件
+    binary_src = find_binary_path(target, project_root, app_name)
+    logger.info(f"使用二进制文件: {binary_src}")
 
     # 临时目录
     temp_dir = os.path.join(project_root, 'src-tauri/target', target, 'release', 'tarball-temp')
@@ -247,10 +271,12 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
             tauri_formats.append(format_type)
 
     # 检查二进制文件是否存在
-    binary_path = os.path.join(project_root, f'src-tauri/target/{target}/release/rtodo')
-
-    if not os.path.exists(binary_path):
-        logger.info("构建基础二进制文件...")
+    try:
+        binary_path = find_binary_path(target, project_root, 'rtodo')
+        logger.info("二进制文件已存在，跳过编译")
+        base_built = True
+    except FileNotFoundError:
+        logger.info("需要构建基础二进制文件...")
 
         # 如果有 Tauri 格式要构建，使用第一个格式来构建（会同时编译二进制文件）
         # 如果没有 Tauri 格式（只要 tar.gz），则只编译二进制文件
@@ -273,11 +299,12 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
             except Exception as e:
                 spinner.fail(f"{first_format.upper()} 构建失败")
                 # 检查二进制文件是否已生成
-                if os.path.exists(binary_path):
+                try:
+                    binary_path = find_binary_path(target, project_root, 'rtodo')
                     logger.warning(f"{first_format.upper()} 打包失败，但二进制文件已构建")
                     logger.success("使用已构建的二进制文件继续...")
                     base_built = True
-                else:
+                except FileNotFoundError:
                     logger.error(f"{first_format.upper()} 构建失败，且二进制文件也未生成")
                     # 如果是 AppImage 失败，给出额外提示
                     if first_format == 'appimage':
