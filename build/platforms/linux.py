@@ -104,7 +104,7 @@ def create_tarball(target: str, project_root: str, version: dict) -> str:
     import shutil
 
     app_name = 'rtodo'
-    app_version = version.get('current', '0.1.1')
+    app_version = version.get('current', '0.1.3')
     arch = 'x86_64' if 'x86_64' in target else 'arm64'
 
     # 查找二进制文件
