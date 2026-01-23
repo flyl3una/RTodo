@@ -236,7 +236,13 @@ class Spinner:
             self._thread.join(timeout=0.5)
             self._thread = None
 
-        symbol = '✓' if success else '✗'
+        # 使用 ASCII 字符以兼容 Windows GBK 编码
+        # 在 Windows 上，Unicode 符号 ✓ 和 ✗ 会导致编码错误
+        if success:
+            symbol = '[OK]'
+        else:
+            symbol = '[FAIL]'
+
         color = Colors.GREEN if success else Colors.RED
         text = final_text or self.text
         sys.stdout.write(f"\r{color}{symbol}{Colors.RESET} {text}\n")
