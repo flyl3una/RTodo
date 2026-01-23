@@ -224,6 +224,73 @@ jobs:
           retention-days: 30
           if-no-files-found: ignore
 
+      - name: Create tar.gz package (Linux)
+        if: matrix.platform == 'linux'
+        run: |
+          # 获取版本号
+          VERSION=$(node -p "require('./package.json').version")
+          APP_NAME="rtodo"
+          TARGET="x86_64-unknown-linux-gnu"
+          ARCH="x86_64"
+
+          # 二进制文件路径
+          BINARY="target/$TARGET/release/$APP_NAME"
+
+          # 临时目录
+          TEMP_DIR="target/$TARGET/release/tarball-temp"
+          PACKAGE_DIR="$TEMP_DIR/$APP_NAME-$VERSION-$ARCH"
+
+          # 创建目录结构
+          rm -rf "$TEMP_DIR"
+          mkdir -p "$PACKAGE_DIR"
+
+          # 复制二进制文件
+          cp "$BINARY" "$PACKAGE_DIR/$APP_NAME"
+          chmod +x "$PACKAGE_DIR/$APP_NAME"
+
+          # 创建 README
+          cat > "$PACKAGE_DIR/README.md" << 'EOF'
+          # RTodo
+
+          ## Installation
+
+          1. Extract the archive:
+             tar -xzf rtodo-{version}-{arch}.tar.gz
+
+          2. Enter the directory:
+             cd rtodo-{version}-{arch}
+
+          3. Run the application:
+             ./rtodo
+
+          ## System Requirements
+
+          - GTK 3
+          - WebKit2GTK
+          - libayatana-appindicator (optional, for system tray)
+
+          ### Ubuntu/Debian:
+          sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 libayatana-appindicator3-1
+
+          ### Fedora/RHEL:
+          sudo dnf install gtk3 webkit2gtk3 libappindicator-gtk3
+
+          ### Arch Linux:
+          sudo pacman -S gtk3 webkit2gtk libappindicator-gtk3
+          EOF
+
+          # 创建 tar.gz 目录
+          mkdir -p "target/$TARGET/release/bundle/tarball"
+
+          # 打包
+          TARBALL_NAME="$APP_NAME-$VERSION-$ARCH.tar.gz"
+          tar -czf "target/$TARGET/release/bundle/tarball/$TARBALL_NAME" -C "$TEMP_DIR" "$APP_NAME-$VERSION-$ARCH"
+
+          # 清理临时目录
+          rm -rf "$TEMP_DIR"
+
+          echo "Created: target/$TARGET/release/bundle/tarball/$TARBALL_NAME"
+
       - name: Upload Linux artifacts
         if: matrix.platform == 'linux'
         uses: actions/upload-artifact@v4
@@ -275,6 +342,9 @@ jobs:
           echo ""
           echo "=== All .rpm files ==="
           find artifacts -name "*.rpm" -type f
+          echo ""
+          echo "=== All .tar.gz files ==="
+          find artifacts -name "*.tar.gz" -type f
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -292,4 +362,5 @@ jobs:
             artifacts/linux-x64-bundle/target/x86_64-unknown-linux-gnu/release/bundle/deb/*.deb
             artifacts/linux-x64-bundle/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
             artifacts/linux-x64-bundle/target/x86_64-unknown-linux-gnu/release/bundle/rpm/*.rpm
+            artifacts/linux-x64-bundle/target/x86_64-unknown-linux-gnu/release/bundle/tarball/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
