@@ -209,9 +209,7 @@ jobs:
           name: macos-x64-bundle
           path: |
             target/**/release/bundle/**/*.dmg
-            target/**/release/bundle/**/*.app
             src-tauri/target/**/release/bundle/**/*.dmg
-            src-tauri/target/**/release/bundle/**/*.app
           retention-days: 30
           if-no-files-found: ignore
 
@@ -222,9 +220,7 @@ jobs:
           name: macos-arm64-bundle
           path: |
             target/**/release/bundle/**/*.dmg
-            target/**/release/bundle/**/*.app
             src-tauri/target/**/release/bundle/**/*.dmg
-            src-tauri/target/**/release/bundle/**/*.app
           retention-days: 30
           if-no-files-found: ignore
 
@@ -266,15 +262,17 @@ jobs:
           draft: true
           prerelease: false
           generate_release_notes: true
+          update_existing: true
+          fail_on_unmatched_files: false
           files: |
             artifacts/**/*.msi
             artifacts/**/*.exe
             artifacts/**/*.dmg
-            artifacts/**/*.app
             artifacts/**/*.deb
             artifacts/**/*.AppImage
             artifacts/**/*.rpm
             artifacts/**/*.tar.gz
+            artifacts/**/tarball/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # 手动创建 Release（通过 workflow_dispatch 触发）
@@ -307,13 +305,15 @@ jobs:
           draft: true
           prerelease: false
           generate_release_notes: true
+          update_existing: true
+          fail_on_unmatched_files: false
           files: |
             artifacts/**/*.msi
             artifacts/**/*.exe
             artifacts/**/*.dmg
-            artifacts/**/*.app
             artifacts/**/*.deb
             artifacts/**/*.AppImage
             artifacts/**/*.rpm
             artifacts/**/*.tar.gz
+            artifacts/**/tarball/*.tar.gz
           token: ${{ secrets.GITHUB_TOKEN }}
