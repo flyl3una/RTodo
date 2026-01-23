@@ -63,6 +63,111 @@ def get_package_formats(arch: str, no_appimage: bool = False) -> List[str]:
     return formats
 
 
+def create_tarball(target: str, project_root: str, version: dict) -> str:
+    """
+    手动创建 tar.gz 包
+    :param target: Rust 目标架构
+    :param project_root: 项目根目录
+    :param version: 版本信息
+    :return: tar.gz 文件路径
+    """
+    import tarfile
+    import shutil
+
+    app_name = 'rtodo'
+    app_version = version.get('current', '0.1.1')
+    arch = 'x86_64' if 'x86_64' in target else 'arm64'
+
+    # 源二进制文件路径
+    binary_src = os.path.join(
+        project_root,
+        f'src-tauri/target/{target}/release/{app_name}'
+    )
+
+    if not os.path.exists(binary_src):
+        raise FileNotFoundError(f"未找到二进制文件: {binary_src}")
+
+    # 临时目录
+    temp_dir = os.path.join(project_root, 'src-tauri/target', target, 'release', 'tarball-temp')
+    if os.path.exists(temp_dir):
+        shutil.rmtree(temp_dir)
+    os.makedirs(temp_dir)
+
+    # 创建目录结构
+    package_dir = os.path.join(temp_dir, f'{app_name}-{app_version}-{arch}')
+    os.makedirs(package_dir)
+
+    # 复制二进制文件
+    binary_dst = os.path.join(package_dir, app_name)
+    shutil.copy2(binary_src, binary_dst)
+    os.chmod(binary_dst, 0o755)
+
+    # 创建 README
+    readme_content = f"""# {app_name} v{app_version} ({arch})
+
+## 安装
+
+1. 解压文件：
+   tar -xzf {app_name}-{app_version}-{arch}.tar.gz
+
+2. 进入目录：
+   cd {app_name}-{app_version}-{arch}
+
+3. 运行程序：
+   ./{app_name}
+
+或者直接运行：
+   ./{app_name}-{app_version}-{arch}/{app_name}
+
+## 系统要求
+
+- GTK 3
+- WebKit2GTK
+- libayatana-appindicator (可选，用于系统托盘)
+
+### Ubuntu/Debian 安装依赖：
+```bash
+sudo apt install libgtk-3-0 libwebkit2gtk-4.1-0 libayatana-appindicator3-1
+```
+
+### Fedora/RHEL 安装依赖：
+```bash
+sudo dnf install gtk3 webkit2gtk3 libappindicator-gtk3
+```
+
+### Arch Linux 安装依赖：
+```bash
+sudo pacman -S gtk3 webkit2gtk libappindicator-gtk3
+```
+
+## 许可证
+
+Copyright © 2025 RTodo Team. All rights reserved.
+"""
+    readme_path = os.path.join(package_dir, 'README.md')
+    with open(readme_path, 'w', encoding='utf-8') as f:
+        f.write(readme_content)
+
+    # 创建 tar.gz 文件
+    tarball_name = f'{app_name}-{app_version}-{arch}.tar.gz'
+    tarball_path = os.path.join(
+        project_root,
+        f'src-tauri/target/{target}/release/bundle/tarball',
+        tarball_name
+    )
+
+    # 确保目标目录存在
+    os.makedirs(os.path.dirname(tarball_path), exist_ok=True)
+
+    with tarfile.open(tarball_path, 'w:gz') as tar:
+        tar.add(package_dir, arcname=os.path.basename(package_dir))
+
+    # 清理临时目录
+    shutil.rmtree(temp_dir)
+
+    return tarball_path
+
+
 def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
     """
     构建 Linux 应用
@@ -129,40 +234,104 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
     os.environ['TAURI_BUNDLE_SKIP_SIGNING'] = '1'
 
     build_results = []
+    base_built = False  # 标记是否已经构建了基础二进制文件
+
+    # 分离出需要通过 Tauri 构建的格式和手动构建的格式
+    tauri_formats = []
+    manual_formats = []
 
     for format_type in package_formats:
-        logger.info(f"构建 {format_type.upper()} 包...")
+        if format_type == 'tar.gz':
+            manual_formats.append(format_type)
+        else:
+            tauri_formats.append(format_type)
 
-        build_command = f'cargo tauri build --target {target} --bundles {format_type}'
+    # 先构建基础二进制文件（如果有任何格式需要构建）
+    if tauri_formats:
+        logger.info("构建基础二进制文件...")
+        base_build_command = f'cargo tauri build --target {target}'
 
-        logger.info(f"执行: {build_command}")
-
-        spinner = Spinner(f"正在构建 {format_type.upper()}...")
+        spinner = Spinner("正在编译 Tauri 应用...")
         spinner.start()
 
         try:
-            # AppImage 需要更长的超时时间（下载文件）
-            timeout = 1200 if format_type == 'appimage' else 600
-            executor.exec(build_command, cwd=project_root, timeout=timeout, silent=False)
-            spinner.succeed(f"{format_type.upper()} 构建完成")
-            build_results.append(format_type)
+            executor.exec(base_build_command, cwd=project_root, timeout=600, silent=False)
+            spinner.succeed("基础二进制文件构建完成")
+            base_built = True
         except Exception as e:
-            spinner.fail(f"{format_type.upper()} 构建失败")
-            if format_type == 'appimage':
-                # AppImage 失败时给出详细提示
-                logger.warning("AppImage 构建失败，可能是因为网络问题")
-                logger.info("提示：")
-                logger.info("1. 检查网络连接或配置代理：")
-                logger.info("   export HTTP_PROXY=http://127.0.0.1:7890")
-                logger.info("   export HTTPS_PROXY=http://127.0.0.1:7890")
-                logger.info("")
-                logger.info("2. 手动下载 AppRun 文件：")
-                logger.info("   python -m build.utils.apprun-helper")
-                logger.info("")
-                logger.info("3. 或者跳过 AppImage，只构建 DEB 包：")
-                logger.info("   将 build/platforms/linux.py 中的 'appimage' 从 formats 中移除")
-            else:
-                # 其他格式的错误应该抛出
+            spinner.fail("基础二进制文件构建失败")
+            raise
+
+        # 然后构建各个 bundle 格式
+        for format_type in tauri_formats:
+            logger.info(f"构建 {format_type.upper()} 包...")
+
+            bundle_command = f'cargo tauri build --target {target} --bundles {format_type}'
+            logger.info(f"执行: {bundle_command}")
+
+            spinner = Spinner(f"正在打包 {format_type.upper()}...")
+            spinner.start()
+
+            try:
+                # AppImage 需要更长的超时时间（下载文件）
+                timeout = 1200 if format_type == 'appimage' else 600
+                executor.exec(bundle_command, cwd=project_root, timeout=timeout, silent=False)
+                spinner.succeed(f"{format_type.upper()} 构建完成")
+                build_results.append(format_type)
+            except Exception as e:
+                spinner.fail(f"{format_type.upper()} 构建失败")
+                if format_type == 'appimage':
+                    # AppImage 失败时给出详细提示
+                    logger.warning("AppImage 构建失败，可能是因为网络问题")
+                    logger.info("提示：")
+                    logger.info("1. 检查网络连接或配置代理：")
+                    logger.info("   export HTTP_PROXY=http://127.0.0.1:7890")
+                    logger.info("   export HTTPS_PROXY=http://127.0.0.1:7890")
+                    logger.info("")
+                    logger.info("2. 手动下载 AppRun 文件：")
+                    logger.info("   python -m build.utils.apprun-helper")
+                    logger.info("")
+                    logger.info("3. 或者跳过 AppImage，只构建 DEB 包：")
+                    logger.info("   python build-cli.py --no-appimage")
+                else:
+                    # 其他格式的错误应该抛出
+                    raise
+    else:
+        # 如果只有 tar.gz，直接构建二进制文件
+        logger.info("构建二进制文件（用于 tar.gz 打包）...")
+        base_build_command = f'cargo tauri build --target {target}'
+
+        spinner = Spinner("正在编译 Tauri 应用...")
+        spinner.start()
+
+        try:
+            executor.exec(base_build_command, cwd=project_root, timeout=600, silent=False)
+            spinner.succeed("二进制文件构建完成")
+            base_built = True
+        except Exception as e:
+            spinner.fail("二进制文件构建失败")
+            raise
+
+    # 手动构建 tar.gz 等格式
+    for format_type in manual_formats:
+        if format_type == 'tar.gz':
+            logger.info(f"打包 {format_type.upper()}...")
+
+            spinner = Spinner(f"正在创建 {format_type.upper()}...")
+            spinner.start()
+
+            try:
+                tarball_path = create_tarball(target, project_root, version)
+                spinner.succeed(f"{format_type.upper()} 创建完成")
+                build_results.append(format_type)
+
+                # 显示文件信息
+                file_size = os.path.getsize(tarball_path)
+                size_mb = file_size / (1024 * 1024)
+                logger.info(f"  生成文件: {os.path.basename(tarball_path)} ({size_mb:.2f} MB)")
+            except Exception as e:
+                spinner.fail(f"{format_type.upper()} 创建失败")
+                logger.error(f"错误: {e}")
                 raise
 
     logger.newline()
@@ -181,7 +350,12 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
 
     # 列出生成的文件
     for format_type in build_results:
-        format_dir = os.path.join(bundle_dir, format_type)
+        # tar.gz 在 bundle/tarball 目录下，其他格式在 bundle/{format_type} 目录下
+        if format_type == 'tar.gz':
+            format_dir = os.path.join(bundle_dir, 'tarball')
+        else:
+            format_dir = os.path.join(bundle_dir, format_type)
+
         if os.path.exists(format_dir):
             try:
                 files = os.listdir(format_dir)

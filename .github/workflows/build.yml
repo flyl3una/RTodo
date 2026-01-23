@@ -231,7 +231,7 @@ jobs:
             src-tauri/target/**/release/bundle/**/*.deb
             src-tauri/target/**/release/bundle/**/*.AppImage
             src-tauri/target/**/release/bundle/**/*.rpm
-            src-tauri/target/**/release/bundle/**/*.tar.gz
+            src-tauri/target/**/release/bundle/tarball/**/*.tar.gz
           retention-days: 30
           if-no-files-found: ignore
 
