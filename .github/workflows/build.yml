@@ -254,7 +254,27 @@ jobs:
           path: artifacts
 
       - name: Display structure of downloaded files
-        run: ls -R artifacts
+        run: |
+          echo "=== All artifacts ==="
+          ls -R artifacts
+          echo ""
+          echo "=== All .dmg files ==="
+          find artifacts -name "*.dmg" -type f
+          echo ""
+          echo "=== All .msi files ==="
+          find artifacts -name "*.msi" -type f
+          echo ""
+          echo "=== All .exe files ==="
+          find artifacts -name "*.exe" -type f
+          echo ""
+          echo "=== All .deb files ==="
+          find artifacts -name "*.deb" -type f
+          echo ""
+          echo "=== All .AppImage files ==="
+          find artifacts -name "*.AppImage" -type f
+          echo ""
+          echo "=== All .rpm files ==="
+          find artifacts -name "*.rpm" -type f
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -265,12 +285,13 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: false
           files: |
-            artifacts/**/*.msi
-            artifacts/**/*.exe
-            artifacts/**/*.dmg
-            artifacts/**/*.deb
-            artifacts/**/*.AppImage
-            artifacts/**/*.rpm
+            artifacts/windows-x64-bundle/*.msi
+            artifacts/windows-x64-bundle/*.exe
+            artifacts/macos-x64-bundle/*.dmg
+            artifacts/macos-arm64-bundle/*.dmg
+            artifacts/linux-x64-bundle/*.deb
+            artifacts/linux-x64-bundle/*.AppImage
+            artifacts/linux-x64-bundle/*.rpm
           token: ${{ secrets.GITHUB_TOKEN }}
 
   # 手动创建 Release（通过 workflow_dispatch 触发）
@@ -287,7 +308,27 @@ jobs:
           path: artifacts
 
       - name: Display structure of downloaded files
-        run: ls -R artifacts
+        run: |
+          echo "=== All artifacts ==="
+          ls -R artifacts
+          echo ""
+          echo "=== All .dmg files ==="
+          find artifacts -name "*.dmg" -type f
+          echo ""
+          echo "=== All .msi files ==="
+          find artifacts -name "*.msi" -type f
+          echo ""
+          echo "=== All .exe files ==="
+          find artifacts -name "*.exe" -type f
+          echo ""
+          echo "=== All .deb files ==="
+          find artifacts -name "*.deb" -type f
+          echo ""
+          echo "=== All .AppImage files ==="
+          find artifacts -name "*.AppImage" -type f
+          echo ""
+          echo "=== All .rpm files ==="
+          find artifacts -name "*.rpm" -type f
 
       - name: Get version from package.json
         id: get-version
@@ -306,10 +347,11 @@ jobs:
           overwrite_files: true
           fail_on_unmatched_files: false
           files: |
-            artifacts/**/*.msi
-            artifacts/**/*.exe
-            artifacts/**/*.dmg
-            artifacts/**/*.deb
-            artifacts/**/*.AppImage
-            artifacts/**/*.rpm
+            artifacts/windows-x64-bundle/*.msi
+            artifacts/windows-x64-bundle/*.exe
+            artifacts/macos-x64-bundle/*.dmg
+            artifacts/macos-arm64-bundle/*.dmg
+            artifacts/linux-x64-bundle/*.deb
+            artifacts/linux-x64-bundle/*.AppImage
+            artifacts/linux-x64-bundle/*.rpm
           token: ${{ secrets.GITHUB_TOKEN }}
