@@ -249,21 +249,50 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
     # 先构建基础二进制文件（如果有任何格式需要构建）
     if tauri_formats:
         logger.info("构建基础二进制文件...")
-        base_build_command = f'cargo tauri build --target {target}'
 
-        spinner = Spinner("正在编译 Tauri 应用...")
+        # 构建第一个 Tauri bundle 格式（如果失败则只构建二进制文件）
+        first_format = tauri_formats[0]
+        logger.info(f"构建 {first_format.upper()} 包...")
+
+        build_command = f'cargo tauri build --target {target} --bundles {first_format}'
+        logger.info(f"执行: {build_command}")
+
+        spinner = Spinner(f"正在编译和打包 {first_format.upper()}...")
         spinner.start()
 
         try:
-            executor.exec(base_build_command, cwd=project_root, timeout=600, silent=False)
-            spinner.succeed("基础二进制文件构建完成")
+            timeout = 1200 if first_format == 'appimage' else 600
+            executor.exec(build_command, cwd=project_root, timeout=timeout, silent=False)
+            spinner.succeed(f"{first_format.upper()} 构建完成")
+            build_results.append(first_format)
             base_built = True
         except Exception as e:
-            spinner.fail("基础二进制文件构建失败")
-            raise
+            spinner.fail(f"{first_format.upper()} 构建失败")
+            if first_format == 'appimage':
+                # AppImage 失败时，尝试只构建二进制文件
+                logger.warning("AppImage 构建失败，尝试只构建二进制文件...")
+                logger.info("提示：")
+                logger.info("1. 检查网络连接或配置代理：")
+                logger.info("   export HTTP_PROXY=http://127.0.0.1:7890")
+                logger.info("   export HTTPS_PROXY=http://127.0.0.1:7890")
+                logger.info("")
+                logger.info("2. 或者使用 --no-appimage 跳过 AppImage")
 
-        # 然后构建各个 bundle 格式
-        for format_type in tauri_formats:
+                # 尝试只构建二进制文件（不打包）
+                base_command = f'cargo tauri build --target {target}'
+                try:
+                    executor.exec(base_command, cwd=project_root, timeout=600, silent=False)
+                    logger.success("二进制文件构建完成（跳过打包）")
+                    base_built = True
+                except Exception as e2:
+                    logger.error("二进制文件构建也失败了")
+                    raise e2
+            else:
+                # 其他格式的错误应该抛出
+                raise
+
+        # 构建其余的 bundle 格式
+        for format_type in tauri_formats[1:]:
             logger.info(f"构建 {format_type.upper()} 包...")
 
             bundle_command = f'cargo tauri build --target {target} --bundles {format_type}'
@@ -291,15 +320,17 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
                     logger.info("2. 手动下载 AppRun 文件：")
                     logger.info("   python -m build.utils.apprun-helper")
                     logger.info("")
-                    logger.info("3. 或者跳过 AppImage，只构建 DEB 包：")
+                    logger.info("3. 或者跳过 AppImage：")
                     logger.info("   python build-cli.py --no-appimage")
                 else:
                     # 其他格式的错误应该抛出
                     raise
     else:
-        # 如果只有 tar.gz，直接构建二进制文件
+        # 如果只有 tar.gz，直接构建二进制文件（不打包任何 bundle）
         logger.info("构建二进制文件（用于 tar.gz 打包）...")
-        base_build_command = f'cargo tauri build --target {target}'
+
+        # 使用 --none 参数告诉 Tauri 不构建任何 bundle
+        base_build_command = f'cargo tauri build --target {target} --bundles none'
 
         spinner = Spinner("正在编译 Tauri 应用...")
         spinner.start()
@@ -310,7 +341,16 @@ def build_linux(options: Dict[str, Any]) -> Dict[str, Any]:
             base_built = True
         except Exception as e:
             spinner.fail("二进制文件构建失败")
-            raise
+            # 如果 --bundles none 不支持，尝试不指定任何 bundles
+            logger.info("尝试使用默认构建...")
+            try:
+                fallback_command = f'cargo tauri build --target {target}'
+                executor.exec(fallback_command, cwd=project_root, timeout=600, silent=False)
+                spinner.succeed("二进制文件构建完成")
+                base_built = True
+            except Exception as e2:
+                spinner.fail("二进制文件构建失败")
+                raise e2
 
     # 手动构建 tar.gz 等格式
     for format_type in manual_formats:
