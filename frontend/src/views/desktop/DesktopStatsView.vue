@@ -261,6 +261,34 @@
         <el-checkbox v-model="showTimeAndTags" style="margin-right: 12px">
           {{ t('stats.showTimeAndTags') }}
         </el-checkbox>
+        <el-select
+          v-model="reportStatusFilter"
+          multiple
+          collapse-tags
+          collapse-tags-tooltip
+          clearable
+          :placeholder="t('stats.selectStatuses')"
+          style="width: 160px; margin-right: 12px"
+        >
+          <el-option :value="2" :label="t('status.done')">
+            <span class="filter-option">
+              <span class="status-dot-small done"></span>
+              <span>{{ t('status.done') }}</span>
+            </span>
+          </el-option>
+          <el-option :value="0" :label="t('status.todo')">
+            <span class="filter-option">
+              <span class="status-dot-small todo"></span>
+              <span>{{ t('status.todo') }}</span>
+            </span>
+          </el-option>
+          <el-option :value="1" :label="t('status.inProgress')">
+            <span class="filter-option">
+              <span class="status-dot-small in-progress"></span>
+              <span>{{ t('status.inProgress') }}</span>
+            </span>
+          </el-option>
+        </el-select>
         <el-button type="primary" @click="copyReportText">
           {{ t('common.copy') }}
         </el-button>
@@ -303,6 +331,9 @@ const showTimeAndTags = ref(false);
 
 const selectedGroupIds = ref<number[]>([]);
 const selectedTagIds = ref<number[]>([]);
+
+// 汇报模式的状态筛选（独立于仪表盘筛选）
+const reportStatusFilter = ref<number[]>([2]); // 默认为已完成
 
 const dateRange = ref<'day' | 'week' | 'month' | 'custom'>('week');
 const customStartDate = ref<number | null>(null);
@@ -522,6 +553,12 @@ function formatFullDateTime(timestamp: number): string {
 const reportText = computed(() => {
   const lines: string[] = [];
   const showDetails = showTimeAndTags.value;
+  const statusFilter = reportStatusFilter.value;
+
+  // 如果没有选择任何状态，返回空
+  if (statusFilter.length === 0) {
+    return '';
+  }
 
   // Helper function to add task metadata
   function addTaskMeta(task: any, targetLines: string[]) {
@@ -553,119 +590,46 @@ const reportText = computed(() => {
     task: any;
   };
 
-  const completedSteps: StepWithParent[] = [];
-  const incompleteSteps: StepWithParent[] = [];
-  const tasksWithoutSteps: { completed: any[]; incomplete: any[] } = {
-    completed: [],
-    incomplete: [],
-  };
-
-  // Process all tasks and categorize
-  allTasksSorted.value.forEach(task => {
-    if (task.steps && task.steps.length > 0) {
-      // Task has steps, categorize each step
-      task.steps.forEach(step => {
-        if (step.is_completed) {
-          completedSteps.push({ step, task });
-        } else {
-          incompleteSteps.push({ step, task });
-        }
-      });
-    } else {
-      // Task has no steps, use task status
-      if (task.status === TodoStatus.Done) {
-        tasksWithoutSteps.completed.push(task);
-      } else {
-        tasksWithoutSteps.incomplete.push(task);
-      }
-    }
+  // 根据选择的状态筛选任务
+  const allFilteredTasks = allTasksSorted.value.filter(task => {
+    if (statusFilter.length === 0) return true; // 没有筛选时显示所有
+    return statusFilter.includes(task.status);
   });
 
-  // All tasks section
-  lines.push('=== ' + t('stats.allTasks') + ' (' + allTasksSorted.value.length + ') ===');
-  allTasksSorted.value.forEach((task, index) => {
-    lines.push(String(index + 1) + '. ' + task.title);
-    if (task.description) {
-      lines.push('   ' + task.description);
-    }
-    if (task.steps && task.steps.length > 0) {
-      task.steps.forEach(step => {
-        const prefix = step.is_completed ? '[√]' : '[ ]';
-        lines.push('   ' + prefix + ' ' + step.title);
-      });
-    }
-    addTaskMeta(task, lines);
-  });
+  if (allFilteredTasks.length === 0) {
+    return '';
+  }
 
-  // Completed tasks section
-  lines.push('=== ' + t('stats.completedTasks') + ' ===');
-  let completedIndex = 0;
-  // First, tasks without steps
-  tasksWithoutSteps.completed.forEach(task => {
-    completedIndex++;
-    lines.push(String(completedIndex) + '. ' + task.title);
-    if (task.description) {
-      lines.push('   ' + task.description);
-    }
-    addTaskMeta(task, lines);
-  });
-  // Then, completed steps from tasks with steps
-  completedSteps.forEach(({ step, task }) => {
-    completedIndex++;
-    lines.push(String(completedIndex) + '. ' + task.title + ' - ' + step.title);
-    if (showDetails && task.completed_at) {
-      lines.push('   ' + t('stats.completedAt') + ' ' + formatFullDateTime(task.completed_at));
-    }
-  });
+  // 为每个状态生成独立的任务块
+  statusFilter.forEach(statusId => {
+    const statusTasks = allFilteredTasks.filter(task => task.status === statusId);
 
-  // Incomplete tasks section
-  lines.push('=== ' + t('stats.incompleteTasks') + ' ===');
-  let incompleteIndex = 0;
-  // First, tasks without steps
-  tasksWithoutSteps.incomplete.forEach(task => {
-    incompleteIndex++;
-    lines.push(String(incompleteIndex) + '. ' + task.title);
-    if (task.description) {
-      lines.push('   ' + task.description);
-    }
-    if (showDetails) {
-      const meta: string[] = [];
-      if (task.group) {
-        meta.push((task.group.icon || '📁') + ' ' + task.group.name);
+    if (statusTasks.length === 0) return;
+
+    let statusTitle = '';
+    if (statusId === 2) statusTitle = t('status.done');
+    else if (statusId === 0) statusTitle = t('status.todo');
+    else if (statusId === 1) statusTitle = t('status.inProgress');
+
+    lines.push('=== ' + statusTitle + ' (' + statusTasks.length + ') ===');
+
+    statusTasks.forEach((task, index) => {
+      lines.push(String(index + 1) + '. ' + task.title);
+      if (task.description) {
+        lines.push('   ' + task.description);
       }
-      if (task.tags && task.tags.length > 0) {
-        meta.push(task.tags.map(tagItem => tagItem.name).join(', '));
+      if (task.steps && task.steps.length > 0) {
+        task.steps.forEach(step => {
+          const prefix = step.is_completed ? '[√]' : '[ ]';
+          lines.push('   ' + prefix + ' ' + step.title);
+        });
       }
-      if (task.due_date && task.due_date < Date.now()) {
-        meta.push(t('todo.overdue') + ': ' + formatFullDateTime(task.due_date));
-      } else if (task.due_date) {
-        meta.push(t('todo.due') + ': ' + formatFullDateTime(task.due_date));
-      }
-      if (meta.length > 0) {
-        lines.push('   [' + meta.join(' | ') + ']');
-      }
-    }
-  });
-  // Then, incomplete steps from tasks with steps
-  incompleteSteps.forEach(({ step, task }) => {
-    incompleteIndex++;
-    lines.push(String(incompleteIndex) + '. ' + task.title + ' - ' + step.title);
-    if (showDetails) {
-      const meta: string[] = [];
-      if (task.group) {
-        meta.push((task.group.icon || '📁') + ' ' + task.group.name);
-      }
-      if (task.tags && task.tags.length > 0) {
-        meta.push(task.tags.map(tagItem => tagItem.name).join(', '));
-      }
-      if (task.due_date && task.due_date < Date.now()) {
-        meta.push(t('todo.overdue') + ': ' + formatFullDateTime(task.due_date));
-      } else if (task.due_date) {
-        meta.push(t('todo.due') + ': ' + formatFullDateTime(task.due_date));
-      }
-      if (meta.length > 0) {
-        lines.push('   [' + meta.join(' | ') + ']');
-      }
+      addTaskMeta(task, lines);
+    });
+
+    // 添加空行分隔不同状态的任务块
+    if (statusFilter.indexOf(statusId) < statusFilter.length - 1) {
+      lines.push('');
     }
   });
 
@@ -1037,6 +1001,25 @@ onMounted(async () => {
 }
 
 .status-dot.done {
+  background: var(--el-color-success);
+}
+
+.status-dot-small {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot-small.todo {
+  background: var(--el-text-color-secondary);
+}
+
+.status-dot-small.in-progress {
+  background: var(--el-color-primary);
+}
+
+.status-dot-small.done {
   background: var(--el-color-success);
 }
 

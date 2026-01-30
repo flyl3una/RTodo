@@ -29,4 +29,5 @@ pub struct GetStatsWithDetailsRequest {
     pub end_date: Option<i64>,
     pub group_ids: Option<Vec<i64>>,
     pub tag_ids: Option<Vec<i64>>,
+    pub status_ids: Option<Vec<i32>>,
 }

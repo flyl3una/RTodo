@@ -194,7 +194,7 @@ impl StatsRepository {
         Ok(stats)
     }
 
-    /// 获取带任务详情的统计（支持时间范围、多任务组、多标签筛选）
+    /// 获取带任务详情的统计（支持时间范围、多任务组、多标签、多状态筛选）
     ///
     /// 统计逻辑说明：
     /// - 待办任务 (status = 0): 使用 created_at 过滤（在时间范围内创建的待办任务）
@@ -206,6 +206,7 @@ impl StatsRepository {
         end_date: Option<i64>,
         group_ids: Option<Vec<i64>>,
         tag_ids: Option<Vec<i64>>,
+        status_ids: Option<Vec<i32>>,
     ) -> Result<TodoStatsWithDetails> {
         // 构建时间过滤条件
         let (created_filter, updated_filter, completed_filter) = Self::build_time_filters(start_date, end_date);
@@ -214,6 +215,9 @@ impl StatsRepository {
         let (group_filter, group_params): (String, Vec<i64>) = Self::build_group_filter(&group_ids);
         let (tag_filter, tag_params): (String, Vec<i64>) = Self::build_tag_filter(&tag_ids);
 
+        // 构建状态过滤条件
+        let (status_filter, status_params): (String, Vec<i32>) = Self::build_status_filter(&status_ids);
+
         // 获取待办任务（使用 created_at）
         let todos = Self::query_tasks_by_status(
             conn,
@@ -221,8 +225,10 @@ impl StatsRepository {
             &created_filter,
             &group_filter,
             &tag_filter,
+            &status_filter,
             &group_params,
             &tag_params,
+            &status_params,
         )?;
 
         // 获取进行中任务（使用 updated_at）
@@ -232,8 +238,10 @@ impl StatsRepository {
             &updated_filter,
             &group_filter,
             &tag_filter,
+            &status_filter,
             &group_params,
             &tag_params,
+            &status_params,
         )?;
 
         // 获取已完成任务（使用 completed_at）
@@ -243,8 +251,10 @@ impl StatsRepository {
             &completed_filter,
             &group_filter,
             &tag_filter,
+            &status_filter,
             &group_params,
             &tag_params,
+            &status_params,
         )?;
 
         let total = todos.len() + in_progress_tasks.len() + done_tasks.len();
@@ -334,6 +344,20 @@ impl StatsRepository {
         }
     }
 
+    /// 构建状态过滤条件
+    fn build_status_filter(status_ids: &Option<Vec<i32>>) -> (String, Vec<i32>) {
+        if let Some(sids) = status_ids {
+            if !sids.is_empty() {
+                let placeholders: Vec<String> = (0..sids.len()).map(|_| "?".to_string()).collect();
+                (format!(" AND t.status IN ({})", placeholders.join(", ")), sids.clone())
+            } else {
+                (String::new(), vec![])
+            }
+        } else {
+            (String::new(), vec![])
+        }
+    }
+
     /// 按状态和时间字段查询任务
     fn query_tasks_by_status(
         conn: &Connection,
@@ -341,12 +365,14 @@ impl StatsRepository {
         time_filter: &str,
         group_filter: &str,
         tag_filter: &str,
+        status_filter: &str,
         group_params: &[i64],
         tag_params: &[i64],
+        status_params: &[i32],
     ) -> Result<Vec<Todo>> {
         let mut query = format!(
-            "SELECT t.* FROM todos t WHERE t.status = {}{}{}{}",
-            status, time_filter, group_filter, tag_filter
+            "SELECT t.* FROM todos t WHERE t.status = {}{}{}{}{}",
+            status, time_filter, group_filter, tag_filter, status_filter
         );
 
         query.push_str(" ORDER BY
@@ -355,17 +381,24 @@ impl StatsRepository {
             t.due_date ASC,
             t.created_at DESC");
 
-        // 构建参数列表
-        let mut params: Vec<i64> = Vec::new();
+        // 构建参数列表（混合类型：i64 和 i32）
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+        // 添加 i64 类型参数（group_params 和 tag_params）
         for gid in group_params {
-            params.push(*gid);
+            params.push(Box::new(*gid));
         }
         for tid in tag_params {
-            params.push(*tid);
+            params.push(Box::new(*tid));
+        }
+
+        // 添加 i32 类型参数（status_params）
+        for sid in status_params {
+            params.push(Box::new(*sid));
         }
 
         // 转换为引用类型
-        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref() as &dyn rusqlite::ToSql).collect();
 
         let mut stmt = conn.prepare(&query)?;
         let todo_iter = stmt.query_map(param_refs.as_slice(), |row| {

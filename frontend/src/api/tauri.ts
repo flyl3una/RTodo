@@ -384,13 +384,15 @@ export async function getStatsWithDetails(
   startDate?: number,
   endDate?: number,
   groupIds?: number[],
-  tagIds?: number[]
+  tagIds?: number[],
+  statusIds?: number[]
 ): Promise<TodoStatsWithDetails> {
   const payload: Record<string, unknown> = {};
   if (startDate !== undefined) payload.start_date = startDate;
   if (endDate !== undefined) payload.end_date = endDate;
   if (groupIds !== undefined && groupIds.length > 0) payload.group_ids = groupIds;
   if (tagIds !== undefined && tagIds.length > 0) payload.tag_ids = tagIds;
+  if (statusIds !== undefined && statusIds.length > 0) payload.status_ids = statusIds;
   return safeInvoke<TodoStatsWithDetails>('get_stats_with_details', { payload });
 }
 

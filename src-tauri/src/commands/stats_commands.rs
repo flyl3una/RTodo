@@ -40,21 +40,22 @@ pub async fn get_stats_by_date(
         .map_err(|e| format!("Failed to get stats by date: {}", e))
 }
 
-/// 获取带任务详情的统计（支持时间范围、多任务组、多标签筛选）
+/// 获取带任务详情的统计（支持时间范围、多任务组、多标签、多状态筛选）
 #[tauri::command]
 pub async fn get_stats_with_details(
     payload: GetStatsWithDetailsRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<TodoStatsWithDetails, String> {
-    tracing::info!("get_stats_with_details called: start_date={:?}, end_date={:?}, group_ids={:?}, tag_ids={:?}",
-        payload.start_date, payload.end_date, payload.group_ids, payload.tag_ids);
+    tracing::info!("get_stats_with_details called: start_date={:?}, end_date={:?}, group_ids={:?}, tag_ids={:?}, status_ids={:?}",
+        payload.start_date, payload.end_date, payload.group_ids, payload.tag_ids, payload.status_ids);
     tracing::info!("group_ids len: {:?}", payload.group_ids.as_ref().map(|v| v.len()));
     tracing::info!("tag_ids len: {:?}", payload.tag_ids.as_ref().map(|v| v.len()));
+    tracing::info!("status_ids len: {:?}", payload.status_ids.as_ref().map(|v| v.len()));
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    StatsRepository::get_stats_with_details(inner, payload.start_date, payload.end_date, payload.group_ids, payload.tag_ids)
+    StatsRepository::get_stats_with_details(inner, payload.start_date, payload.end_date, payload.group_ids, payload.tag_ids, payload.status_ids)
         .map_err(|e| format!("Failed to get stats with details: {}", e))
 }

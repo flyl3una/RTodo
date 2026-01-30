@@ -252,6 +252,7 @@ export default {
     showTimeAndTags: 'Show Time and Tags',
     selectGroups: 'Select Groups',
     selectTags: 'Select Tags',
+    selectStatuses: 'Select Statuses',
   },
 
   attachment: {

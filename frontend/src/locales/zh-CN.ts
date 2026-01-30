@@ -266,6 +266,7 @@ export default {
     showTimeAndTags: '显示时间和标签',
     selectGroups: '选择任务组',
     selectTags: '选择标签',
+    selectStatuses: '选择状态',
   },
 
   // 附件相关
