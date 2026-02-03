@@ -21,8 +21,14 @@ pub struct CreateTodoRequest {
 #[derive(Debug, Default, Deserialize)]
 #[serde(default)]
 pub struct GetTodosRequest {
+    // 保留原有字段（向后兼容）
     pub group_id: Option<i64>,
     pub tag_id: Option<i64>,
+
+    // 新增多选字段
+    pub group_ids: Option<Vec<i64>>,
+    pub tag_ids: Option<Vec<i64>>,
+
     pub status: Option<i32>,
     pub search: Option<String>,
     pub priority: Option<i32>,

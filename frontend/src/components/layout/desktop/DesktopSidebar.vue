@@ -24,7 +24,7 @@
           <a
             href="#"
             class="quick-link"
-            :class="{ active: currentView === 'todo' && route.path === '/' }"
+            :class="{ active: baseView === 'todo' && route.path === '/' }"
             @click.prevent="setFilter('todo')"
           >
             <el-icon><Tickets /></el-icon>
@@ -33,7 +33,7 @@
           <a
             href="#"
             class="quick-link"
-            :class="{ active: currentView === 'all' && route.path === '/' }"
+            :class="{ active: baseView === 'all' && route.path === '/' }"
             @click.prevent="setFilter('all')"
           >
             <el-icon><Collection /></el-icon>
@@ -42,7 +42,7 @@
           <a
             href="#"
             class="quick-link"
-            :class="{ active: currentView === 'important' && route.path === '/' }"
+            :class="{ active: baseView === 'important' && route.path === '/' }"
             @click.prevent="setFilter('important')"
           >
             <el-icon><Star /></el-icon>
@@ -51,7 +51,7 @@
           <a
             href="#"
             class="quick-link"
-            :class="{ active: currentView === 'urgent' && route.path === '/' }"
+            :class="{ active: baseView === 'urgent' && route.path === '/' }"
             @click.prevent="setFilter('urgent')"
           >
             <el-icon><BellFilled /></el-icon>
@@ -60,7 +60,7 @@
           <a
             href="#"
             class="quick-link"
-            :class="{ active: currentView === 'completed' && route.path === '/' }"
+            :class="{ active: baseView === 'completed' && route.path === '/' }"
             @click.prevent="setFilter('completed')"
           >
             <el-icon><CircleCheck /></el-icon>
@@ -69,7 +69,7 @@
           <a
             href="#"
             class="quick-link"
-            :class="{ active: currentView === 'overdue' && route.path === '/' }"
+            :class="{ active: baseView === 'overdue' && route.path === '/' }"
             @click.prevent="setFilter('overdue')"
           >
             <el-icon><Clock /></el-icon>
@@ -81,7 +81,7 @@
           <a
             href="#"
             class="quick-link-icon"
-            :class="{ active: currentView === 'todo' && route.path === '/' }"
+            :class="{ active: baseView === 'todo' && route.path === '/' }"
             @click.prevent="setFilter('todo')"
             :title="t('nav.todo')"
           >
@@ -90,7 +90,7 @@
           <a
             href="#"
             class="quick-link-icon"
-            :class="{ active: currentView === 'all' && route.path === '/' }"
+            :class="{ active: baseView === 'all' && route.path === '/' }"
             @click.prevent="setFilter('all')"
             :title="t('nav.allTodos')"
           >
@@ -99,7 +99,7 @@
           <a
             href="#"
             class="quick-link-icon"
-            :class="{ active: currentView === 'important' && route.path === '/' }"
+            :class="{ active: baseView === 'important' && route.path === '/' }"
             @click.prevent="setFilter('important')"
             :title="t('nav.important')"
           >
@@ -108,7 +108,7 @@
           <a
             href="#"
             class="quick-link-icon"
-            :class="{ active: currentView === 'urgent' && route.path === '/' }"
+            :class="{ active: baseView === 'urgent' && route.path === '/' }"
             @click.prevent="setFilter('urgent')"
             :title="t('nav.urgent')"
           >
@@ -117,7 +117,7 @@
           <a
             href="#"
             class="quick-link-icon"
-            :class="{ active: currentView === 'completed' && route.path === '/' }"
+            :class="{ active: baseView === 'completed' && route.path === '/' }"
             @click.prevent="setFilter('completed')"
             :title="t('nav.completed')"
           >
@@ -126,7 +126,7 @@
           <a
             href="#"
             class="quick-link-icon"
-            :class="{ active: currentView === 'overdue' && route.path === '/' }"
+            :class="{ active: baseView === 'overdue' && route.path === '/' }"
             @click.prevent="setFilter('overdue')"
             :title="t('nav.overdue')"
           >
@@ -147,7 +147,7 @@
           <a
             href="#"
             class="group-item"
-            :class="{ active: filterGroupId === group.id && route.path === '/' }"
+            :class="{ active: filterGroupIds.includes(group.id) && route.path === '/' }"
             v-for="group in groups"
             :key="group.id"
             @click.prevent="selectGroup(group.id)"
@@ -171,6 +171,7 @@
         <div class="tags" v-if="tags.length > 0">
           <span
             class="tag-item"
+            :class="{ active: filterTagIds.includes(tag.id) }"
             v-for="tag in tags"
             :key="tag.id"
             :style="{ backgroundColor: tag.color }"
@@ -253,8 +254,9 @@ const tagStore = useTagStore();
 
 const {
   currentView,
-  filterGroupId,
-  filterTagId,
+  baseView,
+  filterGroupIds,
+  filterTagIds,
   groupDialogVisible,
   editingGroup,
   tagDialogVisible,
@@ -474,6 +476,16 @@ defineExpose({
 
 .tag-item:hover {
   opacity: 0.8;
+}
+
+.tag-item.active {
+  box-shadow: 0 0 0 2px white, 0 0 0 4px var(--el-color-primary);
+  opacity: 1;
+  font-weight: 500;
+}
+
+[data-theme='dark'] .tag-item.active {
+  box-shadow: 0 0 0 2px #424242, 0 0 0 4px var(--el-color-primary);
 }
 
 .empty-tags {

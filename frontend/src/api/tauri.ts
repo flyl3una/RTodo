@@ -21,8 +21,10 @@ import { TodoStatus } from '@/types';
  * 获取任务列表
  */
 export async function getTodos(params?: {
-  group_id?: string;
-  tag_id?: string;
+  group_id?: number;
+  group_ids?: number[];
+  tag_id?: number;
+  tag_ids?: number[];
   status?: TodoStatus;
   search?: string;
   priority?: number;
@@ -33,8 +35,20 @@ export async function getTodos(params?: {
 
   // 只包含有实际值的参数，避免传递 undefined 导致 Tauri IPC 反序列化问题
   const args: Record<string, unknown> = {};
-  if (params?.group_id !== undefined) args.group_id = params.group_id;
-  if (params?.tag_id !== undefined) args.tag_id = params.tag_id;
+
+  // 优先使用多选参数
+  if (params?.group_ids !== undefined) {
+    args.group_ids = params.group_ids;
+  } else if (params?.group_id !== undefined) {
+    args.group_id = params.group_id;
+  }
+
+  if (params?.tag_ids !== undefined) {
+    args.tag_ids = params.tag_ids;
+  } else if (params?.tag_id !== undefined) {
+    args.tag_id = params.tag_id;
+  }
+
   if (params?.status !== undefined) args.status = params.status;
   if (params?.search !== undefined) args.search = params.search;
   if (params?.priority !== undefined) args.priority = params.priority;

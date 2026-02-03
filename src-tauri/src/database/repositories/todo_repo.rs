@@ -6,6 +6,7 @@ use anyhow::{Result, Context};
 use chrono::Utc;
 
 use crate::models::{Todo, TodoStatus, Tag, TodoStep, Attachment, TaskGroup};
+use crate::models::constants::status;
 
 /// Todo 仓库
 pub struct TodoRepository;
@@ -111,12 +112,14 @@ impl TodoRepository {
             query.push_str(&where_clauses.join(" AND "));
         }
 
-        // 排序：未完成在前，按优先级降序，然后按截止时间升序，最后按创建时间倒序
-        query.push_str(" ORDER BY
-            CASE WHEN t.status = 2 THEN 1 ELSE 0 END,
-            t.priority DESC,
-            t.due_date ASC,
-            t.created_at DESC");
+        // 排序：未完成在前，按优先级降序，然后按截止时间升序，最后按创建时间倒序；已完成任务按完成时间倒序
+        query.push_str(&format!(" ORDER BY
+            CASE WHEN t.status = {} THEN 1 ELSE 0 END,
+            CASE WHEN t.status != {} THEN t.priority END DESC,
+            CASE WHEN t.status != {} THEN t.due_date END ASC,
+            CASE WHEN t.status != {} THEN t.created_at END DESC,
+            t.completed_at DESC",
+            status::DONE, status::DONE, status::DONE, status::DONE));
 
         let mut stmt = conn.prepare(&query)
             .context("Failed to prepare get_todos query")?;
@@ -126,12 +129,7 @@ impl TodoRepository {
 
         let todo_iter = stmt.query_map(param_refs.as_slice(), |row| {
             let status_int: i32 = row.get("status")?;
-            let status = match status_int {
-                0 => TodoStatus::Todo,
-                1 => TodoStatus::InProgress,
-                2 => TodoStatus::Done,
-                _ => TodoStatus::Todo, // 默认为待办
-            };
+            let status = TodoStatus::from_i32(status_int);
             Ok(Todo {
                 id: row.get("id")?,
                 title: row.get("title")?,
@@ -177,12 +175,7 @@ impl TodoRepository {
 
         let todo_opt = stmt.query_row(params![id], |row| {
             let status_int: i32 = row.get("status")?;
-            let status = match status_int {
-                0 => TodoStatus::Todo,
-                1 => TodoStatus::InProgress,
-                2 => TodoStatus::Done,
-                _ => TodoStatus::Todo,
-            };
+            let status = TodoStatus::from_i32(status_int);
 
             // 直接从数据库读取并记录日志
             let group_id: Option<i64> = row.get("group_id")?;
@@ -331,8 +324,8 @@ impl TodoRepository {
             params.push(Box::new(s));
             tracing::debug!("Will update status: {}", s);
 
-            // 如果状态变为完成 (2)，设置完成时间
-            if s == 2 {
+            // 如果状态变为完成 (status::DONE)，设置完成时间
+            if s == status::DONE {
                 sets.push("completed_at = ?");
                 params.push(Box::new(now));
             } else {
@@ -556,12 +549,14 @@ impl TodoRepository {
         tracing::info!("list_with_filters group_ids: {:?}, tag_ids: {:?}", group_ids, tag_ids);
         tracing::info!("list_with_filters params count: {}", params.len());
 
-        // 排序
-        query.push_str(" ORDER BY
-            CASE WHEN t.status = 2 THEN 1 ELSE 0 END,
-            t.priority DESC,
-            t.due_date ASC,
-            t.created_at DESC");
+        // 排序：未完成在前，按优先级降序，然后按截止时间升序，最后按创建时间倒序；已完成任务按完成时间倒序
+        query.push_str(&format!(" ORDER BY
+            CASE WHEN t.status = {} THEN 1 ELSE 0 END,
+            CASE WHEN t.status != {} THEN t.priority END DESC,
+            CASE WHEN t.status != {} THEN t.due_date END ASC,
+            CASE WHEN t.status != {} THEN t.created_at END DESC,
+            t.completed_at DESC",
+            status::DONE, status::DONE, status::DONE, status::DONE));
 
         let mut stmt = conn.prepare(&query)
             .context("Failed to prepare list_with_filters query")?;
@@ -570,12 +565,7 @@ impl TodoRepository {
 
         let todo_iter = stmt.query_map(param_refs.as_slice(), |row| {
             let status_int: i32 = row.get("status")?;
-            let status = match status_int {
-                0 => TodoStatus::Todo,
-                1 => TodoStatus::InProgress,
-                2 => TodoStatus::Done,
-                _ => TodoStatus::Todo,
-            };
+            let status = TodoStatus::from_i32(status_int);
             Ok(Todo {
                 id: row.get("id")?,
                 title: row.get("title")?,
@@ -612,7 +602,7 @@ impl TodoRepository {
     /// 更新任务状态
     pub fn update_status(conn: &Connection, id: i64, status: i32) -> Result<Todo> {
         let now = Utc::now().timestamp_millis();
-        let completed_at = if status == 2 { Some(now) } else { None };
+        let completed_at = if status == status::DONE { Some(now) } else { None };
 
         conn.execute(
             "UPDATE todos SET status = ?1, completed_at = ?2, updated_at = ?3 WHERE id = ?4",

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue';
 import type { Todo, CreateTodoRequest, UpdateTodoRequest, TodoStep, Attachment } from '@/types';
 import { TodoStatus } from '@/types';
 import * as api from '@/api/tauri';
+import { isMarked } from '@/utils/priority-helpers';
 
 export const useTodoStore = defineStore('todo', () => {
   // State
@@ -12,8 +13,8 @@ export const useTodoStore = defineStore('todo', () => {
   const error = ref<string | null>(null);
 
   // Filters
-  const filterGroupId = ref<string | undefined>();
-  const filterTagId = ref<string | undefined>();
+  const filterGroupIds = ref<number[]>([]);
+  const filterTagIds = ref<number[]>([]);
   const filterStatus = ref<TodoStatus | undefined>();
   const filterPriority = ref<number | undefined>();
   const searchQuery = ref<string>('');
@@ -47,7 +48,7 @@ export const useTodoStore = defineStore('todo', () => {
     const todo = todos.value.filter(t => t.status === TodoStatus.Todo).length;
     const inProgress = todos.value.filter(t => t.status === TodoStatus.InProgress).length;
     const done = todos.value.filter(t => t.status === TodoStatus.Done).length;
-    const marked = todos.value.filter(t => t.priority >= 1).length;
+    const marked = todos.value.filter(t => isMarked(t.priority)).length;
 
     return { total, todo, inProgress, done, marked };
   });
@@ -58,8 +59,8 @@ export const useTodoStore = defineStore('todo', () => {
     error.value = null;
     try {
       const params = {
-        group_id: filterGroupId.value,
-        tag_id: filterTagId.value,
+        group_ids: filterGroupIds.value.length > 0 ? filterGroupIds.value : undefined,
+        tag_ids: filterTagIds.value.length > 0 ? filterTagIds.value : undefined,
         status: filterStatus.value,
         search: searchQuery.value || undefined,
         priority: filterPriority.value,
@@ -192,8 +193,8 @@ export const useTodoStore = defineStore('todo', () => {
   }
 
   function setFilter(params: {
-    group_id?: string;
-    tag_id?: string;
+    group_ids?: number[];
+    tag_ids?: number[];
     status?: TodoStatus;
     search?: string;
     priority?: number;
@@ -201,14 +202,21 @@ export const useTodoStore = defineStore('todo', () => {
     end_date?: number;
   }) {
     console.log('[TodoStore] setFilter called with:', params);
-    filterGroupId.value = params.group_id;
-    filterTagId.value = params.tag_id;
+
+    if (params.group_ids !== undefined) {
+      filterGroupIds.value = params.group_ids;
+    }
+    if (params.tag_ids !== undefined) {
+      filterTagIds.value = params.tag_ids;
+    }
+
     filterStatus.value = params.status;
     filterPriority.value = params.priority;
     filterStartDate.value = params.start_date;
     filterEndDate.value = params.end_date;
     searchQuery.value = params.search || '';
-    console.log('[TodoStore] Filter state updated - group_id:', filterGroupId.value, 'tag_id:', filterTagId.value, 'status:', filterStatus.value);
+
+    console.log('[TodoStore] Filter state updated - group_ids:', filterGroupIds.value, 'tag_ids:', filterTagIds.value);
     fetchTodos();
   }
 
@@ -335,6 +343,8 @@ export const useTodoStore = defineStore('todo', () => {
     error,
     isOverdueView,
     isTodoView,
+    filterGroupIds,
+    filterTagIds,
     // Computed
     filteredTodos,
     todoStats,

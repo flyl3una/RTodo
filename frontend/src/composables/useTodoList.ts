@@ -8,6 +8,8 @@ import type { Todo, TodoStep } from '@/types';
 import { TodoStatus, getPriorityLabel, getPriorityType, isTodoOverdue } from '@/types';
 import * as api from '@/api/tauri';
 import { isMobile } from '@/utils/device';
+import { cyclePriority } from '@/utils/priority-helpers';
+import { delays } from '@/constants/delays';
 
 export function useTodoList() {
   const { t } = useI18n();
@@ -52,7 +54,7 @@ export function useTodoList() {
 
   async function toggleMark(todo: Todo) {
     try {
-      const newPriority = todo.priority === 0 ? 1 : (todo.priority === 1 ? 3 : 0);
+      const newPriority = cyclePriority(todo.priority);
       await todoStore.updateTodo({
         id: todo.id,
         priority: newPriority,
@@ -97,7 +99,7 @@ export function useTodoList() {
   async function handleTodoUpdated(todo: Todo) {
     console.log('[useTodoList] handleTodoUpdated called');
     await todoStore.fetchTodos();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await delays.uiSync();
     const updatedInStore = todoStore.todos.find(t => t.id === todo.id);
     if (updatedInStore) {
       console.log('[useTodoList] Syncing selectedTodo from store after update');

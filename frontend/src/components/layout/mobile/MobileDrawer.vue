@@ -15,7 +15,7 @@
               <a
                 href="#"
                 class="drawer-item"
-                :class="{ active: currentView === 'todo' }"
+                :class="{ active: baseView === 'todo' }"
                 @click.prevent="setFilter('todo')"
               >
                 <el-icon><Tickets /></el-icon>
@@ -24,7 +24,7 @@
               <a
                 href="#"
                 class="drawer-item"
-                :class="{ active: currentView === 'all' }"
+                :class="{ active: baseView === 'all' }"
                 @click.prevent="setFilter('all')"
               >
                 <el-icon><Collection /></el-icon>
@@ -33,7 +33,7 @@
               <a
                 href="#"
                 class="drawer-item"
-                :class="{ active: currentView === 'important' }"
+                :class="{ active: baseView === 'important' }"
                 @click.prevent="setFilter('important')"
               >
                 <el-icon><Star /></el-icon>
@@ -42,7 +42,7 @@
               <a
                 href="#"
                 class="drawer-item"
-                :class="{ active: currentView === 'urgent' }"
+                :class="{ active: baseView === 'urgent' }"
                 @click.prevent="setFilter('urgent')"
               >
                 <el-icon><BellFilled /></el-icon>
@@ -51,7 +51,7 @@
               <a
                 href="#"
                 class="drawer-item"
-                :class="{ active: currentView === 'completed' }"
+                :class="{ active: baseView === 'completed' }"
                 @click.prevent="setFilter('completed')"
               >
                 <el-icon><CircleCheck /></el-icon>
@@ -60,7 +60,7 @@
               <a
                 href="#"
                 class="drawer-item"
-                :class="{ active: currentView === 'overdue' }"
+                :class="{ active: baseView === 'overdue' }"
                 @click.prevent="setFilter('overdue')"
               >
                 <el-icon><Clock /></el-icon>
@@ -84,7 +84,7 @@
               <div class="drawer-groups">
                 <div
                   class="drawer-item"
-                  :class="{ active: filterGroupId === group.id }"
+                  :class="{ active: filterGroupIds.includes(group.id) }"
                   v-for="group in groups"
                   :key="group.id"
                   @click="selectGroup(group.id)"
@@ -114,7 +114,7 @@
               <div class="drawer-tags" v-if="tags.length > 0">
                 <span
                   class="drawer-tag"
-                  :class="{ active: filterTagId === tag.id }"
+                  :class="{ active: filterTagIds.includes(tag.id) }"
                   v-for="tag in tags"
                   :key="tag.id"
                   :style="{ backgroundColor: tag.color }"
@@ -206,8 +206,9 @@ const longPressTimer = ref<number | null>(null);
 
 const {
   currentView,
-  filterGroupId,
-  filterTagId,
+  baseView,
+  filterGroupIds,
+  filterTagIds,
   groupDialogVisible,
   editingGroup,
   tagDialogVisible,

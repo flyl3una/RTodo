@@ -78,9 +78,9 @@
 
       <el-form-item :label="t('common.priority')">
         <el-radio-group v-model="form.priority" class="desktop-priority">
-          <el-radio :label="0">{{ t('priority.normal') }}</el-radio>
-          <el-radio :label="1">{{ t('priority.important') }}</el-radio>
-          <el-radio :label="3">{{ t('priority.urgent') }}</el-radio>
+          <el-radio :label="PRIORITY_VALUES.NORMAL">{{ t('priority.normal') }}</el-radio>
+          <el-radio :label="PRIORITY_VALUES.IMPORTANT">{{ t('priority.important') }}</el-radio>
+          <el-radio :label="PRIORITY_VALUES.URGENT">{{ t('priority.urgent') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -312,12 +312,14 @@ import { useGroupStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import type { CreateTodoRequest } from '@/types';
 import { isMobile } from '@/utils/device';
+import { PRIORITY_VALUES } from '@/utils/priority-helpers';
+import { ViewFilterTypeEnum, type ViewFilterTypeString } from '@/types/filters';
 
 const { t } = useI18n();
 
 const props = defineProps<{
   modelValue: boolean;
-  currentView?: 'all' | 'todo' | 'today' | 'important' | 'urgent' | 'completed' | 'overdue' | 'group' | 'tag';
+  currentView?: ViewFilterTypeString;
   filterGroupId?: string;
   filterTagId?: string;
 }>();
@@ -488,14 +490,14 @@ watch(visible, async (isOpen) => {
       await tagStore.fetchTags();
 
       // Set default values based on current view (convert string to number)
-      if (props.currentView === 'group' && props.filterGroupId) {
+      if (props.currentView === ViewFilterTypeEnum.Group && props.filterGroupId) {
         const groupId = parseInt(props.filterGroupId, 10);
         if (!isNaN(groupId)) {
           form.value.group_id = groupId;
           console.log('[CreateTodoDialog] Set default group_id:', groupId);
         }
       }
-      if (props.currentView === 'tag' && props.filterTagId) {
+      if (props.currentView === ViewFilterTypeEnum.Tag && props.filterTagId) {
         const tagId = parseInt(props.filterTagId, 10);
         if (!isNaN(tagId)) {
           form.value.tag_ids = [tagId];

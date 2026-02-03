@@ -12,17 +12,34 @@ pub async fn get_todos(
     payload: GetTodosRequest,
     db: tauri::State<'_, Database>,
 ) -> Result<Vec<Todo>, String> {
-    tracing::info!("get_todos called: group_id={:?}, tag_id={:?}, status={:?}, search={:?}, priority={:?}, start_date={:?}, end_date={:?}",
-        payload.group_id, payload.tag_id, payload.status, payload.search, payload.priority, payload.start_date, payload.end_date);
+    tracing::info!("get_todos called: group_id={:?}, tag_id={:?}, group_ids={:?}, tag_ids={:?}, status={:?}, search={:?}, priority={:?}, start_date={:?}, end_date={:?}",
+        payload.group_id, payload.tag_id, payload.group_ids, payload.tag_ids, payload.status, payload.search, payload.priority, payload.start_date, payload.end_date);
+
+    // 合并新旧字段：优先使用 group_ids/tag_ids，回退到 group_id/tag_id
+    let group_ids = if payload.group_ids.is_some() {
+        payload.group_ids
+    } else if payload.group_id.is_some() {
+        Some(vec![payload.group_id.unwrap()])
+    } else {
+        None
+    };
+
+    let tag_ids = if payload.tag_ids.is_some() {
+        payload.tag_ids
+    } else if payload.tag_id.is_some() {
+        Some(vec![payload.tag_id.unwrap()])
+    } else {
+        None
+    };
 
     let conn = db.get_connection().await;
     let conn_guard = conn.lock().await;
     let inner = conn_guard.inner();
 
-    let result = TodoRepository::list(
+    let result = TodoRepository::list_with_filters(
         inner,
-        payload.group_id,
-        payload.tag_id,
+        group_ids,
+        tag_ids,
         payload.status,
         payload.search.as_deref(),
         payload.priority,

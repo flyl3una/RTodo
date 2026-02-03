@@ -72,7 +72,7 @@
               @click.stop="toggleExpand(todo)"
             />
             <el-button
-              :icon="todo.priority >= 1 ? StarFilled : Star"
+              :icon="isMarked(todo.priority) ? StarFilled : Star"
               circle
               text
               @click.stop="toggleMark(todo)"
@@ -125,7 +125,7 @@
           <div style="flex: 1" @click="selectTodo(todo)">
             <div class="card-title">
               <el-tag
-                v-if="todo.priority >= 1"
+                v-if="isMarked(todo.priority)"
                 :type="getPriorityType(todo.priority)"
                 size="small"
                 effect="plain"
@@ -262,6 +262,7 @@
 import { Calendar, Star, StarFilled, ArrowDown, ArrowRight, Delete, Edit, Clock, Paperclip } from '@element-plus/icons-vue';
 import TodoDetailPanel from '@/components/todo/TodoDetailPanel.vue';
 import { useTodoList } from '@/composables/useTodoList';
+import { isMarked } from '@/utils/priority-helpers';
 
 const {
   loading,

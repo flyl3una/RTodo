@@ -299,6 +299,7 @@ import Logo from '@/components/icon/logo.vue';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import { Refresh } from '@element-plus/icons-vue';
+import { delays } from '@/constants/delays';
 
 const { t } = useI18n();
 
@@ -467,7 +468,7 @@ async function handleImport() {
     // After sending file path to backend, parse and load data
     await api.importDataFromCsv(selectedPath);
     ElMessage.success(t('messages.importSuccess'));
-    setTimeout(() => window.location.reload(), 1500);
+    await delays.reloadAfterImport();
   } catch (error) {
     console.error('Import error:', error);
     ElMessage.error(t('messages.importFailed'));
@@ -491,7 +492,7 @@ async function handleClear() {
 
     await api.clearAllData();
     ElMessage.success(t('messages.dataCleared'));
-    setTimeout(() => window.location.reload(), 1000);
+    await delays.reloadAfterMessage();
   } catch (error) {
     // User cancelled
   }

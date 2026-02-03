@@ -15,6 +15,23 @@ pub enum TodoStatus {
     Done = 2,
 }
 
+impl TodoStatus {
+    /// 从 i32 值创建 TodoStatus，无效值默认为 Todo
+    pub fn from_i32(value: i32) -> Self {
+        match value {
+            x if x == Self::Todo as i32 => Self::Todo,
+            x if x == Self::InProgress as i32 => Self::InProgress,
+            x if x == Self::Done as i32 => Self::Done,
+            _ => Self::Todo,
+        }
+    }
+
+    /// 转换为 i32 值
+    pub fn as_i32(self) -> i32 {
+        self as i32
+    }
+}
+
 /// 任务实体
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Todo {

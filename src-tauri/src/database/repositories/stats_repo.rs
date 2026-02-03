@@ -5,6 +5,7 @@ use rusqlite::{Connection, params};
 use anyhow::{Result, Context};
 use chrono::Utc;
 use crate::models::{TodoStats, StatsByDate, TodoStatsWithDetails, Todo, TodoStatus};
+use crate::models::constants::{priority, status};
 
 /// 统计仓库
 pub struct StatsRepository;
@@ -68,28 +69,28 @@ impl StatsRepository {
 
         // 获取待办任务数（使用创建时间）
         let todo: i32 = conn.query_row(
-            &format!("SELECT COUNT(*) FROM todos WHERE status = 0{}", created_filter),
+            &format!("SELECT COUNT(*) FROM todos WHERE status = {}{}", status::TODO, created_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get todo count")?;
 
         // 获取进行中任务数（使用更新时间）
         let in_progress: i32 = conn.query_row(
-            &format!("SELECT COUNT(*) FROM todos WHERE status = 1{}", updated_filter),
+            &format!("SELECT COUNT(*) FROM todos WHERE status = {}{}", status::IN_PROGRESS, updated_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get in_progress count")?;
 
         // 获取已完成任务数（使用完成时间）
         let done: i32 = conn.query_row(
-            &format!("SELECT COUNT(*) FROM todos WHERE status = 2{}", completed_filter),
+            &format!("SELECT COUNT(*) FROM todos WHERE status = {}{}", status::DONE, completed_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get done count")?;
 
         // 获取重要任务数（使用创建时间）
         let marked: i32 = conn.query_row(
-            &format!("SELECT COUNT(*) FROM todos WHERE priority >= 1{}", created_filter),
+            &format!("SELECT COUNT(*) FROM todos WHERE priority >= {}{}", priority::MARKED_THRESHOLD, created_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get marked count")?;
@@ -97,7 +98,7 @@ impl StatsRepository {
         // 获取逾期任务数（使用创建时间）
         let now = Utc::now().timestamp_millis();
         let overdue: i32 = conn.query_row(
-            &format!("SELECT COUNT(*) FROM todos WHERE due_date < {} AND status != 2{}", now, created_filter),
+            &format!("SELECT COUNT(*) FROM todos WHERE due_date < {} AND status != {}{}", now, status::DONE, created_filter),
             [],
             |row| row.get(0)
         ).context("Failed to get overdue count")?;
@@ -221,7 +222,7 @@ impl StatsRepository {
         // 获取待办任务（使用 created_at）
         let todos = Self::query_tasks_by_status(
             conn,
-            0,
+            status::TODO,
             &created_filter,
             &group_filter,
             &tag_filter,
@@ -234,7 +235,7 @@ impl StatsRepository {
         // 获取进行中任务（使用 updated_at）
         let in_progress_tasks = Self::query_tasks_by_status(
             conn,
-            1,
+            status::IN_PROGRESS,
             &updated_filter,
             &group_filter,
             &tag_filter,
@@ -247,7 +248,7 @@ impl StatsRepository {
         // 获取已完成任务（使用 completed_at）
         let done_tasks = Self::query_tasks_by_status(
             conn,
-            2,
+            status::DONE,
             &completed_filter,
             &group_filter,
             &tag_filter,
@@ -375,11 +376,14 @@ impl StatsRepository {
             status, time_filter, group_filter, tag_filter, status_filter
         );
 
-        query.push_str(" ORDER BY
-            CASE WHEN t.status = 2 THEN 1 ELSE 0 END,
-            t.priority DESC,
-            t.due_date ASC,
-            t.created_at DESC");
+        // 排序：未完成在前，按优先级降序，然后按截止时间升序，最后按创建时间倒序；已完成任务按完成时间倒序
+        query.push_str(&format!(" ORDER BY
+            CASE WHEN t.status = {} THEN 1 ELSE 0 END,
+            CASE WHEN t.status != {} THEN t.priority END DESC,
+            CASE WHEN t.status != {} THEN t.due_date END ASC,
+            CASE WHEN t.status != {} THEN t.created_at END DESC,
+            t.completed_at DESC",
+            status::DONE, status::DONE, status::DONE, status::DONE));
 
         // 构建参数列表（混合类型：i64 和 i32）
         let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
@@ -403,12 +407,7 @@ impl StatsRepository {
         let mut stmt = conn.prepare(&query)?;
         let todo_iter = stmt.query_map(param_refs.as_slice(), |row| {
             let status_int: i32 = row.get("status")?;
-            let status = match status_int {
-                0 => TodoStatus::Todo,
-                1 => TodoStatus::InProgress,
-                2 => TodoStatus::Done,
-                _ => TodoStatus::Todo,
-            };
+            let status = TodoStatus::from_i32(status_int);
             Ok(Todo {
                 id: row.get("id")?,
                 title: row.get("title")?,

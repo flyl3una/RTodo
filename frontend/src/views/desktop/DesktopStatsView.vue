@@ -270,19 +270,19 @@
           :placeholder="t('stats.selectStatuses')"
           style="width: 160px; margin-right: 12px"
         >
-          <el-option :value="2" :label="t('status.done')">
+          <el-option :value="TodoStatus.Done" :label="t('status.done')">
             <span class="filter-option">
               <span class="status-dot-small done"></span>
               <span>{{ t('status.done') }}</span>
             </span>
           </el-option>
-          <el-option :value="0" :label="t('status.todo')">
+          <el-option :value="TodoStatus.Todo" :label="t('status.todo')">
             <span class="filter-option">
               <span class="status-dot-small todo"></span>
               <span>{{ t('status.todo') }}</span>
             </span>
           </el-option>
-          <el-option :value="1" :label="t('status.inProgress')">
+          <el-option :value="TodoStatus.InProgress" :label="t('status.inProgress')">
             <span class="filter-option">
               <span class="status-dot-small in-progress"></span>
               <span>{{ t('status.inProgress') }}</span>
@@ -314,6 +314,7 @@ import { useTagStore } from '@/stores';
 import type { TodoStats, StatsByDate, TodoStatsWithDetails } from '@/types';
 import { TodoStatus } from '@/types';
 import * as api from '@/api/tauri';
+import { isMarked } from '@/utils/priority-helpers';
 
 const { t } = useI18n();
 
@@ -333,7 +334,7 @@ const selectedGroupIds = ref<number[]>([]);
 const selectedTagIds = ref<number[]>([]);
 
 // 汇报模式的状态筛选（独立于仪表盘筛选）
-const reportStatusFilter = ref<number[]>([2]); // 默认为已完成
+const reportStatusFilter = ref<number[]>([TodoStatus.Done]); // 默认为已完成
 
 const dateRange = ref<'day' | 'week' | 'month' | 'custom'>('week');
 const customStartDate = ref<number | null>(null);
@@ -363,7 +364,7 @@ const stats = computed<TodoStats>(() => {
     todo: statsWithDetails.value.todo,
     in_progress: statsWithDetails.value.in_progress,
     done: statsWithDetails.value.done,
-    marked: allTodos.filter(t => t.priority >= 1).length,
+    marked: allTodos.filter(t => isMarked(t.priority)).length,
     overdue: allTodos.filter(t => t.due_date && t.due_date < now && t.status !== TodoStatus.Done).length,
   };
 });

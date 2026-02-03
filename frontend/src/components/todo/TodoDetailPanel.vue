@@ -46,9 +46,9 @@
 
       <el-form-item :label="t('common.priority')">
         <el-radio-group v-model="form.priority">
-          <el-radio :label="0">{{ t('priority.normal') }}</el-radio>
-          <el-radio :label="1">{{ t('priority.important') }}</el-radio>
-          <el-radio :label="3">{{ t('priority.urgent') }}</el-radio>
+          <el-radio :label="PRIORITY_VALUES.NORMAL">{{ t('priority.normal') }}</el-radio>
+          <el-radio :label="PRIORITY_VALUES.IMPORTANT">{{ t('priority.important') }}</el-radio>
+          <el-radio :label="PRIORITY_VALUES.URGENT">{{ t('priority.urgent') }}</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -305,6 +305,7 @@ import { useTagStore } from '@/stores';
 import { useGroupStore } from '@/stores';
 import type { Todo, UpdateTodoRequest, TodoStep, Attachment } from '@/types';
 import { TodoStatus, getStatusLabel, getStatusType } from '@/types';
+import { PRIORITY_VALUES, cyclePriority, isMarked } from '@/utils/priority-helpers';
 
 const { t } = useI18n();
 
@@ -384,16 +385,16 @@ const statusText = computed(() => getStatusLabel(props.todo.status));
 
 const priorityType = computed(() => {
   switch (props.todo.priority) {
-    case 3: return 'danger';
-    case 1: return 'warning';
+    case PRIORITY_VALUES.URGENT: return 'danger';
+    case PRIORITY_VALUES.IMPORTANT: return 'warning';
     default: return '';
   }
 });
 
 const priorityText = computed(() => {
   switch (props.todo.priority) {
-    case 3: return t('priority.urgent');
-    case 1: return t('priority.important');
+    case PRIORITY_VALUES.URGENT: return t('priority.urgent');
+    case PRIORITY_VALUES.IMPORTANT: return t('priority.important');
     default: return t('priority.normal');
   }
 });
@@ -524,8 +525,7 @@ async function handleStatusToggle() {
 
 async function handleMarkToggle() {
   try {
-    // Cycle through priorities: 0 (Normal) → 1 (Important) → 3 (Urgent) → 0 (Normal)
-    const newPriority = props.todo.priority === 0 ? 1 : (props.todo.priority === 1 ? 3 : 0);
+    const newPriority = cyclePriority(props.todo.priority);
     await todoStore.updateTodo({
       id: props.todo.id,
       priority: newPriority,
