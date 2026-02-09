@@ -275,6 +275,13 @@ export default {
     downloadSuccess: 'Attachment downloaded successfully',
     downloadFailed: 'Failed to download attachment',
     fileTooLarge: 'File size exceeds 50MB limit',
+    fileTooLargeDetailed: 'File size {size}MB exceeds {maxSize}MB limit',
+    fileSelected: 'File selected, will be uploaded on save',
+    pendingUpload: 'Pending Upload',
+    selectFilesFailed: 'Failed to select files',
+    fileAlreadyAdded: 'File "{name}" has already been added',
+    addFileFailed: 'Failed to add file',
+    tauriOnly: 'This feature is only available in desktop app',
   },
 
   // Icon categories
@@ -446,7 +453,7 @@ export default {
     dataMigrated: 'Data migration completed',
     migrateDataWarning: 'Migration will copy all database and attachments to the new path. Old data will be preserved.',
     targetDirectoryNotEmptyWarning: 'Target directory is not empty. Continue? Existing files will be preserved.',
-    restartRequired: 'Data path has been changed. The application needs to restart to take effect. Restart now?',
+    restartRequiredQuestion: 'Data path has been changed. The application needs to restart to take effect. Restart now?',
     restartNow: 'Restart Now',
     restartLater: 'Restart Later',
     resetDataPathWarning: 'Resetting the data path will restore it to the default location. Continue?',
@@ -466,7 +473,7 @@ export default {
     logRetentionDaysChanged: 'Retention days has been changed',
     logCompressed: 'Log compression completed',
     logCompressFailed: 'Log compression failed',
-    restartRequired: ' (Restart required)',
+    restartRequiredNote: ' (Restart required)',
     logLevelRestartRequired: 'Note: Log level changes require restarting the application to take full effect',
   },
 

@@ -120,16 +120,18 @@
       </el-form-item>
 
       <el-form-item :label="t('attachment.attachments')">
-        <div class="attachment-upload">
-          <el-button :icon="Upload" @click="handleSelectFiles">
-            {{ t('attachment.selectFiles') }}
-          </el-button>
-          <div v-if="pendingFiles.length > 0" class="pending-files">
-            <div v-for="(file, index) in pendingFiles" :key="index" class="pending-file">
-              <el-icon><Document /></el-icon>
-              <span>{{ file.name }}</span>
-              <el-button :icon="Close" size="small" text @click="removeFile(index)" />
-            </div>
+        <el-button :icon="Upload" @click="selectFilesWithTauri">
+          {{ t('attachment.selectFiles') }}
+        </el-button>
+
+        <!-- 自定义文件列表 -->
+        <div v-if="pendingFiles.length > 0" class="pending-files">
+          <div v-for="file in pendingFiles" :key="file.path" class="pending-file">
+            <el-icon><Document /></el-icon>
+            <span class="file-name">{{ file.name }}</span>
+            <span class="file-size">{{ formatFileSize(file.size) }}</span>
+            <el-tag size="small" type="warning">{{ t('attachment.pendingUpload') }}</el-tag>
+            <el-button :icon="Close" size="small" text @click="removeFile(file.path)" />
           </div>
         </div>
       </el-form-item>
@@ -272,16 +274,18 @@
             </el-form-item>
 
             <el-form-item :label="t('attachment.attachments')">
-              <div class="attachment-upload">
-                <el-button :icon="Upload" @click="handleSelectFiles">
-                  {{ t('attachment.selectFiles') }}
-                </el-button>
-                <div v-if="pendingFiles.length > 0" class="pending-files">
-                  <div v-for="(file, index) in pendingFiles" :key="index" class="pending-file">
-                    <el-icon><Document /></el-icon>
-                    <span>{{ file.name }}</span>
-                    <el-button :icon="Close" size="small" text @click="removeFile(index)" />
-                  </div>
+              <el-button :icon="Upload" @click="selectFilesWithTauri">
+                {{ t('attachment.selectFiles') }}
+              </el-button>
+
+              <!-- 自定义文件列表 -->
+              <div v-if="pendingFiles.length > 0" class="pending-files">
+                <div v-for="file in pendingFiles" :key="file.path" class="pending-file">
+                  <el-icon><Document /></el-icon>
+                  <span class="file-name">{{ file.name }}</span>
+                  <span class="file-size">{{ formatFileSize(file.size) }}</span>
+                  <el-tag size="small" type="warning">{{ t('attachment.pendingUpload') }}</el-tag>
+                  <el-button :icon="Close" size="small" text @click="removeFile(file.path)" />
                 </div>
               </div>
             </el-form-item>
@@ -335,7 +339,15 @@ const tagStore = useTagStore();
 
 const formRef = ref<FormInstance>();
 const loading = ref(false);
-const pendingFiles = ref<Array<{ path: string; name: string }>>([]);
+const isTauri = ref(false);
+
+interface PendingFile {
+  path: string;
+  name: string;
+  size: number;
+}
+
+const pendingFiles = ref<PendingFile[]>([]);
 const pendingSteps = ref<Array<{ title: string }>>([]);
 
 const form = ref<CreateTodoRequest>({
@@ -362,7 +374,7 @@ const visible = computed({
 const groups = computed(() => groupStore.groups);
 const tags = computed(() => tagStore.tags);
 
-async function handleSelectFiles() {
+async function selectFilesWithTauri() {
   try {
     const { open } = await import('@tauri-apps/plugin-dialog');
     const selected = await open({
@@ -375,21 +387,59 @@ async function handleSelectFiles() {
     const files = Array.isArray(selected) ? selected : [selected];
     for (const filePath of files) {
       if (typeof filePath === 'string') {
-        const fileName = filePath.split(/[/\\]/).pop() || 'unknown';
-        // 避免重复添加
-        if (!pendingFiles.value.some(f => f.path === filePath)) {
-          pendingFiles.value.push({ path: filePath, name: fileName });
-        }
+        await addFileFromPath(filePath);
       }
     }
   } catch (error) {
     console.error('Failed to select files:', error);
-    ElMessage.error(t('messages.folderSelectFailed'));
+    ElMessage.error(t('attachment.selectFilesFailed'));
   }
 }
 
-function removeFile(index: number) {
-  pendingFiles.value.splice(index, 1);
+async function addFileFromPath(filePath: string) {
+  try {
+    const { stat } = await import('@tauri-apps/plugin-fs');
+    const fileStats = await stat(filePath);
+    const fileName = filePath.split(/[/\\]/).pop() || 'unknown';
+
+    // 检查文件大小
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    if (fileStats.size > MAX_FILE_SIZE) {
+      const sizeMB = (fileStats.size / 1024 / 1024).toFixed(2);
+      ElMessage.error(
+        t('attachment.fileTooLargeDetailed', { size: sizeMB, maxSize: '50' })
+      );
+      return;
+    }
+
+    // 检查重复
+    if (pendingFiles.value.some(f => f.path === filePath)) {
+      ElMessage.warning(t('attachment.fileAlreadyAdded', { name: fileName }));
+      return;
+    }
+
+    pendingFiles.value.push({
+      path: filePath,
+      name: fileName,
+      size: fileStats.size,
+    });
+  } catch (error) {
+    console.error('Failed to add file:', error);
+    ElMessage.error(t('attachment.addFileFailed'));
+  }
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function removeFile(filePath: string) {
+  const index = pendingFiles.value.findIndex(f => f.path === filePath);
+  if (index !== -1) {
+    pendingFiles.value.splice(index, 1);
+  }
 }
 
 function addStep() {
@@ -425,7 +475,7 @@ async function handleSubmit() {
       for (const step of pendingSteps.value) {
         if (step.title.trim()) {
           try {
-            await todoStore.createStep(newTodo.id.toString(), step.title.trim());
+            await todoStore.createStep(newTodo.id, step.title.trim());
           } catch (stepError) {
             console.error('Failed to create step:', step.title, stepError);
           }
@@ -485,6 +535,7 @@ function handleClose() {
 // Load groups and tags when dialog opens
 watch(visible, async (isOpen) => {
   if (isOpen) {
+    isTauri.value = window.__TAURI__ !== undefined;
     try {
       await groupStore.fetchGroups();
       await tagStore.fetchTags();
@@ -746,11 +797,11 @@ watch(visible, async (isOpen) => {
 .pending-file {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
+  gap: 12px;
+  padding: 12px;
   background: var(--el-fill-color-light);
-  border-radius: 4px;
-  font-size: 14px;
+  border-radius: 6px;
+  border-left: 3px solid var(--el-color-warning);
 }
 
 .pending-file .el-icon {
@@ -763,6 +814,19 @@ watch(visible, async (isOpen) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.pending-file .file-name {
+  flex: 1;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pending-file .file-size {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
 }
 
 /* Steps input styles */

@@ -234,7 +234,7 @@ export const useTodoStore = defineStore('todo', () => {
     }
   }
 
-  async function createStep(todoId: string, title: string): Promise<TodoStep> {
+  async function createStep(todoId: number, title: string): Promise<TodoStep> {
     try {
       return await api.createStep(todoId, title);
     } catch (e) {

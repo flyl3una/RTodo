@@ -162,6 +162,33 @@ export interface Attachment {
 }
 
 /**
+ * 编辑模式下的本地步骤
+ */
+export interface LocalStep {
+  localId?: string;        // 新增步骤的临时标识
+  id?: number;             // 已有步骤的真实ID
+  title: string;
+  is_completed: boolean;
+  sort_order?: number;
+  _deleted?: boolean;      // 标记为待删除
+  _modified?: boolean;     // 标记为已修改
+}
+
+/**
+ * 编辑模式下的本地附件
+ */
+export interface LocalAttachment {
+  localId?: string;        // 新增附件的临时标识
+  id?: number;             // 已有附件的真实ID
+  name: string;
+  file_path?: string;      // 新增附件的路径
+  file_size: number;
+  mime_type?: string;
+  _deleted?: boolean;      // 标记为待删除
+  _pending?: boolean;      // 标记为待上传
+}
+
+/**
  * 创建任务请求
  */
 export interface CreateTodoRequest {
@@ -278,6 +305,8 @@ export type {
   Tag,
   TodoStep,
   Attachment,
+  LocalStep,
+  LocalAttachment,
   CreateTodoRequest,
   UpdateTodoRequest,
   TodoStats,

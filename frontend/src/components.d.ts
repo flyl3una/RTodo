@@ -48,6 +48,7 @@ declare module 'vue' {
     ElTabPane: typeof import('element-plus/es')['ElTabPane']
     ElTabs: typeof import('element-plus/es')['ElTabs']
     ElTag: typeof import('element-plus/es')['ElTag']
+    ElUpload: typeof import('element-plus/es')['ElUpload']
     GroupManageDialog: typeof import('./components/group/GroupManageDialog.vue')['default']
     IconPicker: typeof import('./components/common/IconPicker.vue')['default']
     Logo: typeof import('./components/icon/logo.vue')['default']

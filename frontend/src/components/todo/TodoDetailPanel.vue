@@ -99,28 +99,82 @@
       <div class="edit-section">
         <div class="section-header">
           <h4>{{ t('step.title') }}</h4>
-          <el-button :icon="Plus" size="small" text @click="showAddStep = true">
+          <el-button :icon="Plus" size="small" text @click="startAddingStep">
             {{ t('common.add') }}
           </el-button>
         </div>
-        <div v-if="steps.length > 0" class="edit-steps-list">
-          <div v-for="step in steps" :key="step.id" class="edit-step-item">
-            <el-checkbox :model-value="step.is_completed" @change="toggleStep(step)" />
-            <span class="step-title" :class="{ completed: step.is_completed }">
+
+        <!-- 新增步骤输入框列表 -->
+        <div v-if="pendingSteps.length > 0" class="add-step-inputs">
+          <div
+            v-for="pendingStep in pendingSteps"
+            :key="pendingStep.localId"
+            class="add-step-input-item"
+          >
+            <el-input
+              v-model="pendingStep.title"
+              :placeholder="t('step.stepPlaceholder')"
+              @keyup.enter="confirmPendingStep(pendingStep.localId)"
+              @blur="handlePendingStepBlur(pendingStep.localId)"
+            />
+            <el-button
+              :icon="Check"
+              size="small"
+              type="success"
+              @click="confirmPendingStep(pendingStep.localId)"
+              class="confirm-btn"
+            />
+            <el-button
+              :icon="Close"
+              size="small"
+              type="danger"
+              @click="removePendingStep(pendingStep.localId)"
+              class="cancel-btn"
+            />
+          </div>
+        </div>
+
+        <!-- 本地步骤列表 -->
+        <div v-if="activeLocalSteps.length > 0" class="edit-steps-list">
+          <div
+            v-for="step in activeLocalSteps"
+            :key="step.localId || step.id"
+            class="edit-step-item"
+          >
+            <el-checkbox
+              :model-value="step.is_completed"
+              @change="toggleLocalStep(step)"
+            />
+            <!-- 内联编辑模式 -->
+            <el-input
+              v-if="editingStepLocalId === (step.localId || `step-${step.id}`)"
+              v-model="editingStepTitle"
+              size="small"
+              @keyup.enter="saveStepEdit(step)"
+              @blur="saveStepEdit(step)"
+              @keyup.esc="cancelStepEdit"
+              class="step-edit-input"
+            />
+            <span
+              v-else
+              class="step-title"
+              :class="{ completed: step.is_completed }"
+              @dblclick="startEditingStep(step)"
+            >
               {{ step.title }}
             </span>
             <el-button
               :icon="Edit"
               size="small"
               text
-              @click="editStep(step)"
+              @click="startEditingStep(step)"
             />
             <el-button
               :icon="Delete"
               size="small"
               text
               type="danger"
-              @click="deleteStep(step.id)"
+              @click="markDeleteStep(step)"
             />
           </div>
         </div>
@@ -132,25 +186,27 @@
       <div class="edit-section">
         <div class="section-header">
           <h4>{{ t('attachment.attachments') }}</h4>
-          <el-button :icon="Plus" size="small" text @click="handleAddAttachment">
+          <el-button :icon="Plus" size="small" text :disabled="loading" @click="selectFilesWithTauri">
             {{ t('common.add') }}
           </el-button>
         </div>
-        <div v-if="attachments.length > 0" class="edit-attachments-list">
+        <div v-if="activeLocalAttachments.length > 0" class="edit-attachments-list">
           <div
-            v-for="attachment in attachments"
-            :key="attachment.id"
+            v-for="attachment in activeLocalAttachments"
+            :key="attachment.localId || attachment.id"
             class="edit-attachment-item"
+            :class="{ 'pending': attachment._pending }"
           >
             <el-icon class="attachment-icon"><Document /></el-icon>
             <span class="attachment-name">{{ attachment.name }}</span>
+            <span v-if="attachment._pending" class="pending-tag">{{ t('attachment.pendingUpload') }}</span>
             <span class="attachment-size">{{ formatFileSize(attachment.file_size) }}</span>
             <el-button
               :icon="Delete"
               size="small"
               text
               type="danger"
-              @click="handleDeleteAttachment(attachment)"
+              @click="markDeleteAttachment(attachment)"
             />
           </div>
         </div>
@@ -158,7 +214,12 @@
       </div>
 
       <el-form-item>
-        <el-button type="primary" @click="handleSave" :loading="loading">
+        <el-button
+          type="primary"
+          @click="handleSave"
+          :loading="loading"
+          :disabled="!hasChanges"
+        >
           {{ t('common.save') }}
         </el-button>
         <el-button @click="cancelEdit">{{ t('common.cancel') }}</el-button>
@@ -273,39 +334,20 @@
         <el-empty v-else :description="t('attachment.noAttachments')" :image-size="60" />
       </div>
     </div>
-
-    <!-- Add/Edit Step Dialog -->
-    <el-dialog
-      v-model="showAddStep"
-      :title="editingStep ? t('step.editStep') : t('step.addStep')"
-      width="500px"
-    >
-      <el-input
-        v-model="newStepTitle"
-        :placeholder="t('step.stepPlaceholder')"
-        @keyup.enter="saveStep"
-      />
-      <template #footer>
-        <el-button @click="showAddStep = false">{{ t('common.cancel') }}</el-button>
-        <el-button type="primary" @click="saveStep" :disabled="!newStepTitle.trim()">
-          {{ editingStep ? t('common.save') : t('common.add') }}
-        </el-button>
-      </template>
-    </el-dialog>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue';
-import { Edit, Delete, Star, StarFilled, Plus, Document, Download } from '@element-plus/icons-vue';
+import { ref, computed, onMounted, watch, nextTick } from 'vue';
+import { Edit, Delete, Star, StarFilled, Plus, Document, Check, Close } from '@element-plus/icons-vue';
 import { ElMessage, ElMessageBox, type FormInstance, type FormRules } from 'element-plus';
 import { useI18n } from 'vue-i18n';
 import { useTodoStore } from '@/stores';
 import { useTagStore } from '@/stores';
 import { useGroupStore } from '@/stores';
-import type { Todo, UpdateTodoRequest, TodoStep, Attachment } from '@/types';
+import type { Todo, UpdateTodoRequest, TodoStep, Attachment, LocalStep, LocalAttachment } from '@/types';
 import { TodoStatus, getStatusLabel, getStatusType } from '@/types';
-import { PRIORITY_VALUES, cyclePriority, isMarked } from '@/utils/priority-helpers';
+import { PRIORITY_VALUES, cyclePriority } from '@/utils/priority-helpers';
 
 const { t } = useI18n();
 
@@ -323,14 +365,28 @@ const todoStore = useTodoStore();
 const tagStore = useTagStore();
 const groupStore = useGroupStore();
 
+// 基础状态
 const isEditing = ref(false);
 const loading = ref(false);
 const formRef = ref<FormInstance>();
-const showAddStep = ref(false);
-const newStepTitle = ref('');
-const editingStep = ref<TodoStep | null>(null);
+const isTauri = ref(false);
+
+// 原始数据备份（用于比较和恢复）
+const originalSteps = ref<TodoStep[]>([]);
+const originalAttachments = ref<Attachment[]>([]);
+
+// 本地编辑数据
+const localSteps = ref<LocalStep[]>([]);
+const localAttachments = ref<LocalAttachment[]>([]);
+
+// 服务器数据（查看模式使用）
 const steps = ref<TodoStep[]>([]);
 const attachments = ref<Attachment[]>([]);
+
+// 步骤内联编辑状态
+const pendingSteps = ref<Array<{ localId: string; title: string }>>([]);
+const editingStepLocalId = ref<string>('');
+const editingStepTitle = ref<string>('');
 
 const form = ref<UpdateTodoRequest>({
   title: '',
@@ -352,13 +408,59 @@ const rules: FormRules = {
 const tags = computed(() => tagStore.tags);
 const groups = computed(() => groupStore.groups);
 
-// Watch for todo prop changes (when store updates the todo)
-watch(() => props.todo, (newTodo, oldTodo) => {
-  console.log('[TodoDetailPanel] Todo prop changed');
-  console.log('[TodoDetailPanel] New todo start_date:', newTodo.start_date, 'due_date:', newTodo.due_date);
-  console.log('[TodoDetailPanel] Old todo start_date:', oldTodo?.start_date, 'due_date:', oldTodo?.due_date);
+// 活跃的本地步骤（排除已删除）
+const activeLocalSteps = computed(() =>
+  localSteps.value.filter(s => !s._deleted)
+);
 
-  // If currently editing, sync the form with new data
+// 活跃的本地附件（排除已删除）
+const activeLocalAttachments = computed(() =>
+  localAttachments.value.filter(a => !a._deleted)
+);
+
+// 变化检测计算属性
+const hasChanges = computed(() => {
+  // 检查主任务字段变化
+  const mainFieldsChanged =
+    form.value.title !== props.todo.title ||
+    form.value.description !== (props.todo.description || '') ||
+    form.value.status !== props.todo.status ||
+    form.value.priority !== props.todo.priority ||
+    form.value.group_id !== props.todo.group_id ||
+    form.value.start_date !== props.todo.start_date ||
+    form.value.due_date !== props.todo.due_date ||
+    JSON.stringify(form.value.tag_ids?.sort()) !== JSON.stringify(props.todo.tags?.map(t => t.id).sort() || []);
+
+  // 检查步骤变化
+  const activeLocalSteps = localSteps.value.filter(s => !s._deleted);
+  const activeOriginalSteps = originalSteps.value;
+  const stepsChanged =
+    activeLocalSteps.length !== activeOriginalSteps.length ||
+    activeLocalSteps.some((localStep, index) => {
+      const originalStep = activeOriginalSteps[index];
+      if (!originalStep) return true;
+      return (
+        localStep.title !== originalStep.title ||
+        localStep.is_completed !== originalStep.is_completed ||
+        localStep._modified
+      );
+    }) ||
+    localSteps.value.some(s => s._deleted || s._modified || !s.id);
+
+  // 检查附件变化
+  const activeLocalAttachments = localAttachments.value.filter(a => !a._deleted);
+  const activeOriginalAttachments = originalAttachments.value;
+  const attachmentsChanged =
+    activeLocalAttachments.length !== activeOriginalAttachments.length ||
+    localAttachments.value.some(a => a._deleted || a._pending);
+
+  return mainFieldsChanged || stepsChanged || attachmentsChanged;
+});
+
+// Watch for todo prop changes
+watch(() => props.todo, (newTodo) => {
+  console.log('[TodoDetailPanel] Todo prop changed');
+
   if (isEditing.value) {
     console.log('[TodoDetailPanel] Syncing form with new data');
     form.value = {
@@ -371,16 +473,10 @@ watch(() => props.todo, (newTodo, oldTodo) => {
       due_date: newTodo.due_date,
       tag_ids: newTodo.tags?.map(t => t.id) || [],
     };
-  } else {
-    // Force re-render computed properties by accessing them
-    console.log('[TodoDetailPanel] Triggering reactivity for display');
-    console.log('[TodoDetailPanel] displayStartDate will be:', displayStartDate.value);
-    console.log('[TodoDetailPanel] displayDueDate will be:', displayDueDate.value);
   }
 }, { deep: true });
 
 const statusType = computed(() => getStatusType(props.todo.status));
-
 const statusText = computed(() => getStatusLabel(props.todo.status));
 
 const priorityType = computed(() => {
@@ -399,7 +495,6 @@ const priorityText = computed(() => {
   }
 });
 
-// Computed properties to ensure reactivity for time display
 const displayStartDate = computed(() => props.todo.start_date);
 const displayDueDate = computed(() => props.todo.due_date);
 
@@ -415,11 +510,16 @@ function formatDate(timestamp?: number): string {
   });
 }
 
+// 生成临时ID
+function generateLocalId(): string {
+  return `local-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+}
+
+// 进入编辑模式
 function startEdit() {
   console.log('[TodoDetailPanel] startEdit called');
-  console.log('[TodoDetailPanel] props.todo:', props.todo);
 
-  // 使用现有的 props 数据初始化表单，因为详情面板已经显示了完整的数据
+  // 初始化主任务表单
   form.value = {
     title: props.todo.title,
     description: props.todo.description || '',
@@ -431,22 +531,41 @@ function startEdit() {
     tag_ids: props.todo.tags?.map(t => t.id) || [],
   };
 
-  console.log('[TodoDetailPanel] Form initialized:', {
-    title: form.value.title,
-    group_id: form.value.group_id,
-    start_date: form.value.start_date,
-    due_date: form.value.due_date,
-    tag_ids: form.value.tag_ids,
-  });
+  // 深拷贝原始数据
+  originalSteps.value = JSON.parse(JSON.stringify(steps.value));
+  originalAttachments.value = JSON.parse(JSON.stringify(attachments.value));
 
-  // 进入编辑模式
+  // 初始化本地数据
+  localSteps.value = steps.value.map(s => ({
+    ...s,
+    _modified: false,
+    _deleted: false,
+  }));
+
+  localAttachments.value = attachments.value.map(a => ({
+    ...a,
+    _deleted: false,
+    _pending: false,
+  }));
+
   isEditing.value = true;
 }
 
+// 取消编辑
 function cancelEdit() {
+  // 恢复原始数据
+  localSteps.value = originalSteps.value.map(s => ({ ...s }));
+  localAttachments.value = originalAttachments.value.map(a => ({ ...a }));
+
+  // 重置编辑状态
+  pendingSteps.value = [];
+  editingStepLocalId.value = '';
+  editingStepTitle.value = '';
+
   isEditing.value = false;
 }
 
+// 保存所有更改
 async function handleSave() {
   if (!formRef.value) return;
 
@@ -454,18 +573,20 @@ async function handleSave() {
     await formRef.value.validate();
     loading.value = true;
 
-    console.log('[TodoDetailPanel] handleSave - form.value:', {
-      start_date: form.value.start_date,
-      due_date: form.value.due_date,
-      start_date_type: typeof form.value.start_date,
-      due_date_type: typeof form.value.due_date
-    });
+    // 处理待定步骤：将所有有待定内容的步骤移入 localSteps
+    for (const pendingStep of pendingSteps.value) {
+      if (pendingStep.title && pendingStep.title.trim()) {
+        localSteps.value.unshift({
+          localId: pendingStep.localId,
+          title: pendingStep.title.trim(),
+          is_completed: false,
+          _modified: true,
+        });
+      }
+    }
+    pendingSteps.value = [];
 
-    // 构建请求对象
-    // 对于日期字段：
-    // - undefined: 不传递该字段（不更新）
-    // - null: 传递 null（清除日期）
-    // - 数字: 传递数字（设置日期）
+    // 1. 保存主任务
     const request: UpdateTodoRequest = {
       id: props.todo.id,
       title: form.value.title,
@@ -473,35 +594,69 @@ async function handleSave() {
       status: form.value.status,
       priority: form.value.priority,
       group_id: form.value.group_id,
-      // 保留原始值（包括 null），让 API 层决定如何处理
       start_date: form.value.start_date,
       due_date: form.value.due_date,
       tag_ids: form.value.tag_ids?.length ? form.value.tag_ids : undefined,
     };
 
-    console.log('[TodoDetailPanel] handleSave - request:', {
-      start_date: request.start_date,
-      start_date_type: typeof request.start_date,
-      due_date: request.due_date,
-      due_date_type: typeof request.due_date
-    });
+    const updatedTodo = await todoStore.updateTodo(request);
 
-    console.log('Saving todo with request:', request);
+    // 2. 批量处理步骤变更
+    for (const step of localSteps.value) {
+      if (step._deleted) {
+        // 删除已有步骤
+        if (step.id) {
+          await todoStore.deleteStep(step.id.toString());
+        }
+        // 新增步骤标记删除的直接跳过
+        continue;
+      }
 
-    const updated = await todoStore.updateTodo(request);
+      if (step.id) {
+        // 已有步骤 - 检查是否需要更新
+        const originalStep = originalSteps.value.find(s => s.id === step.id);
+        if (originalStep) {
+          if (originalStep.is_completed !== step.is_completed) {
+            await todoStore.toggleStep(step.id);
+          }
+          if (originalStep.title !== step.title) {
+            await todoStore.updateStep(step.id.toString(), step.title);
+          }
+        }
+      } else if (step.title && step.title.trim()) {
+        // 新增步骤
+        await todoStore.createStep(updatedTodo.id, step.title.trim());
+      }
+    }
 
-    console.log('Updated todo received:', updated);
-    console.log('Updated start_date:', updated.start_date, 'due_date:', updated.due_date);
+    // 3. 批量处理附件变更
+    for (const attachment of localAttachments.value) {
+      if (attachment._deleted) {
+        // 删除已有附件
+        if (attachment.id) {
+          await todoStore.deleteAttachment(attachment.id);
+        }
+        // 新增附件标记删除的直接跳过
+        continue;
+      }
+
+      if (attachment._pending && attachment.file_path) {
+        // 上传新附件
+        await todoStore.uploadAttachment(updatedTodo.id, attachment.file_path, attachment.name);
+      }
+    }
+
+    // 4. 重新加载数据
+    await loadSteps();
+    await loadAttachments();
 
     ElMessage.success(t('todo.updateSuccess'));
 
-    // 先退出编辑模式
+    // 退出编辑模式
     isEditing.value = false;
 
     // 通知父组件
-    emit('updated', updated);
-
-    console.log('[TodoDetailPanel] Save completed, isEditing:', isEditing.value);
+    emit('updated', updatedTodo);
   } catch (error: any) {
     console.error('[TodoDetailPanel] Save error:', error);
     if (error?.errors) {
@@ -512,6 +667,211 @@ async function handleSave() {
     loading.value = false;
   }
 }
+
+// ============ 步骤操作（编辑模式）============
+
+// 开始添加步骤
+function startAddingStep() {
+  const newLocalId = generateLocalId();
+  pendingSteps.value.push({
+    localId: newLocalId,
+    title: '',
+  });
+  nextTick(() => {
+    const inputElements = document.querySelectorAll('.add-step-input-item:last-child input');
+    (inputElements[0] as HTMLInputElement)?.focus();
+  });
+}
+
+// 确认添加待定步骤
+function confirmPendingStep(localId: string) {
+  const index = pendingSteps.value.findIndex(p => p.localId === localId);
+  if (index === -1) return;
+
+  const { title } = pendingSteps.value[index];
+
+  if (!title.trim()) {
+    removePendingStep(localId);
+    return;
+  }
+
+  localSteps.value.unshift({
+    localId: localId,
+    title: title.trim(),
+    is_completed: false,
+    _modified: true,
+  });
+
+  pendingSteps.value.splice(index, 1);
+}
+
+// 处理待定步骤失去焦点
+function handlePendingStepBlur(localId: string) {
+  setTimeout(() => {
+    const index = pendingSteps.value.findIndex(p => p.localId === localId);
+    if (index === -1) return;
+
+    const { title } = pendingSteps.value[index];
+    if (!title.trim()) {
+      removePendingStep(localId);
+    }
+  }, 200);
+}
+
+// 移除待定步骤
+function removePendingStep(localId: string) {
+  const index = pendingSteps.value.findIndex(p => p.localId === localId);
+  if (index !== -1) {
+    pendingSteps.value.splice(index, 1);
+  }
+}
+
+// 开始编辑步骤
+function startEditingStep(step: LocalStep) {
+  const stepLocalId = step.localId || `step-${step.id}`;
+  editingStepLocalId.value = stepLocalId;
+  editingStepTitle.value = step.title;
+}
+
+// 取消编辑步骤
+function cancelStepEdit() {
+  editingStepLocalId.value = '';
+  editingStepTitle.value = '';
+}
+
+// 保存步骤编辑
+function saveStepEdit(step: LocalStep) {
+  if (!editingStepTitle.value.trim()) {
+    cancelStepEdit();
+    return;
+  }
+
+  const index = localSteps.value.findIndex(
+    s => (s.localId || `step-${s.id}`) === editingStepLocalId.value
+  );
+
+  if (index !== -1) {
+    localSteps.value[index].title = editingStepTitle.value.trim();
+    localSteps.value[index]._modified = true;
+  }
+
+  cancelStepEdit();
+}
+
+// 切换本地步骤状态
+function toggleLocalStep(step: LocalStep) {
+  const index = localSteps.value.findIndex(
+    s => (s.localId || `step-${s.id}`) === (step.localId || `step-${step.id}`)
+  );
+
+  if (index !== -1) {
+    localSteps.value[index].is_completed = !localSteps.value[index].is_completed;
+    localSteps.value[index]._modified = true;
+  }
+}
+
+// 标记删除步骤
+function markDeleteStep(step: LocalStep) {
+  const index = localSteps.value.findIndex(
+    s => (s.localId || `step-${s.id}`) === (step.localId || `step-${step.id}`)
+  );
+
+  if (index !== -1) {
+    if (step.id) {
+      // 已有步骤，标记为删除
+      localSteps.value[index]._deleted = true;
+    } else {
+      // 新步骤，直接移除
+      localSteps.value.splice(index, 1);
+    }
+  }
+}
+
+// ============ 附件操作（编辑模式）============
+
+// 使用 Tauri Dialog API 选择文件
+async function selectFilesWithTauri() {
+  try {
+    const { open } = await import('@tauri-apps/plugin-dialog');
+    const selected = await open({
+      multiple: true,
+      title: t('attachment.selectFiles'),
+    });
+
+    if (!selected) return;
+
+    const files = Array.isArray(selected) ? selected : [selected];
+    for (const filePath of files) {
+      if (typeof filePath === 'string') {
+        await addFileFromPath(filePath);
+      }
+    }
+  } catch (error) {
+    console.error('Failed to select files:', error);
+    ElMessage.error(t('attachment.selectFilesFailed'));
+  }
+}
+
+// 从文件路径添加附件
+async function addFileFromPath(filePath: string) {
+  try {
+    // 获取文件信息
+    const { stat } = await import('@tauri-apps/plugin-fs');
+    const fileStats = await stat(filePath);
+    const fileName = filePath.split(/[/\\]/).pop() || 'unknown';
+
+    // 检查文件大小
+    const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+    if (fileStats.size > MAX_FILE_SIZE) {
+      const sizeMB = (fileStats.size / 1024 / 1024).toFixed(2);
+      ElMessage.error(
+        t('attachment.fileTooLargeDetailed', { size: sizeMB, maxSize: '50' })
+      );
+      return;
+    }
+
+    // 检查重复文件
+    if (localAttachments.value.some(a => a.file_path === filePath && !a._deleted)) {
+      ElMessage.warning(t('attachment.fileAlreadyAdded', { name: fileName }));
+      return;
+    }
+
+    // 创建 LocalAttachment 对象
+    const newAttachment = {
+      localId: generateLocalId(),
+      name: fileName,
+      file_path: filePath,
+      file_size: fileStats.size,
+      _pending: true,
+      _deleted: false,
+    };
+
+    localAttachments.value = [...localAttachments.value, newAttachment];
+    ElMessage.success(t('attachment.fileSelected'));
+  } catch (error) {
+    console.error('Failed to add file from path:', filePath, error);
+    ElMessage.error(t('attachment.addFileFailed'));
+  }
+}
+
+// 标记删除附件
+function markDeleteAttachment(attachment: LocalAttachment) {
+  const index = localAttachments.value.findIndex(
+    a => (a.localId || a.id) === (attachment.localId || attachment.id)
+  );
+
+  if (index !== -1) {
+    if (attachment.id) {
+      // 已有附件，标记为删除
+      localAttachments.value[index]._deleted = true;
+    } else {
+      // 新附件，直接移除
+      localAttachments.value.splice(index, 1);
+    }
+  }
+}
+
+// ============ 查看模式操作 ============
 
 async function handleStatusToggle() {
   try {
@@ -561,144 +921,9 @@ async function toggleStep(step: TodoStep) {
       s.id === step.id ? updated : s
     );
     steps.value = updatedSteps;
-    // 通知父组件刷新数据
     emit('updated', props.todo);
   } catch (error) {
     ElMessage.error(t('step.stepStatusUpdateFailed'));
-  }
-}
-
-async function saveStep() {
-  if (!newStepTitle.value.trim()) return;
-
-  try {
-    if (editingStep.value) {
-      // 编辑模式 - 使用更新 API
-      const updated = await todoStore.updateStep(editingStep.value.id.toString(), newStepTitle.value);
-      // 更新本地状态
-      const index = steps.value.findIndex(s => s.id === editingStep.value!.id);
-      if (index !== -1) {
-        steps.value[index] = updated;
-      }
-      ElMessage.success(t('step.stepUpdated'));
-    } else {
-      // 新增模式
-      await todoStore.createStep(props.todo.id, newStepTitle.value);
-      ElMessage.success(t('step.stepCreated'));
-      await loadSteps();
-    }
-    newStepTitle.value = '';
-    editingStep.value = null;
-    showAddStep.value = false;
-    // 通知父组件刷新数据
-    emit('updated', props.todo);
-  } catch (error) {
-    ElMessage.error(editingStep.value ? t('step.updateStepFailed') : t('step.addStepFailed'));
-  }
-}
-
-function editStep(step: TodoStep) {
-  editingStep.value = step;
-  newStepTitle.value = step.title;
-  showAddStep.value = true;
-}
-
-async function deleteStep(stepId: string) {
-  try {
-    await ElMessageBox.confirm(t('step.deleteConfirm'), t('step.deleteStep'), {
-      type: 'warning',
-      confirmButtonText: t('common.delete'),
-      cancelButtonText: t('common.cancel'),
-    });
-
-    await todoStore.deleteStep(stepId);
-    ElMessage.success(t('step.deleteSuccess'));
-    await loadSteps();
-    // 通知父组件刷新数据
-    emit('updated', props.todo);
-  } catch (error) {
-    if (error !== 'cancel') {
-      ElMessage.error(t('step.deleteStepFailed'));
-    }
-  }
-}
-
-async function loadSteps() {
-  console.log('loadSteps called, props.todo:', props.todo);
-  if (!props.todo?.id) {
-    console.warn('No todo id available for loading steps, skipping API call');
-    return;
-  }
-  try {
-    console.log('Fetching steps for todo id:', props.todo.id);
-    steps.value = await todoStore.fetchSteps(props.todo.id);
-    console.log('Steps loaded successfully:', steps.value.length);
-  } catch (error) {
-    console.error('Failed to load steps:', error);
-  }
-}
-
-async function loadAttachments() {
-  if (!props.todo?.id) {
-    console.warn('No todo id available for loading attachments, skipping API call');
-    return;
-  }
-  try {
-    attachments.value = await todoStore.fetchAttachments(props.todo.id);
-    console.log('Attachments loaded successfully:', attachments.value.length);
-  } catch (error) {
-    console.error('Failed to load attachments:', error);
-  }
-}
-
-async function handleAddAttachment() {
-  try {
-    const { open } = await import('@tauri-apps/plugin-dialog');
-    const selected = await open({
-      multiple: false,
-      title: t('attachment.selectFiles'),
-    });
-
-    if (!selected || typeof selected !== 'string') {
-      return;
-    }
-
-    const fileName = selected.split(/[/\\]/).pop() || 'unknown';
-    const newAttachment = await todoStore.uploadAttachment(props.todo.id, selected, fileName);
-    attachments.value.push(newAttachment);
-    ElMessage.success(t('attachment.uploadSuccess'));
-    // 通知父组件刷新数据
-    emit('updated', props.todo);
-  } catch (error) {
-    console.error('Failed to add attachment:', error);
-    // 显示具体的错误信息
-    const errorMsg = error?.toString() || t('attachment.uploadFailed');
-    ElMessage.error(errorMsg);
-  }
-}
-
-async function handleDeleteAttachment(attachment: Attachment) {
-  try {
-    await ElMessageBox.confirm(
-      t('attachment.deleteConfirm', { name: attachment.name }),
-      t('attachment.deleteAttachment'),
-      {
-        type: 'warning',
-        confirmButtonText: t('common.delete'),
-        cancelButtonText: t('common.cancel'),
-      }
-    );
-
-    await todoStore.deleteAttachment(attachment.id);
-    attachments.value = attachments.value.filter(a => a.id !== attachment.id);
-    ElMessage.success(t('attachment.deleteSuccess'));
-    // 通知父组件刷新数据
-    emit('updated', props.todo);
-  } catch (error) {
-    if (error !== 'cancel') {
-      console.error('Failed to delete attachment:', error);
-      ElMessage.error(t('attachment.deleteFailed'));
-    }
   }
 }
 
@@ -711,34 +936,32 @@ async function handleOpenAttachment(attachment: Attachment) {
   }
 }
 
-async function handleDownloadAttachment(attachment: Attachment) {
-  try {
-    const { save } = await import('@tauri-apps/plugin-dialog');
-    const filePath = await save({
-      defaultPath: attachment.name,
-      title: t('attachment.saveAs'),
-    });
-
-    if (!filePath || typeof filePath !== 'string') {
-      return;
-    }
-
-    // 复制文件到用户选择的位置
-    await todoStore.downloadAttachment(attachment.id, filePath);
-    ElMessage.success(t('attachment.downloadSuccess'));
-  } catch (error) {
-    console.error('Failed to download attachment:', error);
-    ElMessage.error(t('attachment.downloadFailed'));
-  }
-}
-
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+async function loadSteps() {
+  if (!props.todo?.id) return;
+  try {
+    steps.value = await todoStore.fetchSteps(props.todo.id);
+  } catch (error) {
+    console.error('Failed to load steps:', error);
+  }
+}
+
+async function loadAttachments() {
+  if (!props.todo?.id) return;
+  try {
+    attachments.value = await todoStore.fetchAttachments(props.todo.id);
+  } catch (error) {
+    console.error('Failed to load attachments:', error);
+  }
+}
+
 onMounted(async () => {
+  isTauri.value = window.__TAURI__ !== undefined;
   await groupStore.fetchGroups();
   await tagStore.fetchTags();
   await loadSteps();
@@ -748,7 +971,6 @@ onMounted(async () => {
 // Watch for editMode prop changes
 watch(() => props.editMode, (newEditMode) => {
   if (newEditMode && !isEditing.value) {
-    // 确保todo数据存在后再初始化表单
     if (props.todo?.id) {
       startEdit();
     }
@@ -851,6 +1073,7 @@ watch(() => props.editMode, (newEditMode) => {
   flex: 1;
   font-size: 14px;
   color: var(--el-text-color-primary);
+  cursor: text;
 }
 
 .step-title.completed {
@@ -858,36 +1081,109 @@ watch(() => props.editMode, (newEditMode) => {
   color: var(--el-text-color-secondary);
 }
 
-/* Dark theme */
-:global(html.dark) .detail-title {
+/* 编辑模式样式 */
+.edit-section {
+  margin-bottom: 16px;
+}
+
+.edit-section .section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.edit-section h4 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
   color: var(--el-text-color-primary);
 }
 
-:global(html.dark) .section-title {
+.add-step-input {
+  margin-bottom: 12px;
+}
+
+.add-step-inputs {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.add-step-input-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.add-step-input-item .el-input {
+  flex: 1;
+}
+
+.confirm-btn,
+.cancel-btn {
+  flex-shrink: 0;
+}
+
+.edit-steps-list,
+.edit-attachments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.edit-step-item,
+.edit-attachment-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--el-fill-color-light);
+  border-radius: 4px;
+}
+
+.edit-attachment-item.pending {
+  border-left: 3px solid var(--el-color-warning);
+  background: var(--el-fill-color-lighter);
+}
+
+.step-edit-input {
+  flex: 1;
+}
+
+.edit-step-item .step-title {
+  flex: 1;
+  font-size: 14px;
+  color: var(--el-text-color-primary);
+}
+
+.edit-step-item .step-title.completed {
+  text-decoration: line-through;
   color: var(--el-text-color-secondary);
 }
 
-:global(html.dark) .section-content {
-  color: var(--el-text-color-regular);
+.pending-tag {
+  font-size: 12px;
+  padding: 2px 6px;
+  background: var(--el-color-warning);
+  color: white;
+  border-radius: 4px;
 }
 
-:global(html.dark) .detail-section {
-  border-top-color: var(--el-border-color);
+.attachment-icon {
+  font-size: 16px;
+  color: var(--el-color-primary);
 }
 
-:global(html.dark) .time-info {
-  color: var(--el-text-color-regular);
-}
-
-:global(html.dark) .step-item {
-  background: var(--el-fill-color-light);
-}
-
-:global(html.dark) .step-title {
+.edit-attachment-item .attachment-name {
+  flex: 1;
+  font-size: 14px;
   color: var(--el-text-color-primary);
 }
 
-:global(html.dark) .step-title.completed {
+.edit-attachment-item .attachment-size {
+  font-size: 12px;
   color: var(--el-text-color-secondary);
 }
 
@@ -934,72 +1230,42 @@ watch(() => props.editMode, (newEditMode) => {
   color: var(--el-text-color-secondary);
 }
 
-/* 编辑模式样式 */
-.edit-section {
-  margin-bottom: 16px;
-}
-
-.edit-section .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.edit-section h4 {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--el-text-color-primary);
-}
-
-.edit-steps-list,
-.edit-attachments-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.edit-step-item,
-.edit-attachment-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px;
-  background: var(--el-fill-color-light);
-  border-radius: 4px;
-}
-
-.edit-step-item .step-title {
-  flex: 1;
-  font-size: 14px;
-  color: var(--el-text-color-primary);
-}
-
-.edit-step-item .step-title.completed {
-  text-decoration: line-through;
-  color: var(--el-text-color-secondary);
-}
-
-.edit-attachment-item .attachment-icon {
-  font-size: 16px;
-  color: var(--el-color-primary);
-}
-
-.edit-attachment-item .attachment-name {
-  flex: 1;
-  font-size: 14px;
-  color: var(--el-text-color-primary);
-}
-
-.edit-attachment-item .attachment-size {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
 .empty-text {
   text-align: center;
   color: var(--el-text-color-secondary);
   font-size: 14px;
+}
+
+/* Dark theme */
+:global(html.dark) .detail-title {
+  color: var(--el-text-color-primary);
+}
+
+:global(html.dark) .section-title {
+  color: var(--el-text-color-secondary);
+}
+
+:global(html.dark) .section-content {
+  color: var(--el-text-color-regular);
+}
+
+:global(html.dark) .detail-section {
+  border-top-color: var(--el-border-color);
+}
+
+:global(html.dark) .time-info {
+  color: var(--el-text-color-regular);
+}
+
+:global(html.dark) .step-item {
+  background: var(--el-fill-color-light);
+}
+
+:global(html.dark) .step-title {
+  color: var(--el-text-color-primary);
+}
+
+:global(html.dark) .step-title.completed {
+  color: var(--el-text-color-secondary);
 }
 </style>
