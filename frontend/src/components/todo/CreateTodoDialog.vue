@@ -324,8 +324,8 @@ const { t } = useI18n();
 const props = defineProps<{
   modelValue: boolean;
   currentView?: ViewFilterTypeString;
-  filterGroupId?: string;
-  filterTagId?: string;
+  filterGroupIds?: number[];
+  filterTagIds?: number[];
 }>();
 
 const emit = defineEmits<{
@@ -540,20 +540,14 @@ watch(visible, async (isOpen) => {
       await groupStore.fetchGroups();
       await tagStore.fetchTags();
 
-      // Set default values based on current view (convert string to number)
-      if (props.currentView === ViewFilterTypeEnum.Group && props.filterGroupId) {
-        const groupId = parseInt(props.filterGroupId, 10);
-        if (!isNaN(groupId)) {
-          form.value.group_id = groupId;
-          console.log('[CreateTodoDialog] Set default group_id:', groupId);
-        }
+      // 如果有选中的任务组，取第一个作为默认值
+      if (props.filterGroupIds && props.filterGroupIds.length > 0) {
+        form.value.group_id = props.filterGroupIds[0];
       }
-      if (props.currentView === ViewFilterTypeEnum.Tag && props.filterTagId) {
-        const tagId = parseInt(props.filterTagId, 10);
-        if (!isNaN(tagId)) {
-          form.value.tag_ids = [tagId];
-          console.log('[CreateTodoDialog] Set default tag_ids:', [tagId]);
-        }
+
+      // 如果有选中的标签，取第一个作为默认值
+      if (props.filterTagIds && props.filterTagIds.length > 0) {
+        form.value.tag_ids = [props.filterTagIds[0]];
       }
     } catch (error) {
       console.error('Failed to load groups/tags:', error);

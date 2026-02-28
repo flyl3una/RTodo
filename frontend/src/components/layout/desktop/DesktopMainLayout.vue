@@ -26,8 +26,8 @@
     <CreateTodoDialog
       v-model="uiStore.createTodoDialogVisible"
       :current-view="currentViewState.currentView"
-      :filter-group-id="currentViewState.filterGroupId"
-      :filter-tag-id="currentViewState.filterTagId"
+      :filter-group-ids="currentViewState.filterGroupIds"
+      :filter-tag-ids="currentViewState.filterTagIds"
       @created="handleTodoCreated"
     />
   </div>
