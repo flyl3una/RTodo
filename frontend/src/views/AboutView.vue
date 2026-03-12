@@ -2,7 +2,7 @@
   <div class="about-view">
     <div class="placeholder">
       <h1>关于 RTodo</h1>
-      <p>版本 0.1.0</p>
+      <p>版本 {{ appVersion }}</p>
       <p>基于 Tauri + Vue 3 + Element Plus + TailwindCSS 构建</p>
       <p>跨平台待办事项管理应用</p>
     </div>
@@ -10,7 +10,19 @@
 </template>
 
 <script setup lang="ts">
-// 关于页面
+import { ref, onMounted } from 'vue';
+import { getVersion } from '@tauri-apps/api/app';
+
+const appVersion = ref<string>('加载中...');
+
+onMounted(async () => {
+  try {
+    appVersion.value = await getVersion();
+  } catch (error) {
+    console.error('获取版本号失败:', error);
+    appVersion.value = '未知版本';
+  }
+});
 </script>
 
 <style scoped>

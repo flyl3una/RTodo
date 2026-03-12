@@ -199,7 +199,7 @@
             </div>
             <div class="app-details">
               <h3>{{ t('settings.appName') }}</h3>
-              <p class="app-version">{{ t('settings.appVersion') }}</p>
+              <p class="app-version">{{ appVersion }}</p>
             </div>
           </div>
           <p class="app-description">
@@ -299,6 +299,7 @@ import Logo from '@/components/icon/logo.vue';
 import { save, open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import { Refresh } from '@element-plus/icons-vue';
+import { getVersion } from '@tauri-apps/api/app';
 import { delays } from '@/constants/delays';
 
 const { t } = useI18n();
@@ -316,6 +317,9 @@ const currentCloseBehavior = ref<CloseBehavior>(uiStore.closeBehavior);
 const exportLoading = ref(false);
 const currentAutoLaunch = ref(false);
 const autoLaunchLoading = ref(false);
+
+// 应用版本号
+const appVersion = ref<string>('加载中...');
 
 // Data path management
 const currentDataPath = ref('');
@@ -799,6 +803,14 @@ onMounted(async () => {
   currentDensityMode.value = uiStore.densityMode;
   currentGlobalShortcut.value = uiStore.globalShortcut;
   currentCloseBehavior.value = uiStore.closeBehavior;
+
+  // 获取应用版本号
+  try {
+    appVersion.value = await getVersion();
+  } catch (error) {
+    console.error('获取版本号失败:', error);
+    appVersion.value = '未知版本';
+  }
 
   // Load auto-launch status
   try {

@@ -351,7 +351,7 @@ export default {
     clearAllData: '清空所有數據',
     about: '關於',
     appName: 'RTodo',
-    appVersion: '版本 0.1.0',
+    appVersion: '版本 {version}',
     appDescription: '基於 Tauri + Vue 3 的跨平台待辦事項管理應用',
     closeBehavior: '關閉行為',
     closeDirect: '直接關閉',

@@ -402,7 +402,7 @@ export default {
     clearAllData: '清空所有数据',
     about: '关于',
     appName: 'RTodo',
-    appVersion: '版本 0.1.0',
+    appVersion: '版本 {version}',
     appDescription: '基于 Tauri + Vue 3 的跨平台待办事项管理应用',
     // 日志相关
     logging: '日志',

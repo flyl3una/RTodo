@@ -342,7 +342,7 @@ export default {
     clearAllData: 'すべてのデータをクリア',
     about: 'について',
     appName: 'RTodo',
-    appVersion: 'バージョン 0.1.0',
+    appVersion: 'バージョン {version}',
     appDescription: 'Tauri + Vue 3 で構築されたクロスプラットフォーム ToDo アプリケーション',
     closeBehavior: '閉じる動作',
     closeDirect: '直接閉じる',
